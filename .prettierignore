@@ -1,0 +1,12 @@
+node_modules
+dist
+.next
+next-env.d.ts
+build
+coverage
+.ralph-logs
+playwright-report
+test-results
+pnpm-lock.yaml
+apps/web/public/sw.js
+apps/web/public/workbox-*.js

@@ -1,0 +1,36 @@
+table: otp_codes
+comment: One-time passwords for authentication.
+columns:
+  - name: id
+    type: uuid
+    primary_key: true
+    default: gen_random_uuid()
+    nullable: false
+  - name: identifier
+    type: text
+    nullable: false
+    comment: Phone number or email address
+  - name: code
+    type: text
+    nullable: false
+    comment: 6-digit OTP code
+  - name: otp_type
+    type: text
+    nullable: false
+    check: otp_type = ANY (ARRAY['SMS'::text, 'EMAIL'::text])
+  - name: expires_at
+    type: timestamptz
+    nullable: false
+  - name: verified
+    type: boolean
+    nullable: false
+    default: 'false'
+  - name: created_at
+    type: timestamptz
+    nullable: false
+    default: now()
+indexes:
+  - name: idx_otp_identifier
+    columns: [identifier, otp_type]
+  - name: idx_otp_expires
+    columns: [expires_at]

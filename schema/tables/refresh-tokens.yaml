@@ -1,0 +1,33 @@
+table: refresh_tokens
+comment: JWT refresh tokens for session management.
+columns:
+  - name: id
+    type: uuid
+    primary_key: true
+    default: gen_random_uuid()
+    nullable: false
+  - name: token
+    type: text
+    nullable: false
+  - name: user_id
+    type: uuid
+    nullable: false
+    references:
+      table: users
+      column: id
+      on_delete: CASCADE
+  - name: expires_at
+    type: timestamptz
+    nullable: false
+  - name: created_at
+    type: timestamptz
+    nullable: false
+    default: now()
+indexes:
+  - name: idx_refresh_token_value
+    columns: [token]
+    unique: true
+  - name: idx_refresh_token_user
+    columns: [user_id]
+  - name: idx_refresh_token_expires
+    columns: [expires_at]

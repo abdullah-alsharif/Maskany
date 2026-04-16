@@ -1,0 +1,282 @@
+/* ─── Google Fonts (must precede @import 'tailwindcss') ─── */
+@import url('https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=Plus+Jakarta+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;1,400;1,500&display=swap');
+
+@import 'tailwindcss';
+
+/* ═══════════════════════════════════════════════════════
+   MASKANY DESIGN SYSTEM
+   Aesthetic: "Sunlit Stone" — warm Mediterranean luxury
+   meets clean digital interfaces. Terracotta warmth,
+   limestone neutrals, and deep olive accents.
+   ═══════════════════════════════════════════════════════ */
+
+/* ─── Theme Tokens ─── */
+@theme {
+  /* Typography */
+  --font-display: 'DM Serif Display', Georgia, serif;
+  --font-sans: 'Plus Jakarta Sans', system-ui, sans-serif;
+
+  /* ── Color Palette ── */
+  /* Terracotta — primary warmth */
+  --color-terracotta-50: #fef7f4;
+  --color-terracotta-100: #fdeee8;
+  --color-terracotta-200: #fad5c7;
+  --color-terracotta-300: #f5b49b;
+  --color-terracotta-400: #ee8b65;
+  --color-terracotta-500: #e2683d;
+  --color-terracotta-600: #c9502a;
+  --color-terracotta-700: #a73f22;
+  --color-terracotta-800: #893520;
+  --color-terracotta-900: #712f1f;
+
+  /* Stone — neutral warmth */
+  --color-stone-50: #faf9f7;
+  --color-stone-100: #f3f1ed;
+  --color-stone-200: #e8e4dd;
+  --color-stone-300: #d5cfc4;
+  --color-stone-400: #b8b0a0;
+  --color-stone-500: #9f9583;
+  --color-stone-600: #887c6c;
+  --color-stone-700: #72675a;
+  --color-stone-800: #5f564c;
+  --color-stone-900: #4a433b;
+  --color-stone-950: #2b2621;
+
+  /* Olive — accent depth */
+  --color-olive-50: #f6f7f0;
+  --color-olive-100: #eaeddb;
+  --color-olive-200: #d6dbb9;
+  --color-olive-300: #bcc490;
+  --color-olive-400: #a1ab6a;
+  --color-olive-500: #84904d;
+  --color-olive-600: #67723b;
+  --color-olive-700: #505830;
+  --color-olive-800: #41472a;
+  --color-olive-900: #383d27;
+
+  /* Sand — warm backgrounds */
+  --color-sand-50: #fdfcfa;
+  --color-sand-100: #faf8f3;
+  --color-sand-200: #f4f0e6;
+  --color-sand-300: #ebe4d4;
+  --color-sand-400: #ddd2ba;
+  --color-sand-500: #c9b998;
+
+  /* Amber — ratings/stars */
+  --color-amber-400: #f5b731;
+  --color-amber-500: #e5a320;
+
+  /* WhatsApp green */
+  --color-whatsapp: #25d366;
+  --color-whatsapp-dark: #128c7e;
+
+  /* Semantic */
+  --color-error: #d93025;
+  --color-success: #0d7c3f;
+  --color-info: #1a73e8;
+
+  /* ── Border Radius ── */
+  --radius-sm: 0.375rem;
+  --radius-md: 0.5rem;
+  --radius-lg: 0.75rem;
+  --radius-xl: 1rem;
+  --radius-2xl: 1.25rem;
+  --radius-full: 9999px;
+
+  /* ── Shadows ── */
+  --shadow-card: 0 1px 3px rgba(43, 38, 33, 0.06), 0 1px 2px rgba(43, 38, 33, 0.04);
+  --shadow-card-hover: 0 8px 25px rgba(43, 38, 33, 0.1), 0 2px 6px rgba(43, 38, 33, 0.06);
+  --shadow-sheet: 0 -4px 32px rgba(43, 38, 33, 0.12);
+  --shadow-fab: 0 4px 16px rgba(37, 211, 102, 0.3), 0 2px 6px rgba(37, 211, 102, 0.15);
+
+  /* ── Transitions ── */
+  --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+
+  /* ── Z-Index Scale ── */
+  --z-base: 0;
+  --z-card: 1;
+  --z-sticky: 10;
+  --z-header: 20;
+  --z-fab: 30;
+  --z-nav: 40;
+  --z-sheet: 50;
+  --z-overlay: 60;
+  --z-modal: 70;
+  --z-toast: 80;
+}
+
+/* ─── Base Layer ─── */
+@layer base {
+  html {
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    scroll-behavior: smooth;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  body {
+    @apply font-sans text-stone-950 bg-sand-50;
+    font-feature-settings: 'cv11', 'ss01';
+    letter-spacing: -0.011em;
+  }
+
+  /* Hide scrollbars on category/chip bars */
+  .scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
+  }
+
+  /* Safe area utilities */
+  .pb-safe {
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+  .pt-safe {
+    padding-top: env(safe-area-inset-top, 0px);
+  }
+
+  /* Focus ring — warm accent */
+  *:focus-visible {
+    @apply outline-2 outline-offset-2 outline-terracotta-400 rounded-sm;
+  }
+
+  /* Selection */
+  ::selection {
+    @apply bg-terracotta-100 text-terracotta-900;
+  }
+}
+
+/* ─── Component Layer ─── */
+@layer components {
+  /* Page wrapper — accounts for bottom nav */
+  .page-content {
+    @apply pb-20 min-h-screen;
+    padding-bottom: calc(4.5rem + env(safe-area-inset-bottom, 0px));
+  }
+
+  /* Subtle grain texture overlay */
+  .grain-overlay::after {
+    content: '';
+    position: fixed;
+    inset: 0;
+    opacity: 0.025;
+    pointer-events: none;
+    z-index: 9999;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");
+  }
+}
+
+/* ─── Animation Utilities ─── */
+@layer utilities {
+  .animate-fade-in {
+    animation: fade-in 0.4s var(--ease-out-expo) both;
+  }
+
+  .animate-slide-up {
+    animation: slide-up 0.5s var(--ease-out-expo) both;
+  }
+
+  .animate-scale-in {
+    animation: scale-in 0.3s var(--ease-spring) both;
+  }
+
+  .animate-sheet-up {
+    animation: sheet-up 0.4s var(--ease-out-expo) both;
+  }
+
+  .animate-heart-pop {
+    animation: heart-pop 0.4s var(--ease-spring) both;
+  }
+
+  .animate-skeleton {
+    animation: skeleton-pulse 1.8s ease-in-out infinite;
+  }
+
+  .animate-stagger-1 {
+    animation-delay: 0.05s;
+  }
+  .animate-stagger-2 {
+    animation-delay: 0.1s;
+  }
+  .animate-stagger-3 {
+    animation-delay: 0.15s;
+  }
+  .animate-stagger-4 {
+    animation-delay: 0.2s;
+  }
+  .animate-stagger-5 {
+    animation-delay: 0.25s;
+  }
+  .animate-stagger-6 {
+    animation-delay: 0.3s;
+  }
+}
+
+/* ─── Keyframes ─── */
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes slide-up {
+  from {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes scale-in {
+  from {
+    opacity: 0;
+    transform: scale(0.9);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes sheet-up {
+  from {
+    transform: translateY(100%);
+  }
+  to {
+    transform: translateY(0);
+  }
+}
+
+@keyframes heart-pop {
+  0% {
+    transform: scale(1);
+  }
+  30% {
+    transform: scale(1.3);
+  }
+  60% {
+    transform: scale(0.9);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+@keyframes skeleton-pulse {
+  0%,
+  100% {
+    opacity: 0.4;
+  }
+  50% {
+    opacity: 0.7;
+  }
+}

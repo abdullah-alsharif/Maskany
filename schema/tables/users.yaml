@@ -1,0 +1,44 @@
+table: users
+comment: Platform users — browsers and property owners.
+columns:
+  - name: id
+    type: uuid
+    primary_key: true
+    default: gen_random_uuid()
+    nullable: false
+  - name: full_name
+    type: text
+    nullable: false
+  - name: phone
+    type: text
+    nullable: false
+  - name: email
+    type: text
+    nullable: true
+  - name: user_type
+    type: text
+    nullable: false
+    default: "'BROWSER'::text"
+    check: user_type = ANY (ARRAY['BROWSER'::text, 'OWNER'::text])
+  - name: created_at
+    type: timestamptz
+    nullable: false
+    default: now()
+  - name: updated_at
+    type: timestamptz
+    nullable: false
+    default: now()
+indexes:
+  - name: idx_users_phone
+    columns: [phone]
+    unique: true
+  - name: idx_users_email
+    columns: [email]
+    unique: true
+    where: (email IS NOT NULL)
+triggers:
+  - name: trg_users_updated_at
+    timing: BEFORE
+    events: [UPDATE]
+    function: set_updated_timestamp
+    for_each: ROW

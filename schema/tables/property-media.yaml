@@ -1,0 +1,61 @@
+table: property_media
+comment: Photos and videos for property listings.
+columns:
+  - name: id
+    type: uuid
+    primary_key: true
+    default: gen_random_uuid()
+    nullable: false
+  - name: property_id
+    type: uuid
+    nullable: false
+    references:
+      table: properties
+      column: id
+      on_delete: CASCADE
+  - name: media_type
+    type: text
+    nullable: false
+    check: media_type = ANY (ARRAY['IMAGE'::text, 'VIDEO'::text])
+  - name: url
+    type: text
+    nullable: false
+    comment: Full-size image or video URL path
+  - name: thumbnail_url
+    type: text
+    nullable: true
+    comment: Thumbnail URL (400px for images, poster frame for videos)
+  - name: alt_text
+    type: text
+    nullable: true
+  - name: mime_type
+    type: text
+    nullable: true
+    comment: e.g. image/webp, video/mp4
+  - name: file_size
+    type: integer
+    nullable: true
+    comment: File size in bytes
+  - name: width
+    type: integer
+    nullable: true
+  - name: height
+    type: integer
+    nullable: true
+  - name: duration
+    type: numeric(10,2)
+    nullable: true
+    comment: Video duration in seconds
+  - name: sort_order
+    type: integer
+    nullable: false
+    default: '0'
+  - name: created_at
+    type: timestamptz
+    nullable: false
+    default: now()
+indexes:
+  - name: idx_property_media_property
+    columns: [property_id]
+  - name: idx_property_media_order
+    columns: [property_id, sort_order]
