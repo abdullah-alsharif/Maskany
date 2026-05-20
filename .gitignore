@@ -15,6 +15,4 @@ ios/
 uploads/
 test-results/
 playwright-report/
-.ralph-logs/
-.opencode/
 .env.production
