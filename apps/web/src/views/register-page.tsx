@@ -83,7 +83,7 @@ export function RegisterPage() {
             autoComplete="name"
             value={fullName}
             onChange={(e) => setFullName(e.target.value)}
-            className="h-12 w-full rounded-xl border border-stone-200 bg-white px-3 text-base"
+            className="h-12 w-full rounded-xl border border-stone-300 bg-white px-3 text-base focus:outline-none focus:border-terracotta-400 focus:ring-2 focus:ring-terracotta-100 transition-all duration-200"
           />
         </div>
 
@@ -96,7 +96,7 @@ export function RegisterPage() {
               id="country-code"
               value={countryCode}
               onChange={(e) => setCountryCode(e.target.value)}
-              className="h-12 min-w-[88px] rounded-xl border border-stone-200 bg-white px-3 text-sm"
+              className="h-12 min-w-[88px] rounded-xl border border-stone-300 bg-white px-3 text-sm focus:outline-none focus:border-terracotta-400 focus:ring-2 focus:ring-terracotta-100 transition-all duration-200"
             >
               {COUNTRY_CODES.map((c) => (
                 <option key={c.code} value={c.code}>
@@ -117,7 +117,7 @@ export function RegisterPage() {
               value={phone}
               onChange={(e) => setPhone(e.target.value)}
               placeholder="5XXXXXXXX"
-              className="h-12 w-full rounded-xl border border-stone-200 bg-white px-3 text-base"
+              className="h-12 w-full rounded-xl border border-stone-300 bg-white px-3 text-base focus:outline-none focus:border-terracotta-400 focus:ring-2 focus:ring-terracotta-100 transition-all duration-200"
             />
           </div>
         </div>
@@ -133,7 +133,7 @@ export function RegisterPage() {
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             placeholder="you@example.com"
-            className="h-12 w-full rounded-xl border border-stone-200 bg-white px-3 text-base"
+            className="h-12 w-full rounded-xl border border-stone-300 bg-white px-3 text-base focus:outline-none focus:border-terracotta-400 focus:ring-2 focus:ring-terracotta-100 transition-all duration-200"
           />
         </div>
 

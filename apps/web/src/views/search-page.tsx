@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { CategoryBar } from '../components/category-bar';
+import { QuickSort } from '../components/quick-sort';
 import { PropertyCard } from '../components/property-card';
 import { SearchBar } from '../components/search-bar';
 import { SeoHead } from '../components/seo-head';
@@ -56,6 +57,10 @@ export function SearchPage() {
 
       <div className="px-4">
         <CategoryBar selected={category} onSelect={setCategory} />
+      </div>
+
+      <div className="px-4">
+        <QuickSort currentSort={filters.sort} filters={filters} onApply={apply} />
       </div>
 
       {showSkeletons ? (

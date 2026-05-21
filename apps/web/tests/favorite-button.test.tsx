@@ -53,7 +53,7 @@ describe('FavoriteButton', () => {
   it('renders a larger hit target when the md size is requested', () => {
     render(<FavoriteButton propertyId="prop-1" isFavorite={false} size="md" />);
     const button = screen.getByRole('button');
-    expect(button.className).toMatch(/w-10/);
-    expect(button.className).toMatch(/h-10/);
+    expect(button.className).toMatch(/w-12/);
+    expect(button.className).toMatch(/h-12/);
   });
 });

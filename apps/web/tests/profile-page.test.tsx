@@ -74,6 +74,7 @@ describe('ProfilePage', () => {
     renderPage();
 
     fireEvent.click(screen.getByRole('button', { name: /log out/i }));
+    fireEvent.click(screen.getByRole('button', { name: /^sign out$/i }));
 
     await waitFor(() => expect(getReplacedPaths()).toContain('/login'));
     const logoutCall = captured.find((c) => c.url === '/auth/logout');

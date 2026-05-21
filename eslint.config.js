@@ -18,6 +18,7 @@ export default tseslint.config(
       '**/test-results/**',
       'apps/web/public/sw.js',
       'apps/web/public/workbox-*.js',
+      '**/.agents/**',
     ],
   },
   js.configs.recommended,

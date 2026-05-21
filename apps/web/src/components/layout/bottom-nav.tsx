@@ -2,8 +2,8 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Home, Search, Heart, User } from 'lucide-react';
-import { type ReactNode } from 'react';
+import { Home, Heart, User } from 'lucide-react';
+import { type ReactNode, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useFavorites } from '../../hooks/use-favorites';
 
@@ -16,7 +16,6 @@ type NavItem = {
 
 const navItems: NavItem[] = [
   { to: '/', labelKey: 'nav.home', icon: <Home size={22} strokeWidth={1.8} /> },
-  { to: '/search', labelKey: 'nav.search', icon: <Search size={22} strokeWidth={1.8} /> },
   { to: '/favorites', labelKey: 'nav.favorites', icon: <Heart size={22} strokeWidth={1.8} /> },
   { to: '/profile', labelKey: 'nav.profile', icon: <User size={22} strokeWidth={1.8} /> },
 ];
@@ -25,9 +24,15 @@ export function BottomNav() {
   const pathname = usePathname();
   const { t } = useTranslation();
   const { count: favoriteCount } = useFavorites();
+  const [hydrated, setHydrated] = useState(false);
+  useEffect(() => {
+    setHydrated(true);
+  }, []);
 
   const items = navItems.map((item) =>
-    item.to === '/favorites' && favoriteCount > 0 ? { ...item, badge: favoriteCount } : item,
+    item.to === '/favorites' && hydrated && favoriteCount > 0
+      ? { ...item, badge: favoriteCount }
+      : item,
   );
 
   return (
@@ -53,14 +58,16 @@ export function BottomNav() {
               className={`
                 relative flex flex-col items-center justify-center
                 w-16 h-12 rounded-xl
-                transition-colors duration-200
+                transition-all duration-300 ease-out
                 ${isActive ? 'text-terracotta-600' : 'text-stone-400 hover:text-stone-600'}
               `}
             >
               {isActive && (
-                <span className="absolute -top-1 w-1 h-1 rounded-full bg-terracotta-500" />
+                <span className="absolute -top-1 w-1.5 h-1.5 rounded-full bg-terracotta-500 animate-scale-in" />
               )}
-              <span className="relative">
+              <span
+                className={`relative transition-transform duration-300 ${isActive ? 'scale-105' : 'scale-100'}`}
+              >
                 {icon}
                 {badge !== undefined && badge > 0 && (
                   <span
@@ -70,14 +77,16 @@ export function BottomNav() {
                       flex items-center justify-center
                       bg-terracotta-500 text-white
                       text-[10px] font-bold rounded-full
-                      leading-none
+                      leading-none animate-scale-in
                     "
                   >
                     {badge > 99 ? '99+' : badge}
                   </span>
                 )}
               </span>
-              <span className={`text-[10px] mt-0.5 font-medium ${isActive ? 'font-semibold' : ''}`}>
+              <span
+                className={`text-[10px] mt-0.5 tracking-tight transition-all duration-300 ${isActive ? 'font-semibold' : 'font-medium'}`}
+              >
                 {label}
               </span>
             </Link>

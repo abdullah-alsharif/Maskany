@@ -22,9 +22,12 @@ const images: PropertyMedia[] = [makeImage('a', 0), makeImage('b', 1), makeImage
 describe('ImageGallery', () => {
   it('renders every image with alt text', () => {
     render(<ImageGallery images={images} alt="Villa" />);
-    expect(screen.getByRole('img', { name: /image a/i })).toBeInTheDocument();
-    expect(screen.getByRole('img', { name: /image b/i })).toBeInTheDocument();
-    expect(screen.getByRole('img', { name: /image c/i })).toBeInTheDocument();
+    const imgs = screen.getAllByRole('img');
+    // each image renders in both the mobile slide and desktop grid
+    expect(imgs).toHaveLength(6);
+    expect(imgs.filter((img) => img.getAttribute('alt') === 'Image a')).toHaveLength(2);
+    expect(imgs.filter((img) => img.getAttribute('alt') === 'Image b')).toHaveLength(2);
+    expect(imgs.filter((img) => img.getAttribute('alt') === 'Image c')).toHaveLength(2);
   });
 
   it('renders a photo counter showing the active index and total', () => {
@@ -83,8 +86,8 @@ describe('ImageGallery', () => {
     fireEvent.click(screen.getByRole('button', { name: /open fullscreen gallery/i }));
     // Sanity: fullscreen is open — close button present
     expect(screen.getByRole('button', { name: /close fullscreen/i })).toBeInTheDocument();
-    // Click directly on the image
-    const img = screen.getByRole('img', { name: /image a/i });
+    // Click directly on the image (pick the first of two renderings)
+    const img = screen.getAllByRole('img', { name: /image a/i })[0];
     fireEvent.click(img);
     // Still in fullscreen
     expect(screen.getByRole('button', { name: /close fullscreen/i })).toBeInTheDocument();

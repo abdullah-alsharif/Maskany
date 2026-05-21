@@ -2,7 +2,9 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { Globe } from 'lucide-react';
 import { CategoryBar } from '../components/category-bar';
+import { QuickSort } from '../components/quick-sort';
 import { PropertyCard } from '../components/property-card';
 import { SearchBar } from '../components/search-bar';
 import { SeoHead } from '../components/seo-head';
@@ -64,7 +66,7 @@ function usePullToRefresh(onRefresh: () => void): {
 }
 
 export function HomePage() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const [category, setCategory] = useState<CategoryFilter>('ALL');
   const [filterOpen, setFilterOpen] = useState(false);
   const { filters, apply, clearAll, setQuery, activeFilterCount, queryParams } = useFilters();
@@ -105,9 +107,21 @@ export function HomePage() {
       />
       <h1 className="sr-only">{t('nav.home')}</h1>
 
-      <header className="px-4 pt-6 pb-2">
-        <p className="font-display text-3xl text-stone-950">{t('home.heading')}</p>
-        <p className="mt-1 text-sm text-stone-600">{t('home.subheading')}</p>
+      <header className="px-4 pt-6 pb-2 flex items-start justify-between gap-3">
+        <div>
+          <p className="font-display text-3xl text-stone-950">{t('home.heading')}</p>
+          <p className="mt-1 text-sm text-stone-600">{t('home.subheading')}</p>
+        </div>
+        <button
+          type="button"
+          onClick={() => i18n.changeLanguage(i18n.language.startsWith('ar') ? 'en' : 'ar')}
+          aria-label={
+            i18n.language.startsWith('ar') ? t('language.switchToEn') : t('language.switchToAr')
+          }
+          className="shrink-0 flex items-center justify-center w-11 h-11 rounded-xl bg-white border border-stone-300 text-stone-600 hover:bg-stone-50 hover:border-stone-400 active:bg-stone-100 active:scale-[0.96] transition-all duration-150"
+        >
+          <Globe size={18} strokeWidth={2} />
+        </button>
       </header>
 
       <div className="px-4 pt-2">
@@ -121,6 +135,10 @@ export function HomePage() {
 
       <div className="px-4">
         <CategoryBar selected={category} onSelect={setCategory} />
+      </div>
+
+      <div className="px-4">
+        <QuickSort currentSort={filters.sort} filters={filters} onApply={apply} />
       </div>
 
       {pullDelta > 0 && (

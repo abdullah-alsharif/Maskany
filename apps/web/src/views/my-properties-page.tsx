@@ -30,10 +30,10 @@ function DeleteDialog({
       role="dialog"
       aria-modal="true"
       aria-labelledby="delete-dialog-title"
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-[2px] px-4 animate-fade-in"
     >
-      <div className="w-full max-w-sm rounded-2xl bg-white p-6 shadow-[var(--shadow-card-hover)]">
-        <h3 id="delete-dialog-title" className="font-display text-xl text-stone-950">
+      <div className="w-full max-w-sm rounded-2xl bg-white p-6 shadow-[var(--shadow-card-hover)] border border-stone-200/60 animate-scale-in">
+        <h3 id="delete-dialog-title" className="font-display text-xl text-stone-950 font-semibold">
           {t('myProperties.deleteTitle')}
         </h3>
         <p className="mt-2 text-sm text-stone-600">

@@ -110,7 +110,7 @@ export function OtpInput({ length = 6, onComplete, disabled = false, error }: Ot
                   ? 'border-red-300 text-red-600 bg-red-50 focus:border-red-400 focus:ring-2 focus:ring-red-100'
                   : value
                     ? 'border-terracotta-300 text-stone-900 bg-terracotta-50 focus:border-terracotta-400 focus:ring-2 focus:ring-terracotta-100'
-                    : 'border-stone-200 text-stone-900 bg-white focus:border-terracotta-400 focus:ring-2 focus:ring-terracotta-100'
+                    : 'border-stone-300 text-stone-900 bg-white focus:border-terracotta-400 focus:ring-2 focus:ring-terracotta-100'
               }
             `}
             aria-label={`Digit ${index + 1}`}
@@ -178,7 +178,7 @@ export function OtpCountdown({ seconds, onExpired, onResend }: CountdownProps) {
             setCanResend(false);
             setRemaining(seconds);
           }}
-          className="text-sm font-semibold text-terracotta-600 hover:text-terracotta-700"
+          className="inline-flex items-center justify-center min-h-[44px] px-4 text-sm font-semibold text-terracotta-600 hover:text-terracotta-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-terracotta-100 rounded-lg transition-all"
         >
           Resend code
         </button>

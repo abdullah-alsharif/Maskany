@@ -24,17 +24,16 @@ afterEach(() => {
 });
 
 describe('BottomNav', () => {
-  it('renders exactly four navigation tabs', () => {
+  it('renders exactly three navigation tabs', () => {
     renderNav();
     const nav = screen.getByRole('navigation', { name: /main navigation/i });
     const tabs = within(nav).getAllByRole('link');
-    expect(tabs).toHaveLength(4);
+    expect(tabs).toHaveLength(3);
   });
 
-  it('renders tabs labeled Home, Search, Favorites, and Profile', () => {
+  it('renders tabs labeled Home, Favorites, and Profile', () => {
     renderNav();
     expect(screen.getByRole('link', { name: /home/i })).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: /search/i })).toBeInTheDocument();
     expect(screen.getByRole('link', { name: /favorites/i })).toBeInTheDocument();
     expect(screen.getByRole('link', { name: /profile/i })).toBeInTheDocument();
   });
@@ -42,7 +41,6 @@ describe('BottomNav', () => {
   it('links each tab to its route', () => {
     renderNav();
     expect(screen.getByRole('link', { name: /home/i })).toHaveAttribute('href', '/');
-    expect(screen.getByRole('link', { name: /search/i })).toHaveAttribute('href', '/search');
     expect(screen.getByRole('link', { name: /favorites/i })).toHaveAttribute('href', '/favorites');
     expect(screen.getByRole('link', { name: /profile/i })).toHaveAttribute('href', '/profile');
   });
@@ -51,8 +49,12 @@ describe('BottomNav', () => {
     renderNav('/favorites');
     const active = screen.getByRole('link', { name: /favorites/i });
     expect(active).toHaveAttribute('aria-current', 'page');
-    const inactive = screen.getByRole('link', { name: /search/i });
-    expect(inactive).not.toHaveAttribute('aria-current', 'page');
+    const tabs = screen.getAllByRole('link');
+    tabs
+      .filter((tab) => tab.getAttribute('aria-label') !== 'Favorites')
+      .forEach((tab) => {
+        expect(tab).not.toHaveAttribute('aria-current', 'page');
+      });
   });
 
   it('is fixed to the bottom of the viewport', () => {

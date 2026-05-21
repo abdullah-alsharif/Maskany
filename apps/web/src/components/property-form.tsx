@@ -200,9 +200,9 @@ function Field({ id, label, children }: { id: string; label: string; children: R
 }
 
 const inputClass =
-  'h-12 w-full rounded-xl border border-stone-200 bg-white px-3 text-base focus:outline-none focus:border-terracotta-400';
+  'h-12 w-full rounded-xl border border-stone-300 bg-white px-3 text-base focus:outline-none focus:border-terracotta-400 focus:ring-2 focus:ring-terracotta-100 transition-all duration-200';
 const textareaClass =
-  'min-h-[120px] w-full rounded-xl border border-stone-200 bg-white p-3 text-base focus:outline-none focus:border-terracotta-400';
+  'min-h-[120px] w-full rounded-xl border border-stone-300 bg-white p-3 text-base focus:outline-none focus:border-terracotta-400 focus:ring-2 focus:ring-terracotta-100 transition-all duration-200';
 
 export function PropertyForm({ mode, initialValues, onSubmit, submitting }: PropertyFormProps) {
   const { t } = useTranslation();

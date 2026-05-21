@@ -71,10 +71,10 @@ export function SearchBar({
             w-full h-11
             pl-10 pr-9
             rounded-xl
-            bg-white border border-stone-200
+            bg-white border border-stone-300
             text-[15px] text-stone-800
             placeholder:text-stone-400
-            focus:outline-none focus:border-terracotta-300 focus:ring-2 focus:ring-terracotta-100
+            focus:outline-none focus:border-terracotta-400 focus:ring-2 focus:ring-terracotta-100
             transition-all duration-200
           "
           aria-label="Search properties"
@@ -88,6 +88,7 @@ export function SearchBar({
               flex items-center justify-center
               text-stone-400 hover:text-stone-600
               hover:bg-stone-100
+              focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-terracotta-100
               transition-colors duration-150
             "
             aria-label="Clear search"
@@ -106,10 +107,11 @@ export function SearchBar({
             flex items-center justify-center
             w-11 h-11
             rounded-xl
-            bg-white border border-stone-200
+            bg-white border border-stone-300
             text-stone-600
-            hover:border-stone-300 hover:bg-stone-50
-            active:bg-stone-100
+            hover:border-stone-400 hover:bg-stone-50
+            active:bg-stone-100 active:scale-[0.96]
+            focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-terracotta-100 focus-visible:border-terracotta-400
             transition-all duration-200
             shrink-0
           "

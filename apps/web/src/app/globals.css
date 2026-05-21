@@ -172,23 +172,28 @@
 /* ─── Animation Utilities ─── */
 @layer utilities {
   .animate-fade-in {
-    animation: fade-in 0.4s var(--ease-out-expo) both;
+    opacity: 0;
+    animation: fade-in 0.4s var(--ease-out-expo) forwards;
   }
 
   .animate-slide-up {
-    animation: slide-up 0.5s var(--ease-out-expo) both;
+    opacity: 0;
+    transform: translateY(16px);
+    animation: slide-up 0.5s var(--ease-out-expo) forwards;
   }
 
   .animate-scale-in {
-    animation: scale-in 0.3s var(--ease-spring) both;
+    opacity: 0;
+    transform: scale(0.9);
+    animation: scale-in 0.3s var(--ease-spring) forwards;
   }
 
   .animate-sheet-up {
-    animation: sheet-up 0.4s var(--ease-out-expo) both;
+    animation: sheet-up 0.4s var(--ease-out-expo) forwards;
   }
 
   .animate-heart-pop {
-    animation: heart-pop 0.4s var(--ease-spring) both;
+    animation: heart-pop 0.4s var(--ease-spring) forwards;
   }
 
   .animate-skeleton {

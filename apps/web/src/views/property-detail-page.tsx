@@ -165,27 +165,36 @@ function PropertyBody({ property }: { property: Property }) {
           {/* Specs */}
           <section
             aria-label="Property specifications"
-            className="grid grid-cols-3 gap-3 rounded-2xl bg-white p-4 shadow-[var(--shadow-card)]"
+            className="
+              flex items-center justify-around
+              rounded-2xl bg-white py-4 px-2
+              shadow-[var(--shadow-card)] border border-stone-100
+            "
           >
-            <div className="flex flex-col items-center gap-1 text-stone-800">
-              <BedDouble size={20} strokeWidth={2} aria-hidden="true" />
-              <span className="text-sm font-medium">
+            <div className="flex-1 flex flex-col items-center gap-1 text-stone-800 border-r border-stone-100">
+              <BedDouble
+                size={20}
+                strokeWidth={1.8}
+                className="text-stone-500"
+                aria-hidden="true"
+              />
+              <span className="text-[13px] font-semibold text-stone-900">
                 {property.rooms === 1
                   ? t('propertyDetail.bedroom', { count: property.rooms })
                   : t('propertyDetail.bedrooms', { count: property.rooms })}
               </span>
             </div>
-            <div className="flex flex-col items-center gap-1 text-stone-800">
-              <Bath size={20} strokeWidth={2} aria-hidden="true" />
-              <span className="text-sm font-medium">
+            <div className="flex-1 flex flex-col items-center gap-1 text-stone-800 border-r border-stone-100">
+              <Bath size={20} strokeWidth={1.8} className="text-stone-500" aria-hidden="true" />
+              <span className="text-[13px] font-semibold text-stone-900">
                 {property.bathrooms === 1
                   ? t('propertyDetail.bathroom', { count: property.bathrooms })
                   : t('propertyDetail.bathrooms', { count: property.bathrooms })}
               </span>
             </div>
-            <div className="flex flex-col items-center gap-1 text-stone-800">
-              <Ruler size={20} strokeWidth={2} aria-hidden="true" />
-              <span className="text-sm font-medium">
+            <div className="flex-1 flex flex-col items-center gap-1 text-stone-800">
+              <Ruler size={20} strokeWidth={1.8} className="text-stone-500" aria-hidden="true" />
+              <span className="text-[13px] font-semibold text-stone-900">
                 {t('propertyDetail.areaValue', { count: property.areaSqm ?? 0 })}
               </span>
             </div>

@@ -30,7 +30,16 @@
     "accountType": "Account type",
     "owner": "Owner",
     "browser": "Browser",
-    "logOut": "Log out"
+    "logOut": "Log out",
+    "memberSince": "Member since",
+    "saved": "Saved",
+    "myProperties": "My properties",
+    "language": "Language",
+    "shareApp": "Share app",
+    "signOutTitle": "Sign out?",
+    "signOutDesc": "Are you sure you want to sign out?",
+    "cancel": "Cancel",
+    "confirmSignOut": "Sign out"
   },
   "login": {
     "heading": "Sign in",

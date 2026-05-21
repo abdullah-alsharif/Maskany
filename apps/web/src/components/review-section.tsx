@@ -70,26 +70,30 @@ function toDistributionNumbers(dist: ReviewSummary['distribution']): Record<numb
 function SummaryHeader({ summary, t }: { summary: ReviewSummary; t: (key: string) => string }) {
   const avg = summary.averageRating;
   return (
-    <section aria-label="Reviews summary" className="space-y-4">
+    <section aria-label="Reviews summary" className="space-y-6 animate-fade-in">
       <div className="flex items-center gap-2">
-        <Star size={22} fill="#f5b731" stroke="#f5b731" aria-hidden="true" />
-        <h2 className="text-xl font-semibold text-stone-900">{t('review.heading')}</h2>
+        <Star size={20} className="fill-amber-400 text-amber-400" aria-hidden="true" />
+        <h2 className="text-xl font-display text-stone-950">{t('review.heading')}</h2>
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-[auto_1fr] sm:items-center">
-        <div className="flex items-end gap-3">
+      <div className="grid gap-6 sm:grid-cols-[auto_1fr] sm:items-center bg-stone-50/50 p-6 rounded-2xl border border-stone-200/60">
+        <div className="flex items-center gap-4 sm:flex-col sm:items-start sm:gap-1">
           <span className="font-display text-5xl text-stone-950 leading-none">
             {avg.toFixed(1)}
           </span>
-          <div className="pb-1 space-y-1">
-            <StarRating value={avg} size="md" showValue={false} />
-            <span className="block text-sm text-stone-500">{countLabel(summary.reviewCount)}</span>
+          <div className="space-y-1">
+            <StarRating value={avg} size="sm" showValue={false} />
+            <span className="block text-xs font-medium text-stone-500 uppercase tracking-wider">
+              {countLabel(summary.reviewCount)}
+            </span>
           </div>
         </div>
-        <RatingDistribution
-          distribution={toDistributionNumbers(summary.distribution)}
-          total={summary.reviewCount}
-        />
+        <div className="flex-1 max-w-xs">
+          <RatingDistribution
+            distribution={toDistributionNumbers(summary.distribution)}
+            total={summary.reviewCount}
+          />
+        </div>
       </div>
     </section>
   );
@@ -199,7 +203,7 @@ export function ReviewSection({ propertyId, propertyOwnerId, currentUser }: Revi
       );
     }
     return (
-      <ul className="space-y-3">
+      <ul className="space-y-3 animate-fade-in">
         {mergedReviews.map((review) => {
           const isOwn = currentUser?.id === review.userId;
           return (

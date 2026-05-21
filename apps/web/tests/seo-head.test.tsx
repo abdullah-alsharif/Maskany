@@ -12,7 +12,7 @@ const getMeta = (selector: string): string | null => {
 
 const getJsonLd = (): Record<string, unknown> | null => {
   const script = document.head.querySelector<HTMLScriptElement>(
-    'script[type="application/ld+json"][data-seo-head="true"]',
+    'script[type="application/ld+json"][data-seo-head="real-estate-ld"]',
   );
   if (!script?.textContent) return null;
   return JSON.parse(script.textContent) as Record<string, unknown>;
@@ -20,9 +20,7 @@ const getJsonLd = (): Record<string, unknown> | null => {
 
 afterEach(() => {
   document.title = originalTitle;
-  document.head
-    .querySelectorAll('[data-seo-head="true"]')
-    .forEach((el) => el.parentNode?.removeChild(el));
+  document.head.querySelectorAll('[data-seo-head]').forEach((el) => el.parentNode?.removeChild(el));
 });
 
 describe('SeoHead component (T-025, PRD §8.4)', () => {
@@ -193,7 +191,7 @@ describe('SeoHead component (T-025, PRD §8.4)', () => {
     };
     render(<SeoHead title="t" property={property} />);
     const script = document.head.querySelector<HTMLScriptElement>(
-      'script[type="application/ld+json"][data-seo-head="true"]',
+      'script[type="application/ld+json"][data-seo-head="real-estate-ld"]',
     );
     // Raw textContent must not contain an unescaped closing script tag.
     expect(script?.textContent).not.toContain('</script>');
@@ -202,11 +200,16 @@ describe('SeoHead component (T-025, PRD §8.4)', () => {
     expect(data.name).toBe('Trick</script><script>alert(1)</script>');
   });
 
-  it('cleans up its managed tags when the component unmounts', () => {
+  it('preserves managed tags when the component unmounts (no removeChild race condition)', () => {
     const { unmount } = render(
       <SeoHead title="A" description="B" ogImage="x" ogUrl="y" ogType="article" />,
     );
+    const tagsBefore = document.head.querySelectorAll('[data-seo-head]').length;
+    expect(tagsBefore).toBeGreaterThan(0);
     unmount();
-    expect(document.head.querySelectorAll('[data-seo-head="true"]').length).toBe(0);
+    // Tags are intentionally kept in the DOM to avoid removeChild
+    // race conditions. Their content gets updated on re-mount.
+    const tagsAfter = document.head.querySelectorAll('[data-seo-head]').length;
+    expect(tagsAfter).toBe(tagsBefore);
   });
 });

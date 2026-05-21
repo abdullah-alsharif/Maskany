@@ -30,7 +30,16 @@
     "accountType": "نوع الحساب",
     "owner": "مالك",
     "browser": "مستخدم",
-    "logOut": "تسجيل الخروج"
+    "logOut": "تسجيل الخروج",
+    "memberSince": "عضواً منذ",
+    "saved": "محفوظة",
+    "myProperties": "عقاراتي",
+    "language": "اللغة",
+    "shareApp": "مشاركة التطبيق",
+    "signOutTitle": "تسجيل الخروج؟",
+    "signOutDesc": "هل أنت متأكد من رغبتك في تسجيل الخروج؟",
+    "cancel": "إلغاء",
+    "confirmSignOut": "تسجيل الخروج"
   },
   "login": {
     "heading": "تسجيل الدخول",

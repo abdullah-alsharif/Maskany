@@ -19,10 +19,11 @@ export function LanguageSwitcher({ className = '' }: { className?: string }) {
       className={`
         inline-flex items-center justify-center
         min-h-[44px] px-4
-        rounded-xl border border-stone-200 bg-white
+        rounded-xl border border-stone-300 bg-white
         text-sm font-semibold text-stone-700
         hover:bg-stone-50 active:bg-stone-100
-        transition-colors
+        focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-terracotta-100 focus-visible:border-terracotta-400
+        transition-all duration-150 active:scale-[0.96]
         ${className}
       `}
     >

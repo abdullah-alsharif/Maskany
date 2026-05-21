@@ -32,16 +32,17 @@ export function WhatsAppIconButton({
       onClick={(e) => e.stopPropagation()}
       className="
         flex items-center justify-center
-        w-8 h-8 rounded-full
+        w-11 h-11 rounded-full
         bg-[#25d366] text-white
         shadow-sm hover:shadow-md
         transition-all duration-200
         active:scale-90
         hover:bg-[#20bd5a]
+        focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-[#25d366]
       "
       aria-label="Contact on WhatsApp"
     >
-      <WhatsAppIcon size={15} />
+      <WhatsAppIcon size={20} />
     </a>
   );
 }
@@ -71,10 +72,11 @@ export function WhatsAppFab({ whatsappNumber, propertyTitle, propertyId }: Whats
         shadow-[var(--shadow-fab)]
         hover:bg-[#20bd5a] active:bg-[#128c7e]
         transition-all duration-200
-        active:scale-95
+        active:scale-95 hover:-translate-y-0.5
+        focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-[#25d366]
         font-semibold text-[15px]
+        bottom-20 pb-safe
       "
-      style={{ bottom: 'calc(4.5rem + env(safe-area-inset-bottom, 0px) + 0.5rem)' }}
       aria-label="Contact property owner on WhatsApp"
     >
       <WhatsAppIcon size={22} />

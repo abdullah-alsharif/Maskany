@@ -14,7 +14,7 @@ type EmptyStateProps = {
 export function EmptyState({ icon, title, description, actionLabel, onAction }: EmptyStateProps) {
   return (
     <div className="flex flex-col items-center justify-center py-16 px-8 text-center animate-fade-in">
-      <div className="w-16 h-16 rounded-2xl bg-stone-100 flex items-center justify-center mb-5 text-stone-400">
+      <div className="w-16 h-16 rounded-2xl bg-terracotta-50 text-terracotta-600 flex items-center justify-center mb-5">
         {icon || <SearchX size={28} strokeWidth={1.5} />}
       </div>
       <h3 className="text-lg font-semibold text-stone-800 mb-1">{title}</h3>

@@ -68,15 +68,17 @@ export function CategoryBar({ selected, onSelect }: CategoryBarProps) {
             onClick={() => onSelect(value)}
             className={`
               flex items-center gap-1.5
-              px-3.5 h-9
+              px-3.5 h-11
               rounded-full whitespace-nowrap
-              text-[13px] font-medium
-              transition-all duration-200
+              text-[13px] font-semibold
+              transition-all duration-150
+              active:scale-[0.96]
+              focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-terracotta-100 focus-visible:border-terracotta-400
               shrink-0
               ${
                 isActive
-                  ? 'bg-stone-900 text-white shadow-sm'
-                  : 'bg-white text-stone-600 border border-stone-200 hover:border-stone-300 hover:bg-stone-50'
+                  ? 'bg-stone-950 text-white shadow-sm'
+                  : 'bg-white text-stone-700 border border-stone-300 hover:border-stone-400 hover:bg-stone-50'
               }
             `}
           >

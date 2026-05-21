@@ -20,8 +20,8 @@ export function FavoriteButton({
     onToggle?.(propertyId);
   };
 
-  const sizeClasses = size === 'sm' ? 'w-8 h-8' : 'w-10 h-10';
-  const iconSize = size === 'sm' ? 16 : 20;
+  const sizeClasses = size === 'sm' ? 'w-11 h-11' : 'w-12 h-12';
+  const iconSize = size === 'sm' ? 18 : 22;
 
   return (
     <button
@@ -33,6 +33,7 @@ export function FavoriteButton({
         shadow-sm hover:shadow-md
         transition-all duration-200
         active:scale-90
+        focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-terracotta-400
         ${isFavorite ? 'text-red-500' : 'text-stone-600 hover:text-red-400'}
       `}
       aria-label={isFavorite ? 'Remove from favorites' : 'Add to favorites'}
