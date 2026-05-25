@@ -21,4 +21,5 @@ export type AuthTokens = {
 export type AuthResponse = {
   accessToken: string;
   user: User;
+  recoveryCodes?: string[];
 };

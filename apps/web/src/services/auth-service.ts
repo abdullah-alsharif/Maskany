@@ -58,3 +58,11 @@ export async function fetchCurrentUser(): Promise<User> {
   const res = await apiClient.get<User>('/auth/me');
   return res.data;
 }
+
+export async function recoverWithBackupCode(
+  identifier: string,
+  code: string,
+): Promise<AuthResponse> {
+  const res = await apiClient.post<AuthResponse>('/auth/recover', { identifier, code });
+  return res.data;
+}

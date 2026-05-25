@@ -59,22 +59,31 @@ function formatPrice(amount: number): string {
 }
 
 function PropertyBody({ property }: { property: Property }) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const [expanded, setExpanded] = useState(false);
   const { isFavorite, toggleFavorite } = useFavorites();
   const { user } = useAuth();
   const reviewViewer = user ? { id: user.id, fullName: user.fullName } : null;
   const typeConfig = propertyTypeConfig[property.propertyType] ?? propertyTypeConfig.OTHER;
-  const isLong = property.description.length > DESCRIPTION_CLAMP;
+  const userLocale = i18n.language.startsWith('ar') ? 'ar' : 'en';
+  const useTranslationContent = userLocale !== property.locale && property.translation;
+  const displayTitle = useTranslationContent && property.translation ? property.translation.title : property.title;
+  const displaySummary = useTranslationContent && property.translation ? property.translation.summary : property.summary;
+  const displayDescriptionRaw = useTranslationContent && property.translation ? property.translation.description : property.description;
+  const displayCity = useTranslationContent && property.translation ? property.translation.city : property.city;
+  const displayArea = useTranslationContent && property.translation ? property.translation.area : property.area;
+  const displayCountry = useTranslationContent && property.translation ? property.translation.country : property.country;
+  const displayAmenities = useTranslationContent && property.translation ? property.translation.amenities : property.amenities;
+  const isLong = (displayDescriptionRaw ?? '').length > DESCRIPTION_CLAMP;
   const displayDescription =
     isLong && !expanded
-      ? `${property.description.slice(0, DESCRIPTION_CLAMP).trimEnd()}…`
-      : property.description;
+      ? `${(displayDescriptionRaw ?? '').slice(0, DESCRIPTION_CLAMP).trimEnd()}…`
+      : (displayDescriptionRaw ?? '');
 
   const handleShare = async () => {
     const shareData = {
-      title: property.title,
-      text: property.summary,
+      title: displayTitle,
+      text: displaySummary ?? undefined,
       url: window.location.href,
     };
     if (typeof navigator.share === 'function') {
@@ -91,8 +100,8 @@ function PropertyBody({ property }: { property: Property }) {
   return (
     <>
       <SeoHead
-        title={`${property.title} | Maskany`}
-        description={property.summary}
+        title={`${displayTitle} | Maskany`}
+        description={displaySummary ?? undefined}
         ogType="article"
         ogImage={property.images?.[0]?.url}
         ogUrl={
@@ -125,18 +134,18 @@ function PropertyBody({ property }: { property: Property }) {
           <section className="space-y-3">
             <div className="flex items-start justify-between gap-3">
               <h1 className="font-display text-3xl text-stone-950 leading-tight">
-                {property.title}
+                {displayTitle}
               </h1>
               <Badge variant={typeConfig.color.includes('terracotta') ? 'terracotta' : 'olive'}>
                 {typeConfig.label}
               </Badge>
             </div>
-            <p className="text-stone-600 text-base">{property.summary}</p>
+            <p className="text-stone-600 text-base">{displaySummary}</p>
             <div className="flex items-center gap-4 text-sm text-stone-600">
               <span className="inline-flex items-center gap-1.5">
                 <MapPin size={16} strokeWidth={2} aria-hidden="true" />
-                {property.area ? `${property.area}, ` : ''}
-                {property.city}
+                {displayArea ? `${displayArea}, ` : ''}
+                {displayCity}
               </span>
               {property.averageRating > 0 && (
                 <span className="inline-flex items-center gap-1">
@@ -220,12 +229,12 @@ function PropertyBody({ property }: { property: Property }) {
           </section>
 
           {/* Amenities */}
-          {property.amenities.length > 0 && (
+          {displayAmenities.length > 0 && (
             <section className="space-y-3">
               <h2 className="text-lg font-semibold text-stone-900">
                 {t('propertyDetail.amenities')}
               </h2>
-              <AmenityChips amenities={property.amenities} />
+              <AmenityChips amenities={displayAmenities} />
             </section>
           )}
 
@@ -262,7 +271,7 @@ function PropertyBody({ property }: { property: Property }) {
 
       <WhatsAppFab
         whatsappNumber={property.whatsappNumber}
-        propertyTitle={property.title}
+        propertyTitle={displayTitle}
         propertyId={property.id}
       />
     </>

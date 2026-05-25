@@ -7,8 +7,9 @@
  * piggyback onto the same service so callers only deal with one
  * module.
  */
+import i18n from 'i18next';
 import { apiClient } from './api';
-import type { Property, PropertyMedia } from '../types/property';
+import type { Property, PropertyMedia, PropertyTranslation } from '../types/property';
 import type { PropertyFormValues } from '../components/property-form';
 
 export type PropertyPayload = {
@@ -26,6 +27,7 @@ export type PropertyPayload = {
   bathrooms: number;
   areaSqm?: string;
   amenities?: string[];
+  locale?: string;
   whatsappNumber: string;
 };
 
@@ -42,6 +44,7 @@ export function toPropertyPayload(values: PropertyFormValues): PropertyPayload {
     priceUnit: values.priceUnit,
     rooms: values.rooms,
     bathrooms: values.bathrooms,
+    locale: i18n.language.startsWith('ar') ? 'ar' : 'en',
     whatsappNumber: values.whatsappNumber.trim(),
   };
   const summary = values.summary.trim();
@@ -74,6 +77,22 @@ export async function updateProperty(
     toPropertyPayload(values),
   );
   return response.data;
+}
+
+export async function savePropertyTranslation(
+  propertyId: string,
+  locale: 'en' | 'ar',
+  data: {
+    title: string;
+    summary?: string | null;
+    description?: string | null;
+    city: string;
+    area?: string | null;
+    country?: string;
+    amenities?: string[];
+  },
+): Promise<void> {
+  await apiClient.put(`/properties/${propertyId}/translations/${locale}`, data);
 }
 
 export async function uploadPropertyImages(

@@ -27,12 +27,24 @@ export function LoginPage() {
 
     let identifier: string;
     if (mode === 'phone') {
-      const digits = phone.replace(/\D/g, '');
+      const raw = phone.trim();
+      if (!raw) {
+        setError(t('login.errorPhone'));
+        return;
+      }
+      const digits = raw.replace(/\D/g, '');
       if (!digits) {
         setError(t('login.errorPhone'));
         return;
       }
-      identifier = `${countryCode}${digits}`;
+      if (raw.startsWith('+')) {
+        identifier = `+${digits}`;
+      } else {
+        const countryDigits = countryCode.replace(/\D/g, '');
+        identifier = digits.startsWith(countryDigits)
+          ? `${countryCode}${digits.slice(countryDigits.length)}`
+          : `${countryCode}${digits}`;
+      }
     } else {
       const trimmed = email.trim();
       if (!trimmed || !trimmed.includes('@')) {

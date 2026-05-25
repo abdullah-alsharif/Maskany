@@ -65,6 +65,11 @@ columns:
     type: text[]
     nullable: false
     default: 'ARRAY[]::text[]'
+  - name: locale
+    type: text
+    nullable: false
+    default: "'en'::text"
+    check: locale = ANY (ARRAY['en'::text, 'ar'::text])
   - name: whatsapp_number
     type: text
     nullable: false

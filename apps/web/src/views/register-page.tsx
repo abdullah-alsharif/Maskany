@@ -31,13 +31,26 @@ export function RegisterPage() {
       return;
     }
 
-    const digits = phone.replace(/\D/g, '');
-    if (!digits) {
+    const raw = phone.trim();
+    if (!raw) {
       setError(t('register.errorPhone'));
       return;
     }
 
-    const identifier = `${countryCode}${digits}`;
+    const digits = raw.replace(/\D/g, '');
+    if (!digits) {
+      setError(t('register.errorPhone'));
+      return;
+    }
+    let identifier: string;
+    if (raw.startsWith('+')) {
+      identifier = `+${digits}`;
+    } else {
+      const countryDigits = countryCode.replace(/\D/g, '');
+      identifier = digits.startsWith(countryDigits)
+        ? `${countryCode}${digits.slice(countryDigits.length)}`
+        : `${countryCode}${digits}`;
+    }
     const trimmedEmail = email.trim();
 
     setSubmitting(true);

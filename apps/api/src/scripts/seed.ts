@@ -36,6 +36,7 @@ type PropertySeed = {
   title: string;
   summary: string;
   description: string;
+  locale?: 'en' | 'ar';
   property_type:
     | 'APARTMENT'
     | 'ROOM'
@@ -114,6 +115,20 @@ const USERS: UserSeed[] = [
     email: 'maya@example.com',
     user_type: 'BROWSER',
   },
+  {
+    key: 'dev-browser',
+    full_name: 'Dev Browser',
+    phone: '+966500009001',
+    email: null,
+    user_type: 'BROWSER',
+  },
+  {
+    key: 'dev-owner',
+    full_name: 'Dev Owner',
+    phone: '+966500009002',
+    email: 'owner@test.com',
+    user_type: 'OWNER',
+  },
 ];
 
 const PROPERTIES: PropertySeed[] = [
@@ -134,6 +149,7 @@ const PROPERTIES: PropertySeed[] = [
     area_sqm: '95.00',
     amenities: ['wifi', 'parking', 'ac', 'furnished'],
     whatsapp_number: '+966501111001',
+    locale: 'en',
     owner_key: 'owner-layla',
   },
   {
@@ -153,6 +169,7 @@ const PROPERTIES: PropertySeed[] = [
     area_sqm: '45.00',
     amenities: ['wifi', 'ac', 'furnished', 'kitchen'],
     whatsapp_number: '+966501111001',
+    locale: 'en',
     owner_key: 'owner-layla',
   },
   {
@@ -172,6 +189,7 @@ const PROPERTIES: PropertySeed[] = [
     area_sqm: '420.00',
     amenities: ['wifi', 'parking', 'pool', 'gym', 'ac', 'security'],
     whatsapp_number: '+966501111001',
+    locale: 'en',
     owner_key: 'owner-layla',
   },
   {
@@ -191,6 +209,7 @@ const PROPERTIES: PropertySeed[] = [
     area_sqm: '18.00',
     amenities: ['wifi', 'ac', 'furnished'],
     whatsapp_number: '+966501111001',
+    locale: 'en',
     owner_key: 'owner-layla',
   },
   {
@@ -210,6 +229,7 @@ const PROPERTIES: PropertySeed[] = [
     area_sqm: '260.00',
     amenities: ['parking', 'ac', 'kitchen', 'security'],
     whatsapp_number: '+966501111001',
+    locale: 'en',
     owner_key: 'owner-layla',
   },
   {
@@ -229,6 +249,7 @@ const PROPERTIES: PropertySeed[] = [
     area_sqm: '180.00',
     amenities: ['wifi', 'pool', 'ac', 'furnished', 'kitchen'],
     whatsapp_number: '+966501111002',
+    locale: 'en',
     owner_key: 'owner-omar',
   },
   {
@@ -248,6 +269,7 @@ const PROPERTIES: PropertySeed[] = [
     area_sqm: '140.00',
     amenities: ['wifi', 'parking', 'gym', 'ac', 'furnished', 'elevator'],
     whatsapp_number: '+966501111002',
+    locale: 'en',
     owner_key: 'owner-omar',
   },
   {
@@ -267,6 +289,7 @@ const PROPERTIES: PropertySeed[] = [
     area_sqm: '360.00',
     amenities: ['wifi', 'parking', 'pool', 'gym', 'ac', 'security'],
     whatsapp_number: '+966501111002',
+    locale: 'en',
     owner_key: 'owner-omar',
   },
   {
@@ -286,6 +309,7 @@ const PROPERTIES: PropertySeed[] = [
     area_sqm: '40.00',
     amenities: ['wifi', 'ac', 'furnished', 'kitchen', 'elevator'],
     whatsapp_number: '+966501111002',
+    locale: 'en',
     owner_key: 'owner-omar',
   },
   {
@@ -305,6 +329,7 @@ const PROPERTIES: PropertySeed[] = [
     area_sqm: '22.00',
     amenities: ['wifi', 'ac', 'furnished', 'balcony'],
     whatsapp_number: '+966501111002',
+    locale: 'en',
     owner_key: 'owner-omar',
   },
   {
@@ -324,6 +349,7 @@ const PROPERTIES: PropertySeed[] = [
     area_sqm: '78.00',
     amenities: ['wifi', 'parking', 'pool', 'gym', 'ac', 'furnished', 'elevator', 'security'],
     whatsapp_number: '+971501111003',
+    locale: 'en',
     owner_key: 'owner-sara',
   },
   {
@@ -343,6 +369,7 @@ const PROPERTIES: PropertySeed[] = [
     area_sqm: '720.00',
     amenities: ['wifi', 'parking', 'pool', 'gym', 'ac', 'furnished', 'security'],
     whatsapp_number: '+971501111003',
+    locale: 'en',
     owner_key: 'owner-sara',
   },
   {
@@ -362,6 +389,7 @@ const PROPERTIES: PropertySeed[] = [
     area_sqm: '52.00',
     amenities: ['wifi', 'pool', 'gym', 'ac', 'furnished', 'balcony', 'elevator'],
     whatsapp_number: '+971501111003',
+    locale: 'en',
     owner_key: 'owner-sara',
   },
   {
@@ -381,7 +409,8 @@ const PROPERTIES: PropertySeed[] = [
     area_sqm: '110.00',
     amenities: ['wifi', 'pool', 'ac', 'furnished', 'kitchen'],
     whatsapp_number: '+962791111005',
-    owner_key: 'owner-omar',
+    locale: 'en',
+    owner_key: 'owner-sara',
   },
   {
     key: 'amman-house-1',
@@ -400,6 +429,7 @@ const PROPERTIES: PropertySeed[] = [
     area_sqm: '240.00',
     amenities: ['wifi', 'parking', 'ac', 'furnished', 'kitchen', 'security'],
     whatsapp_number: '+962791111005',
+    locale: 'en',
     owner_key: 'owner-sara',
   },
   {
@@ -419,6 +449,7 @@ const PROPERTIES: PropertySeed[] = [
     area_sqm: '120.00',
     amenities: ['wifi', 'ac', 'furnished', 'elevator', 'balcony'],
     whatsapp_number: '+966501111002',
+    locale: 'en',
     owner_key: 'owner-omar',
   },
 ];
@@ -627,7 +658,7 @@ export const SEED_COUNTS = {
  * users`) keeps the statement safe even if cross-references are added later.
  */
 export async function truncateAll(client: Trx): Promise<void> {
-  await sql`TRUNCATE TABLE reviews, property_media, properties, otp_codes, refresh_tokens, users RESTART IDENTITY CASCADE`.execute(
+  await sql`TRUNCATE TABLE reviews, property_media, properties, property_translations, otp_codes, refresh_tokens, users RESTART IDENTITY CASCADE`.execute(
     client,
   );
 }
@@ -673,6 +704,7 @@ async function insertProperties(
     .insertInto('properties')
     .values(
       PROPERTIES.map((p) => ({
+        locale: p.locale ?? 'en',
         title: p.title,
         summary: p.summary,
         description: p.description,

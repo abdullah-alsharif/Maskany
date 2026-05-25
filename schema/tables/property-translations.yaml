@@ -1,0 +1,57 @@
+table: property_translations
+comment: Optional translated content for property listings — one row per locale per property.
+columns:
+  - name: property_id
+    type: uuid
+    nullable: false
+    references:
+      table: properties
+      column: id
+      on_delete: CASCADE
+  - name: locale
+    type: text
+    nullable: false
+    check: locale = ANY (ARRAY['en'::text, 'ar'::text])
+  - name: title
+    type: text
+    nullable: false
+  - name: summary
+    type: text
+    nullable: true
+  - name: description
+    type: text
+    nullable: true
+  - name: city
+    type: text
+    nullable: false
+  - name: area
+    type: text
+    nullable: true
+  - name: country
+    type: text
+    nullable: false
+    default: "'SA'::text"
+  - name: amenities
+    type: text[]
+    nullable: false
+    default: 'ARRAY[]::text[]'
+  - name: created_at
+    type: timestamptz
+    nullable: false
+    default: now()
+  - name: updated_at
+    type: timestamptz
+    nullable: false
+    default: now()
+primary_key:
+  - property_id
+  - locale
+indexes:
+  - name: idx_property_translations_property
+    columns: [property_id]
+triggers:
+  - name: trg_property_translations_updated_at
+    timing: BEFORE
+    events: [UPDATE]
+    function: set_updated_timestamp
+    for_each: ROW

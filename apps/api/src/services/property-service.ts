@@ -64,6 +64,7 @@ export interface PropertySummary {
   bathrooms: number;
   areaSqm: string | null;
   amenities: string[];
+  locale: 'en' | 'ar';
   whatsappNumber: string;
   ownerId: string;
   status: 'ACTIVE' | 'INACTIVE' | 'DRAFT';
@@ -83,8 +84,19 @@ export interface PropertyImage {
   mediaType: 'IMAGE' | 'VIDEO';
 }
 
+export interface PropertyTranslation {
+  title: string;
+  summary: string | null;
+  description: string | null;
+  city: string;
+  area: string | null;
+  country: string;
+  amenities: string[];
+}
+
 export interface PropertyDetail extends PropertySummary {
   description: string | null;
+  translation: PropertyTranslation | null;
   lat: number | null;
   lng: number | null;
   images: PropertyImage[];
@@ -125,6 +137,7 @@ function toSummary(row: PropertyRow, cover: CoverImage | null): PropertySummary 
     bathrooms: row.bathrooms,
     areaSqm: row.area_sqm,
     amenities: row.amenities,
+    locale: row.locale,
     whatsappNumber: row.whatsapp_number,
     ownerId: row.owner_id,
     status: row.status,
@@ -173,6 +186,7 @@ const PROPERTY_COLUMNS = [
   'bathrooms',
   'area_sqm',
   'amenities',
+  'locale',
   'whatsapp_number',
   'owner_id',
   'status',
@@ -209,6 +223,7 @@ function buildInsertValues(input: CreatePropertyInput, ownerId: string): Propert
   if (input.country !== undefined) values.country = input.country;
   if (input.currency !== undefined) values.currency = input.currency;
   if (input.amenities !== undefined) values.amenities = input.amenities;
+  if (input.locale !== undefined) values.locale = input.locale;
   if (input.status !== undefined) values.status = input.status;
   return values;
 }
@@ -396,9 +411,11 @@ export async function getPropertyDetail(propertyId: string): Promise<PropertyDet
     .executeTakeFirstOrThrow();
 
   const summary = toSummary(property, null);
+  const translation = await getPropertyTranslation(propertyId, property.locale === 'en' ? 'ar' : 'en');
   return {
     ...summary,
     description: property.description,
+    translation,
     lat: property.lat,
     lng: property.lng,
     images: images.map((image) => ({
@@ -494,6 +511,76 @@ export async function softDeleteProperty(userId: string, propertyId: string): Pr
  * List every property owned by `userId` regardless of status. Used by the
  * "my properties" dashboard endpoint.
  */
+export async function upsertPropertyTranslation(
+  propertyId: string,
+  userId: string,
+  locale: 'en' | 'ar',
+  data: {
+    title: string;
+    summary?: string | null;
+    description?: string | null;
+    city: string;
+    area?: string | null;
+    country?: string;
+    amenities?: string[];
+  },
+): Promise<void> {
+  const property = await loadPropertyOrThrow(propertyId);
+  if (property.owner_id !== userId) {
+    throw new HttpError(403, ErrorCode.FORBIDDEN, 'Only the listing owner can add translations.');
+  }
+  if (property.locale === locale) {
+    throw new HttpError(400, ErrorCode.VALIDATION_ERROR, 'Cannot add a translation for the property\'s original language.');
+  }
+  await db
+    .insertInto('property_translations')
+    .values({
+      property_id: propertyId,
+      locale,
+      title: data.title,
+      summary: data.summary ?? null,
+      description: data.description ?? null,
+      city: data.city,
+      area: data.area ?? null,
+      country: data.country ?? 'SA',
+      amenities: data.amenities ?? [],
+    })
+    .onConflict((oc) =>
+      oc.constraint('property_translations_pkey').doUpdateSet({
+        title: data.title,
+        summary: data.summary ?? null,
+        description: data.description ?? null,
+        city: data.city,
+        area: data.area ?? null,
+        country: data.country ?? 'SA',
+        amenities: data.amenities ?? [],
+      }),
+    )
+    .execute();
+}
+
+export async function getPropertyTranslation(
+  propertyId: string,
+  locale: 'en' | 'ar',
+): Promise<PropertyTranslation | null> {
+  const row = await db
+    .selectFrom('property_translations')
+    .where('property_id', '=', propertyId)
+    .where('locale', '=', locale)
+    .select(['title', 'summary', 'description', 'city', 'area', 'country', 'amenities'])
+    .executeTakeFirst();
+  if (!row) return null;
+  return {
+    title: row.title,
+    summary: row.summary,
+    description: row.description,
+    city: row.city,
+    area: row.area,
+    country: row.country,
+    amenities: row.amenities,
+  };
+}
+
 export async function listMyProperties(userId: string): Promise<PropertySummary[]> {
   const rows = (await db
     .selectFrom('properties')

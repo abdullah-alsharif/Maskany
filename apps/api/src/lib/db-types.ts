@@ -52,6 +52,7 @@ export interface PropertiesTable {
   bathrooms: Generated<number>;
   area_sqm: string | null;
   amenities: Generated<string[]>;
+  locale: Generated<'en' | 'ar'>;
   whatsapp_number: string;
   owner_id: string;
   status: Generated<'ACTIVE' | 'INACTIVE' | 'DRAFT'>;
@@ -113,6 +114,28 @@ export interface PushTokensTable {
   created_at: Generated<Date>;
 }
 
+export interface PropertyTranslationsTable {
+  property_id: string;
+  locale: 'en' | 'ar';
+  title: string;
+  summary: string | null;
+  description: string | null;
+  city: string;
+  area: string | null;
+  country: string;
+  amenities: string[];
+  created_at: Generated<Date>;
+  updated_at: Timestamp;
+}
+
+export interface RecoveryCodesTable {
+  id: Generated<string>;
+  user_id: string;
+  code_hash: string;
+  used_at: Date | string | null;
+  created_at: Generated<Date>;
+}
+
 export interface Database {
   users: UsersTable;
   properties: PropertiesTable;
@@ -121,4 +144,6 @@ export interface Database {
   otp_codes: OtpCodesTable;
   refresh_tokens: RefreshTokensTable;
   push_tokens: PushTokensTable;
+  recovery_codes: RecoveryCodesTable;
+  property_translations: PropertyTranslationsTable;
 }

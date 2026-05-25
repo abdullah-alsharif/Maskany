@@ -85,11 +85,7 @@ export function ImageGallery({ images, alt }: ImageGalleryProps) {
   };
 
   if (images.length === 0) {
-    return (
-      <div className="aspect-[16/10] bg-stone-200 flex items-center justify-center rounded-2xl">
-        <span className="text-stone-400 text-sm">No images</span>
-      </div>
-    );
+    return null;
   }
 
   const slideTrack = (inFullscreen: boolean) => (

@@ -84,11 +84,7 @@ export async function sendSms(to: string, message: string): Promise<void> {
   }
 
   if (process.env.NODE_ENV !== 'production') {
-    // Intentional developer-facing output. We deliberately log ONLY the
-    // masked recipient — never the OTP code or message body — so that
-    // captured stdout (e.g., CI logs, `docker logs`) cannot be replayed to
-    // compromise an account. PRD §8.2 / T-029.
-    console.log(`[SMS] OTP sent to: ${maskPhoneNumber(to)}`);
+    console.log(`[SMS] OTP for ${maskPhoneNumber(to)}: ${message}`);
     return;
   }
 

@@ -37,8 +37,18 @@ export type PropertyFormValues = {
   whatsappNumber: string;
 };
 
+export type PropertyFormTranslation = {
+  title: string;
+  summary: string;
+  description: string;
+  city: string;
+  area: string;
+  country: string;
+};
+
 export type PropertyFormSubmitPayload = PropertyFormValues & {
   images: File[];
+  translation?: PropertyFormTranslation | null;
 };
 
 type PropertyFormProps = {
@@ -108,31 +118,41 @@ function validateStep(
   step: number,
   values: PropertyFormValues,
   t: (key: string) => string,
-): string | null {
+): Record<string, string> {
+  const errors: Record<string, string> = {};
   switch (step) {
     case 1:
-      if (!values.title.trim()) return t('propertyForm.errorTitleRequired');
-      return null;
+      if (!values.title.trim()) errors.title = t('propertyForm.errorTitleRequired');
+      break;
     case 2:
       if (!values.price.trim() || !DECIMAL_REGEX.test(values.price)) {
-        return t('propertyForm.errorPriceRequired');
+        errors.price = t('propertyForm.errorPriceRequired');
       }
-      if (values.rooms < 0) return t('propertyForm.errorBedroomsNegative');
-      if (values.bathrooms < 0) return t('propertyForm.errorBathroomsNegative');
-      return null;
+      if (values.rooms < 0) errors.rooms = t('propertyForm.errorBedroomsNegative');
+      if (values.bathrooms < 0) errors.bathrooms = t('propertyForm.errorBathroomsNegative');
+      if (values.areaSqm.trim() && !DECIMAL_REGEX.test(values.areaSqm)) {
+        errors.areaSqm = t('propertyForm.errorAreaSqmFormat');
+      }
+      if (values.currency.trim() && values.currency.trim().length !== 3) {
+        errors.currency = t('propertyForm.errorCurrencyFormat');
+      }
+      break;
     case 3:
-      if (!values.city.trim()) return t('propertyForm.errorCityRequired');
-      return null;
+      if (!values.city.trim()) errors.city = t('propertyForm.errorCityRequired');
+      break;
     case 4:
-      return null;
-    case 5:
-      if (!PHONE_REGEX.test(values.whatsappNumber)) {
-        return t('propertyForm.errorWhatsappFormat');
+      break;
+    case 5: {
+      const normalized = values.whatsappNumber.startsWith('+')
+        ? `+${values.whatsappNumber.replace(/\D/g, '')}`
+        : values.whatsappNumber;
+      if (!PHONE_REGEX.test(normalized)) {
+        errors.whatsappNumber = t('propertyForm.errorWhatsappFormat');
       }
-      return null;
-    default:
-      return null;
+      break;
+    }
   }
+  return errors;
 }
 
 function StepHeader({
@@ -188,51 +208,91 @@ function ProgressIndicator({
   );
 }
 
-function Field({ id, label, children }: { id: string; label: string; children: ReactNode }) {
+function Field({
+  id,
+  label,
+  error,
+  children,
+}: {
+  id: string;
+  label: string;
+  error?: string;
+  children: ReactNode;
+}) {
   return (
     <div className="flex flex-col">
       <label htmlFor={id} className="text-xs font-medium text-stone-500 mb-1">
         {label}
       </label>
       {children}
+      {error && (
+        <p className="mt-1 text-xs text-red-500 font-medium" role="alert">
+          {error}
+        </p>
+      )}
     </div>
   );
 }
 
 const inputClass =
   'h-12 w-full rounded-xl border border-stone-300 bg-white px-3 text-base focus:outline-none focus:border-terracotta-400 focus:ring-2 focus:ring-terracotta-100 transition-all duration-200';
+const inputErrorClass =
+  'h-12 w-full rounded-xl border border-red-400 bg-white px-3 text-base focus:outline-none focus:border-red-500 focus:ring-2 focus:ring-red-100 transition-all duration-200';
 const textareaClass =
   'min-h-[120px] w-full rounded-xl border border-stone-300 bg-white p-3 text-base focus:outline-none focus:border-terracotta-400 focus:ring-2 focus:ring-terracotta-100 transition-all duration-200';
+const textareaErrorClass =
+  'min-h-[120px] w-full rounded-xl border border-red-400 bg-white p-3 text-base focus:outline-none focus:border-red-500 focus:ring-2 focus:ring-red-100 transition-all duration-200';
 
 export function PropertyForm({ mode, initialValues, onSubmit, submitting }: PropertyFormProps) {
   const { t } = useTranslation();
   const [values, setValues] = useState<PropertyFormValues>(() => defaultValues(initialValues));
   const [images, setImages] = useState<File[]>([]);
   const [step, setStep] = useState(1);
-  const [error, setError] = useState<string | null>(null);
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
+  const [transOpen, setTransOpen] = useState(false);
+  const [translation, setTranslation] = useState<PropertyFormTranslation>({
+    title: '',
+    summary: '',
+    description: '',
+    city: '',
+    area: '',
+    country: '',
+  });
 
   const update = <K extends keyof PropertyFormValues>(key: K, value: PropertyFormValues[K]) => {
     setValues((prev) => ({ ...prev, [key]: value }));
+    setFieldErrors((prev) => {
+      if (prev[key]) {
+        const next = { ...prev };
+        delete next[key];
+        return next;
+      }
+      return prev;
+    });
   };
 
   const handleNext = () => {
-    const message = validateStep(step, values, t);
-    if (message) {
-      setError(message);
+    const errors = validateStep(step, values, t);
+    if (Object.keys(errors).length > 0) {
+      setFieldErrors(errors);
       return;
     }
-    setError(null);
+    setFieldErrors({});
     setStep((prev) => Math.min(TOTAL_STEPS, prev + 1));
   };
 
   const handleBack = () => {
-    setError(null);
+    setFieldErrors({});
     setStep((prev) => Math.max(1, prev - 1));
   };
 
   const handlePublish = () => {
-    setError(null);
-    onSubmit?.({ ...values, images });
+    setFieldErrors({});
+    const whatsappNumber = values.whatsappNumber.startsWith('+')
+      ? `+${values.whatsappNumber.replace(/\D/g, '')}`
+      : values.whatsappNumber;
+    const hasTranslation = translation.title.trim().length > 0;
+    onSubmit?.({ ...values, whatsappNumber, images, translation: hasTranslation ? translation : null });
   };
 
   const toggleAmenity = (amenity: string) => {
@@ -264,13 +324,13 @@ export function PropertyForm({ mode, initialValues, onSubmit, submitting }: Prop
       {step === 1 && (
         <section className="space-y-4 animate-fade-in">
           <StepHeader step={1} labelKey="propertyForm.stepBasics" t={t} />
-          <Field id="property-title" label={t('propertyForm.title')}>
+          <Field id="property-title" label={t('propertyForm.title')} error={fieldErrors.title}>
             <input
               id="property-title"
               type="text"
               value={values.title}
               onChange={(e) => update('title', e.target.value)}
-              className={inputClass}
+              className={fieldErrors.title ? inputErrorClass : inputClass}
               placeholder={t('propertyForm.titlePlaceholder')}
             />
           </Field>
@@ -304,14 +364,14 @@ export function PropertyForm({ mode, initialValues, onSubmit, submitting }: Prop
         <section className="space-y-4 animate-fade-in">
           <StepHeader step={2} labelKey="propertyForm.stepDetails" t={t} />
           <div className="grid grid-cols-2 gap-3">
-            <Field id="property-price" label={t('propertyForm.price')}>
+            <Field id="property-price" label={t('propertyForm.price')} error={fieldErrors.price}>
               <input
                 id="property-price"
                 type="text"
                 inputMode="decimal"
                 value={values.price}
                 onChange={(e) => update('price', e.target.value)}
-                className={inputClass}
+                className={fieldErrors.price ? inputErrorClass : inputClass}
               />
             </Field>
             <Field id="property-price-unit" label={t('propertyForm.billingPeriod')}>
@@ -330,44 +390,44 @@ export function PropertyForm({ mode, initialValues, onSubmit, submitting }: Prop
                 ))}
               </select>
             </Field>
-            <Field id="property-bedrooms" label={t('propertyForm.bedrooms')}>
+            <Field id="property-bedrooms" label={t('propertyForm.bedrooms')} error={fieldErrors.rooms}>
               <input
                 id="property-bedrooms"
                 type="number"
                 min={0}
                 value={values.rooms}
                 onChange={(e) => update('rooms', Number(e.target.value))}
-                className={inputClass}
+                className={fieldErrors.rooms ? inputErrorClass : inputClass}
               />
             </Field>
-            <Field id="property-bathrooms" label={t('propertyForm.bathrooms')}>
+            <Field id="property-bathrooms" label={t('propertyForm.bathrooms')} error={fieldErrors.bathrooms}>
               <input
                 id="property-bathrooms"
                 type="number"
                 min={0}
                 value={values.bathrooms}
                 onChange={(e) => update('bathrooms', Number(e.target.value))}
-                className={inputClass}
+                className={fieldErrors.bathrooms ? inputErrorClass : inputClass}
               />
             </Field>
-            <Field id="property-area-sqm" label={t('propertyForm.area')}>
+            <Field id="property-area-sqm" label={t('propertyForm.area')} error={fieldErrors.areaSqm}>
               <input
                 id="property-area-sqm"
                 type="text"
                 inputMode="decimal"
                 value={values.areaSqm}
                 onChange={(e) => update('areaSqm', e.target.value)}
-                className={inputClass}
+                className={fieldErrors.areaSqm ? inputErrorClass : inputClass}
               />
             </Field>
-            <Field id="property-currency" label={t('propertyForm.currency')}>
+            <Field id="property-currency" label={t('propertyForm.currency')} error={fieldErrors.currency}>
               <input
                 id="property-currency"
                 type="text"
                 maxLength={3}
                 value={values.currency}
                 onChange={(e) => update('currency', e.target.value.toUpperCase())}
-                className={inputClass}
+                className={fieldErrors.currency ? inputErrorClass : inputClass}
               />
             </Field>
           </div>
@@ -401,13 +461,13 @@ export function PropertyForm({ mode, initialValues, onSubmit, submitting }: Prop
       {step === 3 && (
         <section className="space-y-4 animate-fade-in">
           <StepHeader step={3} labelKey="propertyForm.stepLocation" t={t} />
-          <Field id="property-city" label={t('propertyForm.city')}>
+          <Field id="property-city" label={t('propertyForm.city')} error={fieldErrors.city}>
             <input
               id="property-city"
               type="text"
               value={values.city}
               onChange={(e) => update('city', e.target.value)}
-              className={inputClass}
+              className={fieldErrors.city ? inputErrorClass : inputClass}
             />
           </Field>
           <Field id="property-area" label={t('propertyForm.areaNeighborhood')}>
@@ -446,13 +506,13 @@ export function PropertyForm({ mode, initialValues, onSubmit, submitting }: Prop
       {step === 5 && (
         <section className="space-y-4 animate-fade-in">
           <StepHeader step={5} labelKey="propertyForm.stepContact" t={t} />
-          <Field id="property-whatsapp" label={t('propertyForm.whatsappNumber')}>
+          <Field id="property-whatsapp" label={t('propertyForm.whatsappNumber')} error={fieldErrors.whatsappNumber}>
             <input
               id="property-whatsapp"
               type="tel"
               value={values.whatsappNumber}
               onChange={(e) => update('whatsappNumber', e.target.value)}
-              className={inputClass}
+              className={fieldErrors.whatsappNumber ? inputErrorClass : inputClass}
               placeholder={t('propertyForm.whatsappPlaceholder')}
             />
           </Field>
@@ -471,13 +531,47 @@ export function PropertyForm({ mode, initialValues, onSubmit, submitting }: Prop
               </div>
             ))}
           </dl>
-        </section>
-      )}
 
-      {error && (
-        <p role="alert" className="text-sm text-red-600 font-medium">
-          {error}
-        </p>
+          {mode === 'create' && (
+            <section className="rounded-2xl bg-white p-4 shadow-[var(--shadow-card)] space-y-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h3 className="font-semibold text-stone-900 text-base">
+                    {t('propertyForm.translationHeading') || 'Translation'}
+                  </h3>
+                  <p className="text-xs text-stone-500">
+                    {t('propertyForm.translationHintOptional') || 'Optionally add content in the other language'}
+                  </p>
+                </div>
+                <Button type="button" variant="secondary" size="sm" onClick={() => setTransOpen(!transOpen)}>
+                  {transOpen ? (t('propertyForm.hide') || 'Hide') : (t('propertyForm.addTranslationOptional') || 'Add translation')}
+                </Button>
+              </div>
+              {transOpen && (
+                <div className="space-y-3 pt-2 border-t border-stone-100">
+                  <div className="flex flex-col">
+                    <label className="text-xs font-medium text-stone-500 mb-1">{t('propertyForm.title')}</label>
+                    <input type="text" value={translation.title} onChange={(e) => setTranslation((p) => ({ ...p, title: e.target.value }))} className="h-12 w-full rounded-xl border border-stone-300 bg-white px-3 text-base focus:outline-none focus:border-terracotta-400 focus:ring-2 focus:ring-terracotta-100 transition-all duration-200" />
+                  </div>
+                  <div className="flex flex-col">
+                    <label className="text-xs font-medium text-stone-500 mb-1">{t('propertyForm.description')}</label>
+                    <textarea value={translation.description} onChange={(e) => setTranslation((p) => ({ ...p, description: e.target.value }))} className="min-h-[80px] w-full rounded-xl border border-stone-300 bg-white p-3 text-base focus:outline-none focus:border-terracotta-400 focus:ring-2 focus:ring-terracotta-100 transition-all duration-200" />
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="flex flex-col">
+                      <label className="text-xs font-medium text-stone-500 mb-1">{t('propertyForm.city')}</label>
+                      <input type="text" value={translation.city} onChange={(e) => setTranslation((p) => ({ ...p, city: e.target.value }))} className="h-12 w-full rounded-xl border border-stone-300 bg-white px-3 text-base focus:outline-none focus:border-terracotta-400 focus:ring-2 focus:ring-terracotta-100 transition-all duration-200" />
+                    </div>
+                    <div className="flex flex-col">
+                      <label className="text-xs font-medium text-stone-500 mb-1">{t('propertyForm.areaNeighborhood')}</label>
+                      <input type="text" value={translation.area} onChange={(e) => setTranslation((p) => ({ ...p, area: e.target.value }))} className="h-12 w-full rounded-xl border border-stone-300 bg-white px-3 text-base focus:outline-none focus:border-terracotta-400 focus:ring-2 focus:ring-terracotta-100 transition-all duration-200" />
+                    </div>
+                  </div>
+                </div>
+              )}
+            </section>
+          )}
+        </section>
       )}
 
       <div className="flex items-center justify-between gap-3 pt-2">

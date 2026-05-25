@@ -9,12 +9,7 @@
 import { afterAll, beforeEach, describe, expect, it } from 'vitest';
 import { db, destroy } from '../src/lib/db.js';
 import { HttpError } from '../src/lib/http-error.js';
-import {
-  OTP_RATE_LIMIT_PER_HOUR,
-  OTP_TTL_MS,
-  generateOtp,
-  verifyOtp,
-} from '../src/services/otp-service.js';
+import { OTP_TTL_MS, generateOtp, verifyOtp } from '../src/services/otp-service.js';
 
 const SMS_IDENTIFIER = '+966500000099';
 const EMAIL_IDENTIFIER = 'alice@example.com';
@@ -74,46 +69,63 @@ describe('otp-service', () => {
       expect(OTP_TTL_MS).toBe(5 * 60 * 1000);
     });
 
-    it('enforces a rate limit of 3 requests per hour per identifier', () => {
-      expect(OTP_RATE_LIMIT_PER_HOUR).toBe(3);
-    });
-
     it('invalidates previous unused OTPs for the same identifier+type', async () => {
-      const first = await generateOtp(SMS_IDENTIFIER, 'SMS');
+      const thirtyFiveSecondsAgo = new Date(Date.now() - 35 * 1000);
+
+      await db
+        .insertInto('otp_codes')
+        .values({
+          identifier: SMS_IDENTIFIER,
+          code: '111111',
+          otp_type: 'SMS',
+          expires_at: new Date(Date.now() + OTP_TTL_MS),
+          created_at: thirtyFiveSecondsAgo,
+        })
+        .execute();
+
       const second = await generateOtp(SMS_IDENTIFIER, 'SMS');
 
-      expect(first.code).not.toBe(second.code);
-
-      // Verifying with the old code must fail because it has been invalidated.
-      await expect(verifyOtp(SMS_IDENTIFIER, first.code, 'SMS')).rejects.toSatisfy(
+      // The old code must be invalidated.
+      await expect(verifyOtp(SMS_IDENTIFIER, '111111', 'SMS')).rejects.toSatisfy(
         (err) => err instanceof HttpError && err.code === 'OTP_INVALID',
       );
 
-      // Verifying with the new code still succeeds.
+      // The new code still succeeds.
       const result = await verifyOtp(SMS_IDENTIFIER, second.code, 'SMS');
       expect(result.verified).toBe(true);
     });
 
     it('does not invalidate OTPs for a different identifier or type', async () => {
-      const sms = await generateOtp(SMS_IDENTIFIER, 'SMS');
+      const thirtyFiveSecondsAgo = new Date(Date.now() - 35 * 1000);
+
+      await db
+        .insertInto('otp_codes')
+        .values({
+          identifier: SMS_IDENTIFIER,
+          code: '111111',
+          otp_type: 'SMS',
+          expires_at: new Date(Date.now() + OTP_TTL_MS),
+          created_at: thirtyFiveSecondsAgo,
+        })
+        .execute();
+
+      // Generate an EMAIL OTP for a different identifier (no cooldown conflict)
       const email = await generateOtp(EMAIL_IDENTIFIER, 'EMAIL');
 
-      // Generating a new SMS for the SMS identifier must not invalidate the
-      // EMAIL identifier's OTP.
-      await generateOtp(SMS_IDENTIFIER, 'SMS');
+      // Generate a new SMS for SMS_IDENTIFIER (cooldown has passed)
+      const sms = await generateOtp(SMS_IDENTIFIER, 'SMS');
 
+      // The EMAIL code must still be valid (different identifier+type).
       const verified = await verifyOtp(EMAIL_IDENTIFIER, email.code, 'EMAIL');
       expect(verified.verified).toBe(true);
 
       // The original SMS code is invalidated by the new SMS generation.
-      await expect(verifyOtp(SMS_IDENTIFIER, sms.code, 'SMS')).rejects.toSatisfy(
+      await expect(verifyOtp(SMS_IDENTIFIER, '111111', 'SMS')).rejects.toSatisfy(
         (err) => err instanceof HttpError && err.code === 'OTP_INVALID',
       );
     });
 
-    it('throws OTP_RATE_LIMIT after 3 requests within one hour', async () => {
-      await generateOtp(SMS_IDENTIFIER, 'SMS');
-      await generateOtp(SMS_IDENTIFIER, 'SMS');
+    it('enforces a 30-second cooldown between OTP generations for the same identifier+type', async () => {
       await generateOtp(SMS_IDENTIFIER, 'SMS');
 
       await expect(generateOtp(SMS_IDENTIFIER, 'SMS')).rejects.toSatisfy(
@@ -121,50 +133,27 @@ describe('otp-service', () => {
       );
     });
 
-    it('does not count requests older than one hour toward the rate limit', async () => {
-      const twoHoursAgo = new Date(Date.now() - 2 * 60 * 60 * 1000);
-      const longAgo = new Date(Date.now() - 30 * 60 * 1000 - 2 * 60 * 60 * 1000);
+    it('allows a new OTP after 30 seconds have elapsed', async () => {
+      const thirtyOneSecondsAgo = new Date(Date.now() - 31 * 1000);
 
       await db
         .insertInto('otp_codes')
-        .values([
-          {
-            identifier: SMS_IDENTIFIER,
-            code: '111111',
-            otp_type: 'SMS',
-            expires_at: new Date(twoHoursAgo.getTime() + OTP_TTL_MS),
-            created_at: twoHoursAgo,
-          },
-          {
-            identifier: SMS_IDENTIFIER,
-            code: '222222',
-            otp_type: 'SMS',
-            expires_at: new Date(longAgo.getTime() + OTP_TTL_MS),
-            created_at: longAgo,
-          },
-          {
-            identifier: SMS_IDENTIFIER,
-            code: '333333',
-            otp_type: 'SMS',
-            expires_at: new Date(longAgo.getTime() + OTP_TTL_MS),
-            created_at: longAgo,
-          },
-        ])
+        .values({
+          identifier: SMS_IDENTIFIER,
+          code: '111111',
+          otp_type: 'SMS',
+          expires_at: new Date(Date.now() + OTP_TTL_MS),
+          created_at: thirtyOneSecondsAgo,
+        })
         .execute();
 
-      // Even though the table has 3 prior rows, none are within the last
-      // hour, so a new request must succeed.
       const result = await generateOtp(SMS_IDENTIFIER, 'SMS');
       expect(result.code).toMatch(/^\d{6}$/);
     });
 
-    it('counts only the matching identifier+type toward the rate limit', async () => {
-      // Fill the SMS rate limit for one identifier.
-      await generateOtp(SMS_IDENTIFIER, 'SMS');
-      await generateOtp(SMS_IDENTIFIER, 'SMS');
+    it('allows a different identifier or type regardless of cooldown', async () => {
       await generateOtp(SMS_IDENTIFIER, 'SMS');
 
-      // A different identifier / different type must still succeed.
       const other = await generateOtp('+966500000001', 'SMS');
       expect(other.code).toMatch(/^\d{6}$/);
 

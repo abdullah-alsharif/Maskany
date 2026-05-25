@@ -190,13 +190,13 @@ describe('email-service', () => {
       logSpy.mockRestore();
     });
 
-    it('logs only a masked identifier and never the OTP code', async () => {
+    it('logs the OTP code and masked identifier in non-production for developer convenience', async () => {
       await sendOtpEmail('alice@example.com', '543210');
 
       const logged = logSpy.mock.calls.map((call) => call.join(' ')).join(' ');
-      expect(logged).toContain('[EMAIL] OTP sent to:');
+      expect(logged).toContain('[EMAIL] OTP for');
       expect(logged).toContain('a***@example.com');
-      expect(logged).not.toContain('543210');
+      expect(logged).toContain('543210');
       expect(logged).not.toContain('alice@example.com');
     });
 

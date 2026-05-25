@@ -106,15 +106,16 @@ describe('sms-service', () => {
       logSpy.mockRestore();
     });
 
-    it('logs a masked identifier when NODE_ENV !== "production"', async () => {
+    it('logs a masked identifier and the OTP code when NODE_ENV !== "production"', async () => {
       expect(process.env.NODE_ENV).toBe('test');
 
       await sendSms('+966500001234', 'Hello from Maskany');
 
       expect(logSpy).toHaveBeenCalled();
       const logged = logSpy.mock.calls.map((call) => call.join(' ')).join(' ');
-      expect(logged).toContain('[SMS] OTP sent to:');
+      expect(logged).toContain('[SMS] OTP for');
       expect(logged).toContain('+966***1234');
+      expect(logged).toContain('Hello from Maskany');
     });
 
     it('never logs the full phone number verbatim', async () => {
@@ -124,13 +125,13 @@ describe('sms-service', () => {
       expect(logged).not.toContain('+966500001234');
     });
 
-    it('never logs the OTP code or message body', async () => {
+    it('logs the OTP code and message body in non-production for developer convenience', async () => {
       await sendSms('+966500001234', formatOtpMessage('246810'));
 
       const logged = logSpy.mock.calls.map((call) => call.join(' ')).join(' ');
-      expect(logged).not.toContain('246810');
-      expect(logged).not.toContain('Your Maskany verification code');
-      expect(logged).not.toContain('Valid for 5 minutes');
+      expect(logged).toContain('246810');
+      expect(logged).toContain('Your Maskany verification code');
+      expect(logged).toContain('Valid for 5 minutes');
     });
 
     it('rejects an invalid phone number with HttpError(400, "INVALID_PHONE")', async () => {

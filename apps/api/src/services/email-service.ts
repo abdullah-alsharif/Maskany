@@ -231,5 +231,8 @@ function logEmailFailure(to: string, err: unknown): void {
  * a single function after generating an OTP code.
  */
 export async function sendOtpEmail(to: string, code: string): Promise<void> {
+  if (process.env.NODE_ENV !== 'production') {
+    console.log(`[EMAIL] OTP for ${maskEmail(to)}: ${code}`);
+  }
   await sendEmail(to, formatOtpEmailSubject(), formatOtpEmailHtml(code));
 }

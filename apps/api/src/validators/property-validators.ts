@@ -53,6 +53,7 @@ const propertyFieldShape = {
   bathrooms: z.number().int().nonnegative(),
   areaSqm: z.string().regex(DECIMAL_REGEX, 'Area must be a positive decimal string.').optional(),
   amenities: z.array(z.string().trim().min(1)).optional(),
+  locale: z.enum(['en', 'ar']).optional(),
   whatsappNumber: z
     .string()
     .regex(PHONE_REGEX, 'WhatsApp number must be in E.164 format (e.g., +9665xxxxxxxx).'),

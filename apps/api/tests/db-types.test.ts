@@ -6,15 +6,17 @@
  * actually executes them.
  */
 import { describe, expect, it } from 'vitest';
-import type {
-  Database,
-  UsersTable,
-  PropertiesTable,
-  PropertyMediaTable,
-  PushTokensTable,
-  ReviewsTable,
-  OtpCodesTable,
-  RefreshTokensTable,
+import {
+  type Database,
+  type OtpCodesTable,
+  type PropertiesTable,
+  type PropertyMediaTable,
+  type PropertyTranslationsTable,
+  type PushTokensTable,
+  type RecoveryCodesTable,
+  type RefreshTokensTable,
+  type ReviewsTable,
+  type UsersTable,
 } from '../src/lib/db-types.js';
 
 describe('db-types interfaces', () => {
@@ -29,6 +31,8 @@ describe('db-types interfaces', () => {
       otp_codes: null as unknown as OtpCodesTable,
       refresh_tokens: null as unknown as RefreshTokensTable,
       push_tokens: null as unknown as PushTokensTable,
+      recovery_codes: null as unknown as RecoveryCodesTable,
+      property_translations: null as unknown as PropertyTranslationsTable,
     } satisfies Database;
 
     expect(Object.keys(witness).sort()).toEqual(
@@ -36,7 +40,9 @@ describe('db-types interfaces', () => {
         'otp_codes',
         'properties',
         'property_media',
+        'property_translations',
         'push_tokens',
+        'recovery_codes',
         'refresh_tokens',
         'reviews',
         'users',
@@ -79,6 +85,7 @@ describe('db-types interfaces', () => {
       bathrooms: true,
       area_sqm: true,
       amenities: true,
+      locale: true,
       whatsapp_number: true,
       owner_id: true,
       status: true,
@@ -157,5 +164,24 @@ describe('db-types interfaces', () => {
 
     expect(Object.keys(refreshKeys)).toContain('user_id');
     expect(Object.keys(refreshKeys)).toContain('expires_at');
+  });
+
+  it('uses snake_case column names on PropertyTranslationsTable matching the YAML schema', () => {
+    const translationKeys: Record<keyof PropertyTranslationsTable, true> = {
+      property_id: true,
+      locale: true,
+      title: true,
+      summary: true,
+      description: true,
+      city: true,
+      area: true,
+      country: true,
+      amenities: true,
+      created_at: true,
+      updated_at: true,
+    };
+
+    expect(Object.keys(translationKeys)).toContain('property_id');
+    expect(Object.keys(translationKeys)).toContain('locale');
   });
 });

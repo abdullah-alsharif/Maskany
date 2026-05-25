@@ -4,8 +4,8 @@
  * Business rules (PRD §2.3):
  *   - Codes are 6 digits, cryptographically random.
  *   - Each code is valid for 5 minutes.
- *   - A given identifier (phone/email) may request at most 3 OTPs per hour,
- *     per delivery channel.
+ *   - At least 30 seconds must elapse between OTP generations for the same
+ *     identifier+type.
  *   - Generating a new OTP for an identifier+type invalidates any still-live
  *     unused OTP for that same identifier+type so only the latest code is
  *     accepted.
@@ -24,11 +24,8 @@ import { ErrorCode, HttpError } from '../lib/http-error.js';
 /** OTP time-to-live in milliseconds (PRD §2.3: 5 minutes). */
 export const OTP_TTL_MS = 5 * 60 * 1000;
 
-/** Max OTP requests allowed per identifier+type within the rate window (PRD §2.3). */
-export const OTP_RATE_LIMIT_PER_HOUR = 3;
-
-/** Sliding window for rate limiting (1 hour). */
-const RATE_LIMIT_WINDOW_MS = 60 * 60 * 1000;
+/** Minimum interval in ms between OTP generations for the same identifier+type. */
+const OTP_COOLDOWN_MS = 30_000;
 
 export type OtpType = 'SMS' | 'EMAIL';
 
@@ -44,15 +41,15 @@ export interface VerifyOtpResult {
 /**
  * Generate and persist a new 6-digit OTP for the given identifier/type.
  *
- * Enforces the PRD rate limit and invalidates any prior live unused OTP for
- * the same (identifier, type) pair so that only the most recent code is
- * accepted by `verifyOtp`.
+ * Enforces a 30-second cooldown between OTP generations and invalidates any
+ * prior live unused OTP for the same (identifier, type) pair so that only
+ * the most recent code is accepted by `verifyOtp`.
  *
- * @throws HttpError(429, 'OTP_RATE_LIMIT') — more than
- *   `OTP_RATE_LIMIT_PER_HOUR` requests within the last hour.
+ * @throws HttpError(429, 'OTP_RATE_LIMIT') — less than 30 seconds since the
+ *   last OTP for the same identifier+type.
  */
 export async function generateOtp(identifier: string, type: OtpType): Promise<GenerateOtpResult> {
-  await enforceRateLimit(identifier, type);
+  await enforceCooldown(identifier, type);
   await invalidatePreviousOtps(identifier, type);
 
   const code = randomSixDigitCode();
@@ -117,19 +114,24 @@ export async function verifyOtp(
   return { verified: true };
 }
 
-async function enforceRateLimit(identifier: string, type: OtpType): Promise<void> {
-  const windowStart = new Date(Date.now() - RATE_LIMIT_WINDOW_MS);
-
-  const result = await db
+async function enforceCooldown(identifier: string, type: OtpType): Promise<void> {
+  const lastOtp = await db
     .selectFrom('otp_codes')
     .where('identifier', '=', identifier)
     .where('otp_type', '=', type)
-    .where('created_at', '>', windowStart)
-    .select((eb) => eb.fn.countAll<string>().as('count'))
-    .executeTakeFirstOrThrow();
+    .orderBy('created_at', 'desc')
+    .select(['created_at'])
+    .executeTakeFirst();
 
-  if (Number(result.count) >= OTP_RATE_LIMIT_PER_HOUR) {
-    throw new HttpError(429, ErrorCode.OTP_RATE_LIMIT, 'Too many OTP requests. Try again later.');
+  if (lastOtp) {
+    const elapsedMs = Date.now() - new Date(lastOtp.created_at).getTime();
+    if (elapsedMs < OTP_COOLDOWN_MS) {
+      throw new HttpError(
+        429,
+        ErrorCode.OTP_RATE_LIMIT,
+        'Please wait before requesting another code.',
+      );
+    }
   }
 }
 

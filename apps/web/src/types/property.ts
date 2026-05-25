@@ -49,6 +49,16 @@ export type PropertyOwner = {
  * district `area`). `media` and `images` are optional because the list
  * endpoint returns summaries without the media array.
  */
+export type PropertyTranslation = {
+  title: string;
+  summary: string | null;
+  description: string | null;
+  city: string;
+  area: string | null;
+  country: string;
+  amenities: string[];
+};
+
 export type CoverImage = {
   url: string;
   thumbnailUrl: string | null;
@@ -77,9 +87,11 @@ export type Property = {
   media?: PropertyMedia[];
   /** Convenience getter — images only (video media is excluded). */
   images?: PropertyMedia[];
+  locale: 'en' | 'ar';
   whatsappNumber: string;
   ownerId: string;
   owner?: PropertyOwner;
+  translation?: PropertyTranslation | null;
   status: PropertyStatus;
   averageRating: number;
   reviewCount: number;

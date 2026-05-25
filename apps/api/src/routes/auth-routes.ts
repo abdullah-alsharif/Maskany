@@ -14,6 +14,7 @@
  * `HttpError(400, 'VALIDATION_ERROR')` with a `details` array. All other
  * failure modes reuse the project's standard error envelope.
  */
+import { createHash, randomBytes } from 'node:crypto';
 import { type Request, type Response, Router } from 'express';
 import { z } from 'zod';
 import { db } from '../lib/db.js';
@@ -33,7 +34,12 @@ import {
 } from '../services/auth-service.js';
 import { isValidEmail, sendOtpEmail } from '../services/email-service.js';
 import { generateOtp, verifyOtp } from '../services/otp-service.js';
-import { formatOtpMessage, isValidPhoneNumber, sendSms } from '../services/sms-service.js';
+import {
+  formatOtpMessage,
+  isValidPhoneNumber,
+  maskPhoneNumber,
+  sendSms,
+} from '../services/sms-service.js';
 import { PHONE_REGEX } from '../validators/property-validators.js';
 
 const registerSchema = z.object({
@@ -177,7 +183,19 @@ export function createAuthRouter(): Router {
         .executeTakeFirstOrThrow();
 
       const { code } = await generateOtp(body.phone, 'SMS');
-      await sendSms(body.phone, formatOtpMessage(code));
+      try {
+        await sendSms(body.phone, formatOtpMessage(code));
+      } catch (smsErr) {
+        if (body.email) {
+          console.warn('[SMS] delivery failed, falling back to email', {
+            phone: maskPhoneNumber(body.phone),
+            error: smsErr instanceof Error ? smsErr.message : 'Unknown',
+          });
+          await sendOtpEmail(body.email, code);
+        } else {
+          throw smsErr;
+        }
+      }
 
       res.status(201).json({
         message: 'Registration started. Enter the code we sent to verify your account.',
@@ -207,7 +225,19 @@ export function createAuthRouter(): Router {
 
       const { code } = await generateOtp(body.identifier, channel);
       if (channel === 'SMS') {
-        await sendSms(body.identifier, formatOtpMessage(code));
+        try {
+          await sendSms(body.identifier, formatOtpMessage(code));
+        } catch (smsErr) {
+          if (user.email) {
+            console.warn('[SMS] delivery failed, falling back to email', {
+              phone: maskPhoneNumber(body.identifier),
+              error: smsErr instanceof Error ? smsErr.message : 'Unknown',
+            });
+            await sendOtpEmail(user.email, code);
+          } else {
+            throw smsErr;
+          }
+        }
       } else {
         await sendOtpEmail(body.identifier, code);
       }
@@ -230,9 +260,19 @@ export function createAuthRouter(): Router {
 
       const user = await findUserByIdentifier(body.identifier);
       if (!user) {
-        // Covers the case where a user was deleted between OTP issuance and
-        // verification — surface as 401 rather than a 500.
         throw new HttpError(401, ErrorCode.UNAUTHORIZED, 'User no longer exists.');
+      }
+
+      // Generate recovery codes on first OTP verification
+      const existing = await db
+        .selectFrom('recovery_codes')
+        .where('user_id', '=', user.id)
+        .select('id')
+        .executeTakeFirst();
+
+      let recoveryCodes: string[] | undefined;
+      if (!existing) {
+        recoveryCodes = await createRecoveryCodes(user.id);
       }
 
       const accessToken = issueAccessToken(user.id);
@@ -242,6 +282,7 @@ export function createAuthRouter(): Router {
       res.status(200).json({
         accessToken,
         user: toUserDto(user),
+        ...(recoveryCodes ? { recoveryCodes } : {}),
       });
     } catch (err) {
       next(err);
@@ -277,6 +318,64 @@ export function createAuthRouter(): Router {
       }
       clearRefreshTokenCookie(res);
       res.status(200).json({ message: 'Logged out.' });
+    } catch (err) {
+      next(err);
+    }
+  });
+
+  async function createRecoveryCodes(userId: string): Promise<string[]> {
+    const codes: { plaintext: string; code_hash: string }[] = [];
+    for (let i = 0; i < 8; i++) {
+      const plaintext = randomBytes(5).toString('hex');
+      const code_hash = createHash('sha256').update(plaintext).digest('hex');
+      codes.push({ plaintext, code_hash });
+    }
+
+    await db
+      .insertInto('recovery_codes')
+      .values(codes.map((c) => ({ user_id: userId, code_hash: c.code_hash, used_at: null })))
+      .execute();
+
+    return codes.map((c) => c.plaintext);
+  }
+
+  const recoverSchema = z.object({
+    identifier: z.string().trim().min(1),
+    code: z.string().regex(/^[0-9a-f]{10}$/, 'Recovery code must be 10 characters.'),
+  });
+
+  router.post('/recover', async (req, res, next) => {
+    try {
+      const body = parseOrThrow(recoverSchema, req.body);
+
+      const user = await findUserByIdentifier(body.identifier);
+      if (!user) {
+        throw new HttpError(404, ErrorCode.USER_NOT_FOUND, 'No account matches that identifier.');
+      }
+
+      const codeHash = createHash('sha256').update(body.code).digest('hex');
+
+      const consumed = await db
+        .updateTable('recovery_codes')
+        .set({ used_at: new Date() })
+        .where('user_id', '=', user.id)
+        .where('code_hash', '=', codeHash)
+        .where('used_at', 'is', null)
+        .returning('id')
+        .executeTakeFirst();
+
+      if (!consumed) {
+        throw new HttpError(401, ErrorCode.UNAUTHORIZED, 'Invalid or already used recovery code.');
+      }
+
+      const accessToken = issueAccessToken(user.id);
+      const refreshToken = await createRefreshToken(user.id);
+      setRefreshTokenCookie(res, refreshToken);
+
+      res.status(200).json({
+        accessToken,
+        user: toUserDto(user),
+      });
     } catch (err) {
       next(err);
     }

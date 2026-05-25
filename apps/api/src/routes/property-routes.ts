@@ -14,7 +14,9 @@
  * forwarding errors to the global error handler.
  */
 import { Router } from 'express';
+import { z } from 'zod';
 import { parseOrThrow } from '../lib/validation.js';
+import { ErrorCode, HttpError } from '../lib/http-error.js';
 import {
   type AuthenticatedRequest,
   requireAuth,
@@ -28,6 +30,7 @@ import {
   listMyProperties,
   softDeleteProperty,
   updateProperty,
+  upsertPropertyTranslation,
 } from '../services/property-service.js';
 import {
   createPropertySchema,
@@ -117,6 +120,31 @@ export function createPropertyRouter(): Router {
       const params = parseOrThrow(propertyIdParamSchema, req.params);
       await softDeleteProperty(userId, params.id);
       res.status(204).send();
+    } catch (err) {
+      next(err);
+    }
+  });
+
+  router.put('/:id/translations/:locale', requireAuth, async (req: AuthenticatedRequest, res, next) => {
+    try {
+      const userId = requireUserId(req);
+      const params = parseOrThrow(propertyIdParamSchema, req.params);
+      const locale = req.params['locale'] as string;
+      if (locale !== 'en' && locale !== 'ar') {
+        throw new HttpError(400, ErrorCode.VALIDATION_ERROR, 'Locale must be "en" or "ar".');
+      }
+      const translationSchema = z.object({
+        title: z.string().trim().min(1).max(120),
+        summary: z.string().trim().max(300).optional(),
+        description: z.string().optional(),
+        city: z.string().trim().min(1),
+        area: z.string().trim().optional(),
+        country: z.string().trim().min(2).optional(),
+        amenities: z.array(z.string().trim().min(1)).optional(),
+      });
+      const body = parseOrThrow(translationSchema, req.body);
+      await upsertPropertyTranslation(params.id, userId, locale as 'en' | 'ar', body);
+      res.status(200).json({ message: 'Translation saved.' });
     } catch (err) {
       next(err);
     }
