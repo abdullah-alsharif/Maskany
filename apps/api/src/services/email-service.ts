@@ -105,7 +105,7 @@ export function formatOtpEmailHtml(code: string): string {
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>${OTP_EMAIL_SUBJECT}</title>
   </head>
-  <body style="margin:0;padding:0;background-color:#fdfcfa;font-family:'Plus Jakarta Sans',Arial,sans-serif;color:#1c1917;">
+  <body style="margin:0;padding:0;background-color:#fdfcfa;font-family:'Outfit',Arial,sans-serif;color:#1c1917;">
     <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#fdfcfa;">
       <tr>
         <td align="center" style="padding:32px 16px;">

@@ -141,7 +141,7 @@ describe('MyPropertiesPage', () => {
     fireEvent.click(screen.getByRole('button', { name: /delete old villa/i }));
     // Confirmation dialog
     expect(screen.getByRole('dialog')).toBeInTheDocument();
-    fireEvent.click(screen.getByRole('button', { name: /confirm delete/i }));
+    fireEvent.click(screen.getByRole('button', { name: /yes, delete listing/i }));
 
     await waitFor(() => {
       const deleteCall = captured.find((c) => c.method?.toLowerCase() === 'delete');

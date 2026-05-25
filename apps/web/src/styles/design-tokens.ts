@@ -71,7 +71,7 @@ export const colors = {
 export const typography = {
   fontFamily: {
     display: "'DM Serif Display', Georgia, serif",
-    sans: "'Plus Jakarta Sans', system-ui, sans-serif",
+    sans: "'Outfit', system-ui, sans-serif",
   },
   /** Mobile-first type scale (px) */
   scale: {
