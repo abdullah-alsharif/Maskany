@@ -55,6 +55,7 @@ export function BottomNav() {
               href={to}
               aria-label={label}
               aria-current={isActive ? 'page' : undefined}
+              suppressHydrationWarning
               className={`
                 relative flex flex-col items-center justify-center
                 w-16 h-12 rounded-xl
@@ -85,6 +86,7 @@ export function BottomNav() {
                 )}
               </span>
               <span
+                suppressHydrationWarning
                 className={`text-[10px] mt-0.5 tracking-tight transition-all duration-300 ${isActive ? 'font-semibold' : 'font-medium'}`}
               >
                 {label}

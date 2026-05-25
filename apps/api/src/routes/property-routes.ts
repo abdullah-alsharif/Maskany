@@ -25,11 +25,12 @@ import {
 import { parseAmenitiesParam, parseTypesParam } from '../services/filter-service.js';
 import {
   createProperty,
+  deleteProperty,
   getPropertyDetail,
   listActiveProperties,
   listMyProperties,
-  softDeleteProperty,
   updateProperty,
+  updatePropertyStatus,
   upsertPropertyTranslation,
 } from '../services/property-service.js';
 import {
@@ -37,6 +38,7 @@ import {
   listPropertiesQuerySchema,
   propertyIdParamSchema,
   updatePropertySchema,
+  updatePropertyStatusSchema,
 } from '../validators/property-validators.js';
 
 export function createPropertyRouter(): Router {
@@ -118,8 +120,20 @@ export function createPropertyRouter(): Router {
     try {
       const userId = requireUserId(req);
       const params = parseOrThrow(propertyIdParamSchema, req.params);
-      await softDeleteProperty(userId, params.id);
+      await deleteProperty(userId, params.id);
       res.status(204).send();
+    } catch (err) {
+      next(err);
+    }
+  });
+
+  router.patch('/:id/status', requireAuth, async (req: AuthenticatedRequest, res, next) => {
+    try {
+      const userId = requireUserId(req);
+      const params = parseOrThrow(propertyIdParamSchema, req.params);
+      const body = parseOrThrow(updatePropertyStatusSchema, req.body);
+      await updatePropertyStatus(userId, params.id, body.status);
+      res.status(200).json({ status: body.status });
     } catch (err) {
       next(err);
     }

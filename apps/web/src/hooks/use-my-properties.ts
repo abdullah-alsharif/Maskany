@@ -26,3 +26,26 @@ export function useDeleteProperty() {
     },
   });
 }
+
+export function useUpdatePropertyStatus() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({
+      propertyId,
+      status,
+    }: {
+      propertyId: string;
+      status: 'ACTIVE' | 'INACTIVE';
+    }) => {
+      const response = await apiClient.patch<{ status: string }>(
+        `/properties/${propertyId}/status`,
+        { status },
+      );
+      return response.data;
+    },
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ['my-properties'] });
+    },
+  });
+}

@@ -168,4 +168,61 @@ describe('MyPropertiesPage', () => {
     const link = screen.getByRole('link', { name: /new listing/i });
     expect(link.getAttribute('href')).toBe('/properties/create');
   });
+
+  it('deactivates an active property via PATCH /properties/:id/status', async () => {
+    const properties = [makeProperty({ id: 'p1', title: 'Villa' })];
+    responder = (config) => {
+      if (config.method?.toLowerCase() === 'patch') {
+        properties[0] = { ...properties[0], status: 'INACTIVE' };
+        return ok({ status: 'INACTIVE' });
+      }
+      return ok({ properties });
+    };
+    renderPage();
+    await waitFor(() => expect(screen.getByText(/villa/i)).toBeInTheDocument());
+
+    fireEvent.click(screen.getByRole('button', { name: /deactivate villa/i }));
+
+    await waitFor(() => {
+      const patchCall = captured.find((c) => c.method?.toLowerCase() === 'patch');
+      expect(patchCall?.url).toBe('/properties/p1/status');
+      expect(JSON.parse(patchCall?.data as string)).toEqual({ status: 'INACTIVE' });
+    });
+  });
+
+  it('activates an inactive property via PATCH /properties/:id/status', async () => {
+    const properties = [makeProperty({ id: 'p1', title: 'Villa', status: 'INACTIVE' })];
+    responder = (config) => {
+      if (config.method?.toLowerCase() === 'patch') {
+        properties[0] = { ...properties[0], status: 'ACTIVE' };
+        return ok({ status: 'ACTIVE' });
+      }
+      return ok({ properties });
+    };
+    renderPage();
+    await waitFor(() => expect(screen.getByText(/villa/i)).toBeInTheDocument());
+
+    fireEvent.click(screen.getByRole('button', { name: /activate villa/i }));
+
+    await waitFor(() => {
+      const patchCall = captured.find((c) => c.method?.toLowerCase() === 'patch');
+      expect(patchCall?.url).toBe('/properties/p1/status');
+      expect(JSON.parse(patchCall?.data as string)).toEqual({ status: 'ACTIVE' });
+    });
+  });
+
+  it('renders the activate/deactivate button for each property', async () => {
+    responder = () =>
+      ok({
+        properties: [
+          makeProperty({ id: 'p1', title: 'Active One', status: 'ACTIVE' }),
+          makeProperty({ id: 'p2', title: 'Inactive Two', status: 'INACTIVE' }),
+        ],
+      });
+    renderPage();
+    await waitFor(() => expect(screen.getByText(/active one/i)).toBeInTheDocument());
+
+    expect(screen.getByRole('button', { name: /deactivate active one/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /activate inactive two/i })).toBeInTheDocument();
+  });
 });

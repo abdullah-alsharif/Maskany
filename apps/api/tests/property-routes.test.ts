@@ -419,7 +419,7 @@ describe('property routes', () => {
   });
 
   describe('DELETE /api/properties/:id', () => {
-    it('soft-deletes the property (status=INACTIVE) and returns 204', async () => {
+    it('hard-deletes the property and returns 204', async () => {
       const owner = await createUser('Delete Owner', '+966500010015', 'OWNER');
       const propertyId = await insertProperty(owner.id);
       const token = issueAccessToken(owner.id);
@@ -433,12 +433,12 @@ describe('property routes', () => {
       const row = await db
         .selectFrom('properties')
         .where('id', '=', propertyId)
-        .select('status')
-        .executeTakeFirstOrThrow();
-      expect(row.status).toBe('INACTIVE');
+        .select('id')
+        .executeTakeFirst();
+      expect(row).toBeUndefined();
     });
 
-    it('deleted (inactive) properties are excluded from the public listing', async () => {
+    it('deleted properties are excluded from the public listing', async () => {
       const owner = await createUser('Hidden Owner', '+966500010016', 'OWNER');
       const visible = await insertProperty(owner.id, { title: 'Visible' });
       const hidden = await insertProperty(owner.id, { title: 'Hidden' });
@@ -468,13 +468,6 @@ describe('property routes', () => {
 
       expect(response.status).toBe(403);
       expect(response.body.error.code).toBe('FORBIDDEN');
-
-      const row = await db
-        .selectFrom('properties')
-        .where('id', '=', propertyId)
-        .select('status')
-        .executeTakeFirstOrThrow();
-      expect(row.status).toBe('ACTIVE');
     });
 
     it('returns 404 when deleting a non-existent property', async () => {
@@ -487,6 +480,85 @@ describe('property routes', () => {
 
       expect(response.status).toBe(404);
       expect(response.body.error.code).toBe('PROPERTY_NOT_FOUND');
+    });
+  });
+
+  describe('PATCH /api/properties/:id/status', () => {
+    it('toggles a property from ACTIVE to INACTIVE', async () => {
+      const owner = await createUser('Status Owner 1', '+966500010030', 'OWNER');
+      const propertyId = await insertProperty(owner.id, { status: 'ACTIVE' });
+      const token = issueAccessToken(owner.id);
+
+      const response = await request(app)
+        .patch(`/api/properties/${propertyId}/status`)
+        .set('Authorization', `Bearer ${token}`)
+        .send({ status: 'INACTIVE' });
+
+      expect(response.status).toBe(200);
+      expect(response.body.status).toBe('INACTIVE');
+
+      const row = await db
+        .selectFrom('properties')
+        .where('id', '=', propertyId)
+        .select('status')
+        .executeTakeFirstOrThrow();
+      expect(row.status).toBe('INACTIVE');
+    });
+
+    it('toggles a property from INACTIVE to ACTIVE', async () => {
+      const owner = await createUser('Status Owner 2', '+966500010031', 'OWNER');
+      const propertyId = await insertProperty(owner.id, { status: 'INACTIVE' });
+      const token = issueAccessToken(owner.id);
+
+      const response = await request(app)
+        .patch(`/api/properties/${propertyId}/status`)
+        .set('Authorization', `Bearer ${token}`)
+        .send({ status: 'ACTIVE' });
+
+      expect(response.status).toBe(200);
+      expect(response.body.status).toBe('ACTIVE');
+    });
+
+    it('returns 403 when another owner tries to change status', async () => {
+      const ownerA = await createUser('Status Owner 3A', '+966500010032', 'OWNER');
+      const ownerB = await createUser('Status Owner 3B', '+966500010033', 'OWNER');
+      const propertyId = await insertProperty(ownerA.id);
+      const token = issueAccessToken(ownerB.id);
+
+      const response = await request(app)
+        .patch(`/api/properties/${propertyId}/status`)
+        .set('Authorization', `Bearer ${token}`)
+        .send({ status: 'INACTIVE' });
+
+      expect(response.status).toBe(403);
+      expect(response.body.error.code).toBe('FORBIDDEN');
+    });
+
+    it('returns 404 when changing status of a non-existent property', async () => {
+      const owner = await createUser('Status NotFound', '+966500010034', 'OWNER');
+      const token = issueAccessToken(owner.id);
+
+      const response = await request(app)
+        .patch('/api/properties/00000000-0000-0000-0000-000000000000/status')
+        .set('Authorization', `Bearer ${token}`)
+        .send({ status: 'INACTIVE' });
+
+      expect(response.status).toBe(404);
+      expect(response.body.error.code).toBe('PROPERTY_NOT_FOUND');
+    });
+
+    it('returns 400 for an invalid status value', async () => {
+      const owner = await createUser('Status Invalid', '+966500010035', 'OWNER');
+      const propertyId = await insertProperty(owner.id);
+      const token = issueAccessToken(owner.id);
+
+      const response = await request(app)
+        .patch(`/api/properties/${propertyId}/status`)
+        .set('Authorization', `Bearer ${token}`)
+        .send({ status: 'DELETED' });
+
+      expect(response.status).toBe(400);
+      expect(response.body.error.code).toBe('VALIDATION_ERROR');
     });
   });
 

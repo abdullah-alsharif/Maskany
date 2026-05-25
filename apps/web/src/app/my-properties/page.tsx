@@ -1,5 +1,3 @@
-'use client';
-
 import { OwnerRoute } from '../../components/auth/owner-route';
 import { MyPropertiesPage } from '../../views/my-properties-page';
 

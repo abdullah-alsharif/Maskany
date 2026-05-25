@@ -162,6 +162,10 @@ export const listPropertiesQuerySchema = z
     { message: 'minPrice must be less than or equal to maxPrice.', path: ['minPrice'] },
   );
 
+export const updatePropertyStatusSchema = z.object({
+  status: z.enum(['ACTIVE', 'INACTIVE']),
+});
+
 export type CreatePropertyInput = z.infer<typeof createPropertySchema>;
 export type UpdatePropertyInput = z.infer<typeof updatePropertySchema>;
 export type ListPropertiesQuery = z.infer<typeof listPropertiesQuerySchema>;

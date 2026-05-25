@@ -487,10 +487,10 @@ export async function updateProperty(
 }
 
 /**
- * Soft-delete a property listing by setting status to INACTIVE. Enforces
- * that the caller is the listing owner. Missing property surfaces as 404.
+ * Permanently delete a property listing. Enforces that the caller is the
+ * listing owner. Missing property surfaces as 404.
  */
-export async function softDeleteProperty(userId: string, propertyId: string): Promise<void> {
+export async function deleteProperty(userId: string, propertyId: string): Promise<void> {
   const existing = await loadPropertyOrThrow(propertyId);
   if (existing.owner_id !== userId) {
     throw new HttpError(
@@ -501,8 +501,32 @@ export async function softDeleteProperty(userId: string, propertyId: string): Pr
   }
 
   await db
+    .deleteFrom('properties')
+    .where('id', '=', propertyId)
+    .execute();
+}
+
+/**
+ * Toggle a property's status between ACTIVE and INACTIVE. Enforces that
+ * the caller is the listing owner. Missing property surfaces as 404.
+ */
+export async function updatePropertyStatus(
+  userId: string,
+  propertyId: string,
+  status: 'ACTIVE' | 'INACTIVE',
+): Promise<void> {
+  const existing = await loadPropertyOrThrow(propertyId);
+  if (existing.owner_id !== userId) {
+    throw new HttpError(
+      403,
+      ErrorCode.FORBIDDEN,
+      'Only the listing owner can change the property status.',
+    );
+  }
+
+  await db
     .updateTable('properties')
-    .set({ status: 'INACTIVE' })
+    .set({ status })
     .where('id', '=', propertyId)
     .execute();
 }

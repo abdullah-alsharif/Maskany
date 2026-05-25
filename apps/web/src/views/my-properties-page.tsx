@@ -3,14 +3,18 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { Pencil, Plus, Trash2 } from 'lucide-react';
+import { Pencil, Plus, Power, Trash2 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { Badge } from '../components/ui/badge';
 import { Button } from '../components/ui/button';
 import { NoProperties } from '../components/ui/empty-state';
 import { SkeletonCard } from '../components/skeleton-card';
 import { SeoHead } from '../components/seo-head';
-import { useDeleteProperty, useMyProperties } from '../hooks/use-my-properties';
+import {
+  useDeleteProperty,
+  useMyProperties,
+  useUpdatePropertyStatus,
+} from '../hooks/use-my-properties';
 import type { Property, PropertyStatus } from '../types/property';
 
 function DeleteDialog({
@@ -61,9 +65,13 @@ function DeleteDialog({
 function PropertyRow({
   property,
   onDelete,
+  onToggleStatus,
+  statusPending,
 }: {
   property: Property;
   onDelete: (p: Property) => void;
+  onToggleStatus: (p: Property) => void;
+  statusPending: boolean;
 }) {
   const { t } = useTranslation();
 
@@ -78,6 +86,9 @@ function PropertyRow({
     INACTIVE: 'stone',
     DRAFT: 'sand',
   };
+
+  const isActive = property.status === 'ACTIVE';
+  const toggleLabel = isActive ? 'myProperties.deactivate' : 'myProperties.activate';
 
   return (
     <article className="rounded-2xl bg-white shadow-[var(--shadow-card)] p-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -103,6 +114,16 @@ function PropertyRow({
           {t('myProperties.edit')}
         </Link>
         <Button
+          variant="secondary"
+          size="sm"
+          loading={statusPending}
+          aria-label={`${t(toggleLabel)} ${property.title}`}
+          onClick={() => onToggleStatus(property)}
+        >
+          <Power size={16} aria-hidden="true" />
+          {t(toggleLabel)}
+        </Button>
+        <Button
           variant="danger"
           size="sm"
           aria-label={`${t('myProperties.delete')} ${property.title}`}
@@ -123,6 +144,7 @@ export function MyPropertiesPage() {
 
   const { data, isPending } = useMyProperties();
   const deleteMutation = useDeleteProperty();
+  const statusMutation = useUpdatePropertyStatus();
 
   const properties = data?.properties ?? [];
 
@@ -131,6 +153,11 @@ export function MyPropertiesPage() {
     deleteMutation.mutate(pendingDelete.id, {
       onSuccess: () => setPendingDelete(null),
     });
+  };
+
+  const handleToggleStatus = (property: Property) => {
+    const newStatus = property.status === 'ACTIVE' ? 'INACTIVE' : 'ACTIVE';
+    statusMutation.mutate({ propertyId: property.id, status: newStatus });
   };
 
   return (
@@ -161,7 +188,13 @@ export function MyPropertiesPage() {
       ) : (
         <div className="grid grid-cols-1 gap-4 px-4 py-4">
           {properties.map((property) => (
-            <PropertyRow key={property.id} property={property} onDelete={setPendingDelete} />
+            <PropertyRow
+              key={property.id}
+              property={property}
+              onDelete={setPendingDelete}
+              onToggleStatus={handleToggleStatus}
+              statusPending={statusMutation.isPending}
+            />
           ))}
         </div>
       )}

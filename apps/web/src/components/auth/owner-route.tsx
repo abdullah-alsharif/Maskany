@@ -6,25 +6,30 @@
  * Unauthenticated visitors are redirected to /login. Authenticated users
  * without the OWNER type are redirected to /.
  */
-import { type PropsWithChildren, useEffect } from 'react';
+import { type PropsWithChildren, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '../../hooks/use-auth';
 
 export function OwnerRoute({ children }: PropsWithChildren) {
   const { isAuthenticated, user } = useAuth();
   const router = useRouter();
+  const [hydrated, setHydrated] = useState(false);
 
   useEffect(() => {
+    setHydrated(true);
+  }, []);
+
+  useEffect(() => {
+    if (!hydrated) return;
     if (!isAuthenticated) {
       router.replace('/login');
     } else if (user?.userType !== 'OWNER') {
       router.replace('/');
     }
-  }, [isAuthenticated, user, router]);
+  }, [hydrated, isAuthenticated, user, router]);
 
-  if (!isAuthenticated || user?.userType !== 'OWNER') {
-    return null;
-  }
+  if (!hydrated) return null;
+  if (!isAuthenticated || user?.userType !== 'OWNER') return null;
 
   return <>{children}</>;
 }
