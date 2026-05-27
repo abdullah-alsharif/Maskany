@@ -20,7 +20,7 @@ test.describe('Search', () => {
     const initialCount = await grid.locator('article').count();
     expect(initialCount).toBeGreaterThan(1);
 
-    const searchInput = page.getByLabel('Search properties');
+    const searchInput = page.getByLabel('Search properties').first();
     await searchInput.fill(RIYADH_QUERY);
 
     // Wait for the debounced query to land and the grid to refresh.

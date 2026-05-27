@@ -85,6 +85,27 @@ describe('OfflineBanner', () => {
     renderBanner();
     expect(screen.getByRole('button', { name: /retry/i })).toBeInTheDocument();
   });
+
+  it('reloads the page when retry is clicked', () => {
+    const reloadSpy = vi.fn();
+    Object.defineProperty(window, 'location', {
+      writable: true,
+      value: { reload: reloadSpy },
+    });
+    Object.defineProperty(navigator, 'onLine', {
+      writable: true,
+      configurable: true,
+      value: false,
+    });
+    renderBanner();
+    screen.getByRole('button', { name: /retry/i }).click();
+    expect(reloadSpy).toHaveBeenCalledOnce();
+  });
+
+  it('cleans up event listeners on unmount (no crash)', () => {
+    const { unmount } = renderBanner();
+    expect(() => unmount()).not.toThrow();
+  });
 });
 
 describe('PwaInit service worker registration', () => {

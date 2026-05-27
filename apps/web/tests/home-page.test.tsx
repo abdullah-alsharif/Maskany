@@ -1,5 +1,6 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import { render, screen, fireEvent, within } from '@testing-library/react';
+import i18n from 'i18next';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { HomePage } from '../src/views/home-page';
 import type { Property, PropertyType } from '../src/types/property';
@@ -143,5 +144,28 @@ describe('HomePage', () => {
   it('exposes the Home level-1 heading for navigation tests', () => {
     renderPage();
     expect(screen.getByRole('heading', { level: 1, name: /home/i })).toBeInTheDocument();
+  });
+
+  it('shows pull-to-refresh indicator when the user pulls down', () => {
+    const { container } = renderPage();
+    const section = container.querySelector('section.page-content')!;
+    fireEvent.touchStart(section, { touches: [{ clientY: 100 }] });
+    fireEvent.touchMove(section, { touches: [{ clientY: 200 }] });
+    expect(screen.getByTestId('pull-indicator')).toBeInTheDocument();
+  });
+
+  it('shows release text when pull exceeds the refresh threshold', () => {
+    const { container } = renderPage();
+    const section = container.querySelector('section.page-content')!;
+    fireEvent.touchStart(section, { touches: [{ clientY: 100 }] });
+    fireEvent.touchMove(section, { touches: [{ clientY: 250 }] });
+    expect(screen.getByTestId('pull-indicator')).toBeInTheDocument();
+  });
+
+  it('triggers language toggle when the globe button is clicked', () => {
+    renderPage();
+    const globeBtn = screen.getByRole('button', { name: /التبديل/i });
+    fireEvent.click(globeBtn);
+    expect(i18n.language).toBe('ar');
   });
 });

@@ -11,24 +11,26 @@ import { useRouter } from 'next/navigation';
 import { useAuth } from '../../hooks/use-auth';
 
 export function OwnerRoute({ children }: PropsWithChildren) {
-  const { isAuthenticated, user } = useAuth();
+  const { isAuthenticated, user, hydrated: authHydrated } = useAuth();
   const router = useRouter();
-  const [hydrated, setHydrated] = useState(false);
+  const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
-    setHydrated(true);
+    setMounted(true);
   }, []);
 
+  const ready = mounted && authHydrated;
+
   useEffect(() => {
-    if (!hydrated) return;
+    if (!ready) return;
     if (!isAuthenticated) {
       router.replace('/login');
     } else if (user?.userType !== 'OWNER') {
       router.replace('/');
     }
-  }, [hydrated, isAuthenticated, user, router]);
+  }, [ready, isAuthenticated, user, router]);
 
-  if (!hydrated) return null;
+  if (!ready) return null;
   if (!isAuthenticated || user?.userType !== 'OWNER') return null;
 
   return <>{children}</>;

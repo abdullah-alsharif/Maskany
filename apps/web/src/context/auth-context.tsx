@@ -35,6 +35,7 @@ export interface AuthContextValue {
   accessToken: string | null;
   isAuthenticated: boolean;
   isLoading: boolean;
+  hydrated: boolean;
   login: (session: AuthResponse) => void;
   logout: () => Promise<void>;
   setAccessToken: (token: string) => void;
@@ -43,13 +44,23 @@ export interface AuthContextValue {
 export const AuthContext = createContext<AuthContextValue | null>(null);
 
 export function AuthProvider({ children }: PropsWithChildren) {
-  const [user, setUser] = useState<User | null>(() => tokenStorage.getUser());
-  const [accessToken, setAccessTokenState] = useState<string | null>(() =>
-    tokenStorage.getAccessToken(),
-  );
+  const [user, setUser] = useState<User | null>(null);
+  const [accessToken, setAccessTokenState] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(false);
+  const [hydrated, setHydrated] = useState(false);
 
   const accessTokenRef = useRef<string | null>(accessToken);
+
+  // Hydrate from localStorage on client mount. The useState initializer
+  // cannot do this because it runs on the server during SSR, where
+  // localStorage is unavailable, and React does not re-run it during
+  // client hydration.
+  useEffect(() => {
+    setUser(tokenStorage.getUser());
+    setAccessTokenState(tokenStorage.getAccessToken());
+    setHydrated(true);
+  }, []);
+
   useEffect(() => {
     accessTokenRef.current = accessToken;
   }, [accessToken]);
@@ -111,11 +122,12 @@ export function AuthProvider({ children }: PropsWithChildren) {
       accessToken,
       isAuthenticated: Boolean(accessToken && user),
       isLoading,
+      hydrated,
       login,
       logout,
       setAccessToken,
     }),
-    [user, accessToken, isLoading, login, logout, setAccessToken],
+    [user, accessToken, isLoading, hydrated, login, logout, setAccessToken],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

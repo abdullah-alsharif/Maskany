@@ -118,4 +118,41 @@ describe('StarRating — interactive mode', () => {
     const rateOne = screen.getByRole('button', { name: /^rate 1 star$/i });
     expect(rateOne.className).toMatch(/scale/);
   });
+
+  it('shows hover preview on focus and resets on blur', () => {
+    const { container } = render(<StarRating value={0} onChange={() => {}} />);
+    const rateFour = screen.getByRole('button', { name: /^rate 4 stars$/i });
+    fireEvent.focus(rateFour);
+    expect(countByFill(container, 'full')).toBe(4);
+    expect(countByFill(container, 'empty')).toBe(1);
+    fireEvent.blur(rateFour);
+    expect(countByFill(container, 'full')).toBe(0);
+    expect(countByFill(container, 'empty')).toBe(5);
+  });
+
+  it('resets hover preview on mouse leave', () => {
+    const { container } = render(<StarRating value={0} onChange={() => {}} />);
+    const rateFour = screen.getByRole('button', { name: /^rate 4 stars$/i });
+    fireEvent.mouseEnter(rateFour);
+    expect(countByFill(container, 'full')).toBe(4);
+    const starsRow = container.querySelector('[role="radiogroup"] > div')!;
+    fireEvent.mouseLeave(starsRow);
+    expect(countByFill(container, 'full')).toBe(0);
+  });
+
+  it('handles right-half click on last star to set rating to 5', () => {
+    const handleChange = vi.fn();
+    render(<StarRating value={0} onChange={handleChange} />);
+    const rateFive = screen.getByRole('button', { name: /^rate 5 stars$/i });
+    fireEvent.click(rateFive);
+    expect(handleChange).toHaveBeenCalledWith(5);
+  });
+
+  it('shows half-star hover preview on left-half focus', () => {
+    const { container } = render(<StarRating value={0} onChange={() => {}} />);
+    const leftHalfTwo = screen.getByRole('button', { name: /^rate 1\.5 stars$/i });
+    fireEvent.focus(leftHalfTwo);
+    expect(countByFill(container, 'full')).toBe(1);
+    expect(countByFill(container, 'half')).toBe(1);
+  });
 });

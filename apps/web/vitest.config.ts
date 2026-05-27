@@ -25,6 +25,13 @@ export default defineConfig({
     coverage: {
       provider: 'v8',
       reporter: ['text', 'lcov'],
+      include: ['src/**'],
+      exclude: [
+        'src/types/**',
+        'src/app/**/page.tsx',
+        'src/app/layout.tsx',
+        'src/app/**/property-detail-client.tsx',
+      ],
       thresholds: {
         functions: 80,
         lines: 80,

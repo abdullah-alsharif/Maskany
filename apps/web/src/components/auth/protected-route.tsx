@@ -5,23 +5,30 @@
  *
  * Unauthenticated visitors are redirected to /login.
  */
-import { type PropsWithChildren, useEffect } from 'react';
+import { type PropsWithChildren, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '../../hooks/use-auth';
 
 export function ProtectedRoute({ children }: PropsWithChildren) {
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, hydrated } = useAuth();
   const router = useRouter();
+  const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  const ready = mounted && hydrated;
+
+  useEffect(() => {
+    if (!ready) return;
     if (!isAuthenticated) {
       router.replace('/login');
     }
-  }, [isAuthenticated, router]);
+  }, [ready, isAuthenticated, router]);
 
-  if (!isAuthenticated) {
-    return null;
-  }
+  if (!ready) return null;
+  if (!isAuthenticated) return null;
 
   return <>{children}</>;
 }

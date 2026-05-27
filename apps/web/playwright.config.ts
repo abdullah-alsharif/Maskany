@@ -78,7 +78,7 @@ export default defineConfig({
       },
     },
     {
-      command: `pnpm exec next dev -p ${TEST_WEB_PORT}`,
+      command: `pnpm exec next dev --webpack -p ${TEST_WEB_PORT}`,
       cwd: __dirname,
       url: `http://localhost:${TEST_WEB_PORT}`,
       reuseExistingServer: !process.env.CI,

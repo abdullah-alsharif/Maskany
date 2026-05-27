@@ -119,9 +119,9 @@ export interface PropertyListPage {
 
 type PropertyRow = Selectable<PropertiesTable>;
 
-type CoverImage = { url: string; thumbnailUrl: string | null; altText: string | null };
+export type CoverImage = { url: string; thumbnailUrl: string | null; altText: string | null };
 
-function toSummary(row: PropertyRow, cover: CoverImage | null): PropertySummary {
+export function toSummary(row: PropertyRow, cover: CoverImage | null): PropertySummary {
   return {
     id: row.id,
     title: row.title,
@@ -202,7 +202,7 @@ const PROPERTY_COLUMNS = [
  * or `null`/default so Postgres column defaults (country='SA',
  * currency='SAR', status='ACTIVE') apply when the caller omits them.
  */
-function buildInsertValues(input: CreatePropertyInput, ownerId: string): PropertyInsert {
+export function buildInsertValues(input: CreatePropertyInput, ownerId: string): PropertyInsert {
   const values: PropertyInsert = {
     title: input.title,
     summary: input.summary ?? null,
@@ -233,7 +233,7 @@ function buildInsertValues(input: CreatePropertyInput, ownerId: string): Propert
  * Absent keys are NOT included so the existing column value survives —
  * Kysely only writes the keys that appear here.
  */
-function buildUpdateValues(input: UpdatePropertyInput): PropertyUpdate {
+export function buildUpdateValues(input: UpdatePropertyInput): PropertyUpdate {
   const values: PropertyUpdate = {};
   if (input.title !== undefined) values.title = input.title;
   if (input.summary !== undefined) values.summary = input.summary;
