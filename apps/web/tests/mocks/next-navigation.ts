@@ -48,25 +48,27 @@ export function usePathname(): string {
   return _pathname;
 }
 
+const router = {
+  push(url: string) {
+    _pushHistory.push(url);
+    const [p, s = ''] = url.split('?');
+    _pathname = p;
+    _search = s;
+  },
+  replace(url: string) {
+    _replaceHistory.push(url);
+    const [p, s = ''] = url.split('?');
+    _pathname = p;
+    _search = s;
+  },
+  back() {},
+  forward() {},
+  refresh() {},
+  prefetch() {},
+};
+
 export function useRouter() {
-  return {
-    push(url: string) {
-      _pushHistory.push(url);
-      const [p, s = ''] = url.split('?');
-      _pathname = p;
-      _search = s;
-    },
-    replace(url: string) {
-      _replaceHistory.push(url);
-      const [p, s = ''] = url.split('?');
-      _pathname = p;
-      _search = s;
-    },
-    back() {},
-    forward() {},
-    refresh() {},
-    prefetch() {},
-  };
+  return router;
 }
 
 export function useSearchParams(): URLSearchParams {

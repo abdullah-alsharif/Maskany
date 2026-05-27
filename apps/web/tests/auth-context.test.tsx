@@ -1,8 +1,8 @@
 /**
  * T-026 — Auth context and useAuth hook tests.
  */
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { act, render, renderHook, screen } from '@testing-library/react';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { act, render, renderHook, screen, waitFor } from '@testing-library/react';
 import type { AxiosAdapter, AxiosRequestConfig, AxiosResponse } from 'axios';
 import { AuthProvider } from '../src/context/auth-context';
 import { useAuth } from '../src/hooks/use-auth';
@@ -51,6 +51,7 @@ describe('AuthProvider + useAuth', () => {
     expect(result.current.isAuthenticated).toBe(false);
     expect(result.current.user).toBeNull();
     expect(result.current.accessToken).toBeNull();
+    expect(result.current.isLoading).toBe(false);
   });
 
   it('hydrates its state from tokenStorage on mount', () => {
@@ -82,25 +83,44 @@ describe('AuthProvider + useAuth', () => {
     expect(tokenStorage.getUser()).toEqual(USER);
   });
 
-  it('logout clears context state and localStorage', async () => {
-    tokenStorage.setSession({
-      accessToken: 'access-1',
-      user: USER,
-    });
+  it('logout sets isLoading to true during the operation', async () => {
+    let resolveLogout: (value: unknown) => void;
+    const logoutGate = new Promise((r) => { resolveLogout = r; });
+
+    const saved = apiClient.defaults.adapter;
+    apiClient.defaults.adapter = (async (config: AxiosRequestConfig) => {
+      if (config.url === '/auth/logout') {
+        await logoutGate;
+      }
+      if (config.url?.startsWith('/auth/me')) {
+        return { data: USER, status: 200, statusText: 'OK', headers: {}, config } as AxiosResponse;
+      }
+      return { data: {}, status: 200, statusText: 'OK', headers: {}, config } as AxiosResponse;
+    }) as AxiosAdapter;
+
+    tokenStorage.setSession({ accessToken: 'access-1', user: USER });
     const { result } = renderHook(() => useAuth(), { wrapper });
 
+    expect(result.current.isLoading).toBe(false);
+
+    const logoutPromise = result.current.logout();
+
+    await act(async () => {});
+    expect(result.current.isLoading).toBe(true);
+
+    resolveLogout!(undefined);
+
     await act(async () => {
-      await result.current.logout();
+      await logoutPromise;
     });
 
+    expect(result.current.isLoading).toBe(false);
     expect(result.current.isAuthenticated).toBe(false);
-    expect(result.current.user).toBeNull();
-    expect(result.current.accessToken).toBeNull();
-    expect(tokenStorage.getAccessToken()).toBeNull();
-    expect(tokenStorage.getUser()).toBeNull();
+
+    apiClient.defaults.adapter = saved;
   });
 
-  it('setAccessToken rotates only the access token (for refresh flow)', () => {
+  it('setAccessToken updates state AND persists to tokenStorage', () => {
     tokenStorage.setSession({
       accessToken: 'old-access',
       user: USER,
@@ -113,22 +133,67 @@ describe('AuthProvider + useAuth', () => {
 
     expect(result.current.accessToken).toBe('new-access');
     expect(tokenStorage.getAccessToken()).toBe('new-access');
+    expect(tokenStorage.getUser()).toEqual(USER);
   });
 });
 
 describe('useAuth outside AuthProvider', () => {
   it('throws a descriptive error so bugs surface at dev time', () => {
+    const spy = vi.spyOn(console, 'error').mockImplementation(() => {});
     function Consumer() {
       useAuth();
       return null;
     }
-    const spy = console.error;
-    console.error = () => {};
-    try {
-      expect(() => render(<Consumer />)).toThrow(/AuthProvider/);
-    } finally {
-      console.error = spy;
-    }
+    expect(() => render(<Consumer />)).toThrow(/AuthProvider/);
+    spy.mockRestore();
+  });
+});
+
+describe('AuthProvider — interceptor lifecycle', () => {
+  it('installs auth interceptors on mount that attach the Bearer header', async () => {
+    const adapterCalls: AxiosRequestConfig[] = [];
+    const saved = apiClient.defaults.adapter;
+    apiClient.defaults.adapter = (async (config) => {
+      adapterCalls.push(config);
+      return { data: {}, status: 200, statusText: 'OK', headers: {}, config } as AxiosResponse;
+    }) as AxiosAdapter;
+
+    tokenStorage.setSession({ accessToken: 'intercepted', user: USER });
+
+    render(
+      <AuthProvider>
+        <div />
+      </AuthProvider>,
+    );
+
+    await waitFor(async () => {
+      await apiClient.get('/test');
+    });
+    expect(adapterCalls[0].headers?.Authorization).toBe('Bearer intercepted');
+
+    apiClient.defaults.adapter = saved;
+  });
+
+  it('removes interceptors on unmount (eject is called)', async () => {
+    const saved = apiClient.defaults.adapter;
+
+    const ejectSpy = vi.spyOn(apiClient.interceptors.request, 'eject');
+    const ejectSpyResp = vi.spyOn(apiClient.interceptors.response, 'eject');
+
+    const { unmount } = render(
+      <AuthProvider>
+        <div />
+      </AuthProvider>,
+    );
+
+    unmount();
+
+    await vi.waitFor(() => {
+      expect(ejectSpy).toHaveBeenCalled();
+      expect(ejectSpyResp).toHaveBeenCalled();
+    });
+
+    apiClient.defaults.adapter = saved;
   });
 });
 

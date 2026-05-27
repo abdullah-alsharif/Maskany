@@ -162,4 +162,106 @@ describe('installAuthInterceptors — 401 refresh', () => {
     await expect(client.get('/protected')).rejects.toBeTruthy();
     expect(calls.filter((c) => c.url === '/auth/refresh')).toHaveLength(1);
   });
+
+  it('non-401 error (500) passes through without triggering refresh', async () => {
+    const { adapter, calls } = buildAdapter(() => ({ status: 500, data: {} }));
+    const client = axios.create({ adapter });
+    const onRefreshFailed = vi.fn();
+    installAuthInterceptors(client, {
+      getAccessToken: () => 'old',
+      onTokenRefreshed: () => {},
+      onRefreshFailed,
+    });
+
+    await expect(client.get('/broken')).rejects.toBeTruthy();
+    expect(calls).toHaveLength(1);
+    expect(calls[0].url).toBe('/broken');
+    expect(onRefreshFailed).not.toHaveBeenCalled();
+  });
+
+  it('401 on /auth/refresh itself propagates without retry', async () => {
+    const { adapter, calls } = buildAdapter(() => ({ status: 401, data: {} }));
+    const client = axios.create({ adapter });
+    const onRefreshFailed = vi.fn();
+    installAuthInterceptors(client, {
+      getAccessToken: () => 'old',
+      onTokenRefreshed: () => {},
+      onRefreshFailed,
+    });
+
+    await expect(client.post('/auth/refresh')).rejects.toBeTruthy();
+    expect(calls).toHaveLength(1);
+    expect(calls[0].url).toBe('/auth/refresh');
+  });
+
+  it('multiple concurrent 401s trigger only one refresh (queue behavior)', async () => {
+    let refreshCount = 0;
+    let refreshed = false;
+    const { adapter, calls } = buildAdapter((config) => {
+      if (config.url === '/auth/refresh') {
+        refreshCount++;
+        refreshed = true;
+        return { data: { accessToken: 'new' }, status: 200 };
+      }
+      if (refreshed) {
+        return { data: {}, status: 200 };
+      }
+      return { status: 401, data: {} };
+    });
+    const client = axios.create({ adapter });
+    let stored = 'old';
+    const onTokenRefreshed = vi.fn((t: string) => { stored = t; });
+    const onRefreshFailed = vi.fn();
+    installAuthInterceptors(client, {
+      getAccessToken: () => stored,
+      onTokenRefreshed,
+      onRefreshFailed,
+    });
+
+    const [r1, r2] = await Promise.allSettled([client.get('/res1'), client.get('/res2')]);
+
+    expect(refreshCount).toBe(1);
+    expect(calls.filter((c) => c.url === '/auth/refresh')).toHaveLength(1);
+    expect(onTokenRefreshed).toHaveBeenCalledTimes(1);
+    expect(r1.status).toBe('fulfilled');
+    expect(r2.status).toBe('fulfilled');
+  });
+
+  it('refresh response without accessToken calls onRefreshFailed', async () => {
+    const { adapter, calls } = buildAdapter((config, idx) => {
+      if (idx === 0) return { status: 401, data: {} };
+      if (config.url === '/auth/refresh') return { status: 200, data: {} };
+      return { status: 200, data: {} };
+    });
+    const client = axios.create({ adapter });
+    const onRefreshFailed = vi.fn();
+    installAuthInterceptors(client, {
+      getAccessToken: () => 'old',
+      onTokenRefreshed: () => {},
+      onRefreshFailed,
+    });
+
+    await expect(client.get('/protected')).rejects.toBeTruthy();
+    expect(calls.filter((c) => c.url === '/auth/refresh')).toHaveLength(1);
+    expect(onRefreshFailed).toHaveBeenCalledTimes(1);
+  });
+
+  it('eject removes both interceptors', async () => {
+    const { adapter, calls } = buildAdapter(() => ({ status: 401, data: {} }));
+    const client = axios.create({ adapter });
+    const onRefreshFailed = vi.fn();
+    const eject = installAuthInterceptors(client, {
+      getAccessToken: () => 'old',
+      onTokenRefreshed: () => {},
+      onRefreshFailed,
+    });
+
+    eject();
+
+    await expect(client.get('/no-auth')).rejects.toBeTruthy();
+    // Without interceptors, no refresh is attempted — only the original 401 call
+    expect(calls).toHaveLength(1);
+    expect(calls[0].url).toBe('/no-auth');
+    expect(onRefreshFailed).not.toHaveBeenCalled();
+  });
 });

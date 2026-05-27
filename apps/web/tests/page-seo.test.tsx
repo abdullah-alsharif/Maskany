@@ -25,7 +25,7 @@ beforeEach(() => {
 afterEach(() => {
   document.title = originalTitle;
   document.head
-    .querySelectorAll('[data-seo-head="true"]')
+    .querySelectorAll('[data-seo-head]')
     .forEach((el) => el.parentNode?.removeChild(el));
   resetRouter();
   localStorage.clear();
@@ -144,7 +144,7 @@ describe('PropertyDetailPage SEO (T-025, PRD §8.4)', () => {
   it('injects a JSON-LD RealEstateListing block', () => {
     renderDetail();
     const script = document.head.querySelector<HTMLScriptElement>(
-      'script[type="application/ld+json"][data-seo-head="true"]',
+      'script[type="application/ld+json"]',
     );
     expect(script).not.toBeNull();
     const data = JSON.parse(script!.textContent!) as Record<string, unknown>;

@@ -332,6 +332,52 @@ describe('review routes', () => {
       expect(response.status).toBe(400);
       expect(response.body.error.code).toBe('VALIDATION_ERROR');
     });
+
+    it('updates only the rating without modifying the comment', async () => {
+      const owner = await createUser('Owner PUP1', '+966500030010', 'OWNER');
+      const reviewer = await createUser('Rev PUP1', '+966500030011');
+      const propertyId = await insertProperty(owner.id);
+      const token = issueAccessToken(reviewer.id);
+
+      const created = await request(app)
+        .post(`/api/properties/${propertyId}/reviews`)
+        .set('Authorization', `Bearer ${token}`)
+        .send({ rating: 2, comment: 'Okay' });
+      expect(created.status).toBe(201);
+      const reviewId = created.body.id as string;
+
+      const updated = await request(app)
+        .put(`/api/properties/${propertyId}/reviews/${reviewId}`)
+        .set('Authorization', `Bearer ${token}`)
+        .send({ rating: 5 });
+
+      expect(updated.status).toBe(200);
+      expect(updated.body.rating).toBe(5);
+      expect(updated.body.comment).toBe('Okay');
+    });
+
+    it('updates only the comment without modifying the rating', async () => {
+      const owner = await createUser('Owner PUP2', '+966500030012', 'OWNER');
+      const reviewer = await createUser('Rev PUP2', '+966500030013');
+      const propertyId = await insertProperty(owner.id);
+      const token = issueAccessToken(reviewer.id);
+
+      const created = await request(app)
+        .post(`/api/properties/${propertyId}/reviews`)
+        .set('Authorization', `Bearer ${token}`)
+        .send({ rating: 3, comment: 'Meh' });
+      expect(created.status).toBe(201);
+      const reviewId = created.body.id as string;
+
+      const updated = await request(app)
+        .put(`/api/properties/${propertyId}/reviews/${reviewId}`)
+        .set('Authorization', `Bearer ${token}`)
+        .send({ comment: 'Amazing!' });
+
+      expect(updated.status).toBe(200);
+      expect(updated.body.comment).toBe('Amazing!');
+      expect(updated.body.rating).toBe(3);
+    });
   });
 
   describe('DELETE /api/properties/:id/reviews/:reviewId', () => {
@@ -531,6 +577,89 @@ describe('review routes', () => {
       expect(response.status).toBe(400);
       expect(response.body.error.code).toBe('VALIDATION_ERROR');
     });
+
+    it('paginates 25 reviews across 3 pages with correct total', async () => {
+      const owner = await createUser('Owner P25', '+966500070005', 'OWNER');
+      const propertyId = await insertProperty(owner.id);
+
+      const base = Date.now() - 25 * 1000;
+      for (let i = 0; i < 25; i += 1) {
+        const user = await createUser(`P25 Reviewer ${i}`, `+96650009${String(i + 20).padStart(4, '0')}`);
+        await db
+          .insertInto('reviews')
+          .values({
+            property_id: propertyId,
+            user_id: user.id,
+            rating: String(((i % 5) + 1).toFixed(1)),
+            comment: `Review ${i}`,
+            created_at: new Date(base + i * 1000),
+          })
+          .execute();
+      }
+
+      const page1 = await request(app).get(`/api/properties/${propertyId}/reviews`);
+      expect(page1.status).toBe(200);
+      expect(page1.body.reviews).toHaveLength(10);
+      expect(page1.body.total).toBe(25);
+      expect(page1.body.page).toBe(1);
+
+      const page2 = await request(app)
+        .get(`/api/properties/${propertyId}/reviews`)
+        .query({ page: '2' });
+      expect(page2.status).toBe(200);
+      expect(page2.body.reviews).toHaveLength(10);
+      expect(page2.body.total).toBe(25);
+      expect(page2.body.page).toBe(2);
+
+      const page3 = await request(app)
+        .get(`/api/properties/${propertyId}/reviews`)
+        .query({ page: '3' });
+      expect(page3.status).toBe(200);
+      expect(page3.body.reviews).toHaveLength(5);
+      expect(page3.body.total).toBe(25);
+      expect(page3.body.page).toBe(3);
+    });
+
+    it('returns empty list for out-of-range page while total remains correct', async () => {
+      const owner = await createUser('Owner P999', '+966500070010', 'OWNER');
+      const propertyId = await insertProperty(owner.id);
+
+      const base = Date.now() - 5 * 1000;
+      for (let i = 0; i < 5; i += 1) {
+        const user = await createUser(`P999 Reviewer ${i}`, `+96650009${String(i + 50).padStart(4, '0')}`);
+        await db
+          .insertInto('reviews')
+          .values({
+            property_id: propertyId,
+            user_id: user.id,
+            rating: String(((i % 5) + 1).toFixed(1)),
+            comment: `Review ${i}`,
+            created_at: new Date(base + i * 1000),
+          })
+          .execute();
+      }
+
+      const response = await request(app)
+        .get(`/api/properties/${propertyId}/reviews`)
+        .query({ page: '999' });
+
+      expect(response.status).toBe(200);
+      expect(response.body.reviews).toHaveLength(0);
+      expect(response.body.total).toBe(5);
+      expect(response.body.page).toBe(999);
+    });
+
+    it('returns 400 when page is 0', async () => {
+      const owner = await createUser('Owner P0', '+966500070015', 'OWNER');
+      const propertyId = await insertProperty(owner.id);
+
+      const response = await request(app)
+        .get(`/api/properties/${propertyId}/reviews`)
+        .query({ page: '0' });
+
+      expect(response.status).toBe(400);
+      expect(response.body.error.code).toBe('VALIDATION_ERROR');
+    });
   });
 
   describe('GET /api/properties/:id/reviews/summary', () => {
@@ -598,6 +727,152 @@ describe('review routes', () => {
 
       expect(response.status).toBe(404);
       expect(response.body.error.code).toBe('PROPERTY_NOT_FOUND');
+    });
+  });
+
+  describe('aggregate edge cases', () => {
+    it('computes average_rating 4.0 for reviews with ratings 5, 4, 3', async () => {
+      const owner = await createUser('Owner AGG1', '+966500090001', 'OWNER');
+      const propertyId = await insertProperty(owner.id);
+
+      const ratings = [5, 4, 3];
+      for (let i = 0; i < ratings.length; i += 1) {
+        const reviewer = await createUser(
+          `AGG Reviewer ${i}`,
+          `+96650009${String(i + 80).padStart(4, '0')}`,
+        );
+        const token = issueAccessToken(reviewer.id);
+        const res = await request(app)
+          .post(`/api/properties/${propertyId}/reviews`)
+          .set('Authorization', `Bearer ${token}`)
+          .send({ rating: ratings[i] });
+        expect(res.status).toBe(201);
+      }
+
+      const aggregate = await fetchPropertyAggregate(propertyId);
+      expect(aggregate.reviewCount).toBe(3);
+      expect(aggregate.averageRating).toBeCloseTo((5 + 4 + 3) / 3, 1);
+    });
+
+    it('recalculates aggregate when a review rating is updated', async () => {
+      const owner = await createUser('Owner AGG2', '+966500090005', 'OWNER');
+      const propertyId = await insertProperty(owner.id);
+
+      const reviewerA = await createUser('AGG2 Rev A', '+966500090011');
+      const reviewerB = await createUser('AGG2 Rev B', '+966500090012');
+      const tokenA = issueAccessToken(reviewerA.id);
+      const tokenB = issueAccessToken(reviewerB.id);
+
+      const r1 = await request(app)
+        .post(`/api/properties/${propertyId}/reviews`)
+        .set('Authorization', `Bearer ${tokenA}`)
+        .send({ rating: 5 });
+      expect(r1.status).toBe(201);
+
+      await request(app)
+        .post(`/api/properties/${propertyId}/reviews`)
+        .set('Authorization', `Bearer ${tokenB}`)
+        .send({ rating: 4 })
+        .expect(201);
+
+      // Update rating from 5 → 1.
+      const updated = await request(app)
+        .put(`/api/properties/${propertyId}/reviews/${r1.body.id}`)
+        .set('Authorization', `Bearer ${tokenA}`)
+        .send({ rating: 1 });
+      expect(updated.status).toBe(200);
+
+      const aggregate = await fetchPropertyAggregate(propertyId);
+      expect(aggregate.reviewCount).toBe(2);
+      expect(aggregate.averageRating).toBeCloseTo((1 + 4) / 2, 1);
+    });
+
+    it('recalculates aggregate when the first review is deleted', async () => {
+      const owner = await createUser('Owner AGG3', '+966500090015', 'OWNER');
+      const propertyId = await insertProperty(owner.id);
+
+      const reviewerA = await createUser('AGG3 Rev A', '+966500090016');
+      const reviewerB = await createUser('AGG3 Rev B', '+966500090017');
+      const tokenA = issueAccessToken(reviewerA.id);
+      const tokenB = issueAccessToken(reviewerB.id);
+
+      const r1 = await request(app)
+        .post(`/api/properties/${propertyId}/reviews`)
+        .set('Authorization', `Bearer ${tokenA}`)
+        .send({ rating: 2 });
+      await request(app)
+        .post(`/api/properties/${propertyId}/reviews`)
+        .set('Authorization', `Bearer ${tokenB}`)
+        .send({ rating: 4 });
+
+      await request(app)
+        .delete(`/api/properties/${propertyId}/reviews/${r1.body.id}`)
+        .set('Authorization', `Bearer ${tokenA}`)
+        .expect(204);
+
+      const aggregate = await fetchPropertyAggregate(propertyId);
+      expect(aggregate.reviewCount).toBe(1);
+      expect(aggregate.averageRating).toBeCloseTo(4, 1);
+    });
+  });
+
+  describe('review workflow', () => {
+    it('enforces the complete review lifecycle', async () => {
+      const owner = await createUser('Owner WF', '+966500090020', 'OWNER');
+      const userA = await createUser('User A WF', '+966500090021');
+      const userB = await createUser('User B WF', '+966500090022');
+      const propertyId = await insertProperty(owner.id);
+      const tokenA = issueAccessToken(userA.id);
+      const tokenB = issueAccessToken(userB.id);
+
+      // Owner cannot review own listing.
+      const ownerToken = issueAccessToken(owner.id);
+      const ownReview = await request(app)
+        .post(`/api/properties/${propertyId}/reviews`)
+        .set('Authorization', `Bearer ${ownerToken}`)
+        .send({ rating: 5 });
+      expect(ownReview.status).toBe(403);
+      expect(ownReview.body.error.code).toBe('FORBIDDEN');
+
+      // User A reviews.
+      const aFirst = await request(app)
+        .post(`/api/properties/${propertyId}/reviews`)
+        .set('Authorization', `Bearer ${tokenA}`)
+        .send({ rating: 4, comment: 'Nice' });
+      expect(aFirst.status).toBe(201);
+      const reviewId = aFirst.body.id as string;
+
+      // User A tries again — 409.
+      const aDup = await request(app)
+        .post(`/api/properties/${propertyId}/reviews`)
+        .set('Authorization', `Bearer ${tokenA}`)
+        .send({ rating: 3 });
+      expect(aDup.status).toBe(409);
+      expect(aDup.body.error.code).toBe('REVIEW_ALREADY_EXISTS');
+
+      // User B reviews.
+      const bFirst = await request(app)
+        .post(`/api/properties/${propertyId}/reviews`)
+        .set('Authorization', `Bearer ${tokenB}`)
+        .send({ rating: 5, comment: 'Great' });
+      expect(bFirst.status).toBe(201);
+
+      // User A deletes.
+      const aDel = await request(app)
+        .delete(`/api/properties/${propertyId}/reviews/${reviewId}`)
+        .set('Authorization', `Bearer ${tokenA}`);
+      expect(aDel.status).toBe(204);
+
+      // User A reviews again.
+      const aSecond = await request(app)
+        .post(`/api/properties/${propertyId}/reviews`)
+        .set('Authorization', `Bearer ${tokenA}`)
+        .send({ rating: 2, comment: 'Second try' });
+      expect(aSecond.status).toBe(201);
+
+      // Final state: 2 reviews (user A's second + user B's).
+      const aggregate = await fetchPropertyAggregate(propertyId);
+      expect(aggregate.reviewCount).toBe(2);
     });
   });
 });

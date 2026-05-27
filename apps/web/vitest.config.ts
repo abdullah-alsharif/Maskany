@@ -10,6 +10,7 @@ export default defineConfig({
   plugins: [react()],
   resolve: {
     alias: {
+      '@': path.resolve(__dirname, 'src'),
       'next/navigation': path.resolve(__dirname, 'tests/mocks/next-navigation.ts'),
     },
   },

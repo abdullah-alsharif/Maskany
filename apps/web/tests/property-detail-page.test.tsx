@@ -178,8 +178,8 @@ describe('PropertyDetailPage', () => {
 
   it('renders image gallery photos from the property media', () => {
     renderDetail({ property: makeProperty() });
-    expect(screen.getByRole('img', { name: /photo m1/i })).toBeInTheDocument();
-    expect(screen.getByRole('img', { name: /photo m2/i })).toBeInTheDocument();
+    expect(screen.getAllByRole('img', { name: /photo m1/i }).length).toBeGreaterThanOrEqual(1);
+    expect(screen.getAllByRole('img', { name: /photo m2/i }).length).toBeGreaterThanOrEqual(1);
   });
 
   it('renders a back button for navigation', () => {

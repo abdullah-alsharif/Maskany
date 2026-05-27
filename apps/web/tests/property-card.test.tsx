@@ -102,8 +102,8 @@ describe('PropertyCard', () => {
 
   it('links the card to the property detail page', () => {
     renderCard();
-    const link = screen.getByRole('link', { name: /sunlit downtown apartment/i });
-    expect(link).toHaveAttribute('href', '/properties/prop-1');
+    const links = screen.getAllByRole('link', { name: /sunlit downtown apartment/i });
+    expect(links[0]).toHaveAttribute('href', '/properties/prop-1');
   });
 
   it('pluralises singular room correctly', () => {

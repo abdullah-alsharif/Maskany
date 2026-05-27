@@ -787,6 +787,59 @@ describe('property routes', () => {
       expect(response.status).toBe(400);
       expect(response.body.error.code).toBe('VALIDATION_ERROR');
     });
+
+    it('respects price range when combined with a search query', async () => {
+      const owner = await createUser('Search+Price', '+966500040003', 'OWNER');
+      const garden2500 = await db
+        .insertInto('properties')
+        .values({
+          title: 'Garden villa with pool',
+          city: 'Riyadh',
+          area: 'Al Olaya',
+          price: '2500',
+          whatsapp_number: '+966500003333',
+          owner_id: owner.id,
+          status: 'ACTIVE',
+          property_type: 'VILLA',
+        })
+        .returning('id')
+        .executeTakeFirstOrThrow();
+
+      await db
+        .insertInto('properties')
+        .values({
+          title: 'Small garden shed',
+          city: 'Riyadh',
+          price: '500',
+          whatsapp_number: '+966500003333',
+          owner_id: owner.id,
+          status: 'ACTIVE',
+          property_type: 'APARTMENT',
+        })
+        .execute();
+
+      await db
+        .insertInto('properties')
+        .values({
+          title: 'Garden penthouse suite',
+          city: 'Riyadh',
+          price: '6000',
+          whatsapp_number: '+966500003333',
+          owner_id: owner.id,
+          status: 'ACTIVE',
+          property_type: 'PENTHOUSE',
+        })
+        .execute();
+
+      const response = await request(app)
+        .get('/api/properties')
+        .query({ q: 'gard', minPrice: '1000', maxPrice: '5000' });
+
+      expect(response.status).toBe(200);
+      const ids = response.body.properties.map((p: { id: string }) => p.id);
+      expect(ids).toEqual([garden2500.id]);
+      expect(response.body.total).toBe(1);
+    });
   });
 
   describe('GET /api/properties with filters', () => {
@@ -1125,6 +1178,252 @@ describe('property routes', () => {
 
       expect(response.status).toBe(400);
       expect(response.body.error.code).toBe('VALIDATION_ERROR');
+    });
+
+    it('combines pagination with filters, returning cursored pages that respect the filter', async () => {
+      const owner = await createUser('Paginate+Filter', '+966500040001', 'OWNER');
+      for (let i = 0; i < 5; i += 1) {
+        await insertFiltered(owner.id, { title: `Apt ${i}`, propertyType: 'APARTMENT' });
+      }
+      for (let i = 0; i < 25; i += 1) {
+        await insertFiltered(owner.id, { title: `Villa ${i}`, propertyType: 'VILLA' });
+      }
+
+      const first = await request(app)
+        .get('/api/properties')
+        .query({ type: 'VILLA' });
+
+      expect(first.status).toBe(200);
+      expect(first.body.total).toBe(25);
+      expect(first.body.properties).toHaveLength(20);
+      expect(first.body.nextCursor).toEqual(expect.any(String));
+
+      const second = await request(app)
+        .get('/api/properties')
+        .query({ type: 'VILLA', cursor: first.body.nextCursor });
+
+      expect(second.status).toBe(200);
+      expect(second.body.properties).toHaveLength(5);
+      expect(second.body.nextCursor).toBeNull();
+      expect(second.body.total).toBe(25);
+
+      const firstIds = new Set(first.body.properties.map((p: { id: string }) => p.id));
+      for (const prop of second.body.properties) {
+        expect(firstIds.has(prop.id)).toBe(false);
+      }
+    });
+  });
+
+  describe('DELETE cascade / side effects', () => {
+    it('cascades deletes to reviews and property_media when a property is removed', async () => {
+      const owner = await createUser('Cascade Owner', '+966500050001', 'OWNER');
+      const propertyId = await insertProperty(owner.id, { title: 'Cascade Test' });
+      const token = issueAccessToken(owner.id);
+
+      await db
+        .insertInto('reviews')
+        .values({
+          property_id: propertyId,
+          user_id: owner.id,
+          rating: '4.0',
+          comment: 'Great property',
+        })
+        .execute();
+
+      await db
+        .insertInto('property_media')
+        .values({
+          property_id: propertyId,
+          media_type: 'IMAGE',
+          url: '/uploads/cascade.webp',
+        })
+        .execute();
+
+      const response = await request(app)
+        .delete(`/api/properties/${propertyId}`)
+        .set('Authorization', `Bearer ${token}`);
+
+      expect(response.status).toBe(204);
+
+      const reviews = await db
+        .selectFrom('reviews')
+        .where('property_id', '=', propertyId)
+        .select('id')
+        .execute();
+      expect(reviews).toHaveLength(0);
+
+      const media = await db
+        .selectFrom('property_media')
+        .where('property_id', '=', propertyId)
+        .select('id')
+        .execute();
+      expect(media).toHaveLength(0);
+
+      const property = await db
+        .selectFrom('properties')
+        .where('id', '=', propertyId)
+        .select('id')
+        .executeTakeFirst();
+      expect(property).toBeUndefined();
+    });
+
+    it('excludes an INACTIVE property from the public listing but includes it in /my', async () => {
+      const owner = await createUser('Inactive Owner', '+966500050002', 'OWNER');
+      const propertyId = await insertProperty(owner.id, { title: 'Toggle Me', status: 'ACTIVE' });
+      const token = issueAccessToken(owner.id);
+
+      await request(app)
+        .patch(`/api/properties/${propertyId}/status`)
+        .set('Authorization', `Bearer ${token}`)
+        .send({ status: 'INACTIVE' });
+
+      const list = await request(app).get('/api/properties');
+      expect(list.status).toBe(200);
+      const listIds = list.body.properties.map((p: { id: string }) => p.id);
+      expect(listIds).not.toContain(propertyId);
+
+      const my = await request(app)
+        .get('/api/properties/my')
+        .set('Authorization', `Bearer ${token}`);
+      expect(my.status).toBe(200);
+      const myIds = my.body.properties.map((p: { id: string }) => p.id);
+      expect(myIds).toContain(propertyId);
+      const prop = my.body.properties.find((p: { id: string }) => p.id === propertyId);
+      expect(prop.status).toBe('INACTIVE');
+    });
+
+    it('reflects a whatsapp_number change after a PUT update', async () => {
+      const owner = await createUser('WA Update', '+966500050003', 'OWNER');
+      const propertyId = await insertProperty(owner.id, { title: 'WA Update Test' });
+      const token = issueAccessToken(owner.id);
+
+      const update = await request(app)
+        .put(`/api/properties/${propertyId}`)
+        .set('Authorization', `Bearer ${token}`)
+        .send({ whatsappNumber: '+966599999999' });
+
+      expect(update.status).toBe(200);
+      expect(update.body.whatsappNumber).toBe('+966599999999');
+
+      const detail = await request(app).get(`/api/properties/${propertyId}`);
+      expect(detail.status).toBe(200);
+      expect(detail.body.whatsappNumber).toBe('+966599999999');
+    });
+  });
+
+  describe('edge cases', () => {
+    it('paginates correctly with sort=price_asc and cursor', async () => {
+      const owner = await createUser('Sort Cursor', '+966500060001', 'OWNER');
+      for (let i = 0; i < 25; i += 1) {
+        await db
+          .insertInto('properties')
+          .values({
+            title: `Price Prop ${i}`,
+            city: 'Riyadh',
+            area: 'Al Olaya',
+            price: String(1000 + i * 100),
+            whatsapp_number: '+966500006666',
+            owner_id: owner.id,
+            status: 'ACTIVE',
+            property_type: 'APARTMENT',
+          })
+          .execute();
+      }
+
+      const first = await request(app)
+        .get('/api/properties')
+        .query({ sort: 'price_asc' });
+
+      expect(first.status).toBe(200);
+      expect(first.body.properties).toHaveLength(20);
+      expect(first.body.total).toBe(25);
+      expect(first.body.nextCursor).toEqual(expect.any(String));
+
+      const prices1 = first.body.properties.map((p: { price: string }) => Number(p.price));
+      for (let i = 1; i < prices1.length; i += 1) {
+        expect(prices1[i]).toBeGreaterThanOrEqual(prices1[i - 1]);
+      }
+
+      const second = await request(app)
+        .get('/api/properties')
+        .query({ sort: 'price_asc', cursor: first.body.nextCursor });
+
+      expect(second.status).toBe(200);
+      expect(second.body.properties).toHaveLength(5);
+      expect(second.body.nextCursor).toBeNull();
+
+      const firstIds = new Set(first.body.properties.map((p: { id: string }) => p.id));
+      for (const prop of second.body.properties) {
+        expect(firstIds.has(prop.id)).toBe(false);
+      }
+    });
+
+    it('only updates the title when PUT contains only a title change', async () => {
+      const owner = await createUser('Partial Update', '+966500060002', 'OWNER');
+      const propertyId = await insertProperty(owner.id, { title: 'Original Title' });
+      const token = issueAccessToken(owner.id);
+
+      const response = await request(app)
+        .put(`/api/properties/${propertyId}`)
+        .set('Authorization', `Bearer ${token}`)
+        .send({ title: 'Updated Title' });
+
+      expect(response.status).toBe(200);
+      expect(response.body.title).toBe('Updated Title');
+      expect(response.body.city).toBe('Riyadh');
+
+      const row = await db
+        .selectFrom('properties')
+        .where('id', '=', propertyId)
+        .select(['title', 'city', 'price'])
+        .executeTakeFirstOrThrow();
+      expect(row.title).toBe('Updated Title');
+      expect(row.city).toBe('Riyadh');
+      expect(row.price).toBe('3000.00');
+    });
+
+    it('returns 400 when whatsappNumber lacks the + prefix', async () => {
+      const owner = await createUser('WA Prefix', '+966500060003', 'OWNER');
+      const token = issueAccessToken(owner.id);
+
+      const response = await request(app)
+        .post('/api/properties')
+        .set('Authorization', `Bearer ${token}`)
+        .send(validPayload({ whatsappNumber: '966500001111' }));
+
+      expect(response.status).toBe(400);
+      expect(response.body.error.code).toBe('VALIDATION_ERROR');
+    });
+
+    it('creates a property with all optional fields omitted and applies defaults', async () => {
+      const owner = await createUser('Defaults Owner', '+966500060004', 'OWNER');
+      const token = issueAccessToken(owner.id);
+
+      const payload = {
+        title: 'Minimal listing',
+        propertyType: 'APARTMENT',
+        city: 'Riyadh',
+        price: '2000',
+        priceUnit: 'per_month',
+        rooms: 1,
+        bathrooms: 1,
+        whatsappNumber: '+966500005555',
+      };
+
+      const response = await request(app)
+        .post('/api/properties')
+        .set('Authorization', `Bearer ${token}`)
+        .send(payload);
+
+      expect(response.status).toBe(201);
+      expect(response.body).toMatchObject({
+        title: 'Minimal listing',
+        status: 'ACTIVE',
+        country: 'SA',
+        currency: 'SAR',
+        locale: 'en',
+        amenities: [],
+      });
     });
   });
 });

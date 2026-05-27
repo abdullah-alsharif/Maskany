@@ -136,8 +136,8 @@ describe('HomePage', () => {
     const properties = [makeProperty({ id: 'abc-123', title: 'Card A' })];
     const { container } = renderPage([{ category: 'ALL', properties }]);
     const grid = container.querySelector('[data-testid="property-grid"]');
-    const link = within(grid as HTMLElement).getByRole('link', { name: /card a/i });
-    expect(link).toHaveAttribute('href', '/properties/abc-123');
+    const links = within(grid as HTMLElement).getAllByRole('link', { name: /card a/i });
+    expect(links[0]).toHaveAttribute('href', '/properties/abc-123');
   });
 
   it('exposes the Home level-1 heading for navigation tests', () => {

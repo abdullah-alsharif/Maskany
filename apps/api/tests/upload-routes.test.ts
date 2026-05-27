@@ -481,6 +481,40 @@ describe('media upload routes', () => {
       const [media] = response.body.media;
       expect(media.sortOrder).toBe(1);
     });
+
+    it('returns a processing error when a jpeg file has non-image content', async () => {
+      const owner = await createUser('Owner CE1', '+966500010050', 'OWNER');
+      const propertyId = await insertProperty(owner.id);
+      const token = issueAccessToken(owner.id);
+
+      const response = await request(app)
+        .post(`/api/properties/${propertyId}/media`)
+        .set('Authorization', `Bearer ${token}`)
+        .attach('images', Buffer.from('not an image'), {
+          filename: 'bad.jpg',
+          contentType: 'image/jpeg',
+        });
+
+      expect(response.status).toBe(500);
+      expect(response.body.error.code).toBe('INTERNAL_ERROR');
+    });
+
+    it('returns an error when a video file has corrupted headers', async () => {
+      const owner = await createUser('Owner CE2', '+966500010051', 'OWNER');
+      const propertyId = await insertProperty(owner.id);
+      const token = issueAccessToken(owner.id);
+
+      const response = await request(app)
+        .post(`/api/properties/${propertyId}/media`)
+        .set('Authorization', `Bearer ${token}`)
+        .attach('videos', Buffer.from('not a video'), {
+          filename: 'bad.mp4',
+          contentType: 'video/mp4',
+        });
+
+      expect(response.status).toBe(500);
+      expect(response.body.error.code).toBe('INTERNAL_ERROR');
+    });
   });
 
   describe('DELETE /api/properties/:id/media/:mediaId', () => {
@@ -669,6 +703,171 @@ describe('media upload routes', () => {
       expect(response.status).toBe(400);
       expect(response.body.error.code).toBe('VALIDATION_ERROR');
     });
+
+    it('returns 400 when mediaIds contains duplicate ids', async () => {
+      const owner = await createUser('Owner RDup', '+966500010035', 'OWNER');
+      const propertyId = await insertProperty(owner.id);
+      const token = issueAccessToken(owner.id);
+
+      const row = await db
+        .insertInto('property_media')
+        .values({
+          property_id: propertyId,
+          media_type: 'IMAGE',
+          url: `/uploads/properties/${propertyId}/single.webp`,
+          mime_type: 'image/webp',
+          sort_order: 0,
+        })
+        .returning('id')
+        .executeTakeFirstOrThrow();
+
+      const response = await request(app)
+        .put(`/api/properties/${propertyId}/media/reorder`)
+        .set('Authorization', `Bearer ${token}`)
+        .send({ mediaIds: [row.id, row.id] });
+
+      expect(response.status).toBe(400);
+      expect(response.body.error.code).toBe('MEDIA_IDS_MISMATCH');
+    });
+
+    it('returns 400 when mediaIds is a partial set (2 of 4)', async () => {
+      const owner = await createUser('Owner RPart', '+966500010036', 'OWNER');
+      const propertyId = await insertProperty(owner.id);
+      const token = issueAccessToken(owner.id);
+
+      const ids: string[] = [];
+      for (let i = 0; i < 4; i += 1) {
+        const row = await db
+          .insertInto('property_media')
+          .values({
+            property_id: propertyId,
+            media_type: 'IMAGE',
+            url: `/uploads/properties/${propertyId}/part-${i}.webp`,
+            mime_type: 'image/webp',
+            sort_order: i,
+          })
+          .returning('id')
+          .executeTakeFirstOrThrow();
+        ids.push(row.id);
+      }
+
+      const response = await request(app)
+        .put(`/api/properties/${propertyId}/media/reorder`)
+        .set('Authorization', `Bearer ${token}`)
+        .send({ mediaIds: ids.slice(0, 2) });
+
+      expect(response.status).toBe(400);
+      expect(response.body.error.code).toBe('MEDIA_IDS_MISMATCH');
+    });
+
+    it('returns 400 when mediaIds is an empty array and property has media', async () => {
+      const owner = await createUser('Owner REmpty', '+966500010037', 'OWNER');
+      const propertyId = await insertProperty(owner.id);
+      const token = issueAccessToken(owner.id);
+
+      await db
+        .insertInto('property_media')
+        .values({
+          property_id: propertyId,
+          media_type: 'IMAGE',
+          url: `/uploads/properties/${propertyId}/exists.webp`,
+          mime_type: 'image/webp',
+          sort_order: 0,
+        })
+        .execute();
+
+      const response = await request(app)
+        .put(`/api/properties/${propertyId}/media/reorder`)
+        .set('Authorization', `Bearer ${token}`)
+        .send({ mediaIds: [] });
+
+      expect(response.status).toBe(400);
+      expect(response.body.error.code).toBe('VALIDATION_ERROR');
+    });
+  });
+
+  describe('upload workflow', () => {
+    it('uploads up to 10 images, enforces the limit, handles delete and reorder, and reflects order in property detail', async () => {
+      const owner = await createUser('Owner Flow', '+966500010060', 'OWNER');
+      const propertyId = await insertProperty(owner.id);
+      const token = issueAccessToken(owner.id);
+
+      // Upload 5 images.
+      const image = await generateImageBuffer(200, 200);
+      const batch1 = await request(app)
+        .post(`/api/properties/${propertyId}/media`)
+        .set('Authorization', `Bearer ${token}`)
+        .attach('images', image, { filename: 'a.jpg', contentType: 'image/jpeg' })
+        .attach('images', image, { filename: 'b.jpg', contentType: 'image/jpeg' })
+        .attach('images', image, { filename: 'c.jpg', contentType: 'image/jpeg' })
+        .attach('images', image, { filename: 'd.jpg', contentType: 'image/jpeg' })
+        .attach('images', image, { filename: 'e.jpg', contentType: 'image/jpeg' });
+      expect(batch1.status).toBe(201);
+      expect(batch1.body.media).toHaveLength(5);
+
+      // Upload 5 more images (10th overall).
+      const batch2 = await request(app)
+        .post(`/api/properties/${propertyId}/media`)
+        .set('Authorization', `Bearer ${token}`)
+        .attach('images', image, { filename: 'f.jpg', contentType: 'image/jpeg' })
+        .attach('images', image, { filename: 'g.jpg', contentType: 'image/jpeg' })
+        .attach('images', image, { filename: 'h.jpg', contentType: 'image/jpeg' })
+        .attach('images', image, { filename: 'i.jpg', contentType: 'image/jpeg' })
+        .attach('images', image, { filename: 'j.jpg', contentType: 'image/jpeg' });
+      expect(batch2.status).toBe(201);
+      expect(batch2.body.media).toHaveLength(5);
+      const allMedia = [...batch1.body.media, ...batch2.body.media];
+      expect(allMedia).toHaveLength(10);
+
+      // Upload 11th image → 400.
+      const overLimit = await request(app)
+        .post(`/api/properties/${propertyId}/media`)
+        .set('Authorization', `Bearer ${token}`)
+        .attach('images', image, { filename: 'k.jpg', contentType: 'image/jpeg' });
+      expect(overLimit.status).toBe(400);
+      expect(overLimit.body.error.code).toBe('TOO_MANY_IMAGES');
+
+      // Delete the 5th image.
+      const fifthId = allMedia[4]!.id;
+      const delRes = await request(app)
+        .delete(`/api/properties/${propertyId}/media/${fifthId}`)
+        .set('Authorization', `Bearer ${token}`);
+      expect(delRes.status).toBe(204);
+
+      // Upload another image → now back to 10.
+      const refill = await request(app)
+        .post(`/api/properties/${propertyId}/media`)
+        .set('Authorization', `Bearer ${token}`)
+        .attach('images', image, { filename: 'k.jpg', contentType: 'image/jpeg' });
+      expect(refill.status).toBe(201);
+      expect(refill.body.media).toHaveLength(1);
+      const replacement = refill.body.media[0]!;
+
+      // Reorder all 10 in reverse order.
+      const remainingIds = allMedia.filter((m: { id: string }) => m.id !== fifthId).map((m: { id: string }) => m.id);
+      const reversed = [replacement.id, ...remainingIds.reverse()];
+      const reorderRes = await request(app)
+        .put(`/api/properties/${propertyId}/media/reorder`)
+        .set('Authorization', `Bearer ${token}`)
+        .send({ mediaIds: reversed });
+      expect(reorderRes.status).toBe(200);
+
+      // Verify sort_order in DB.
+      const rows = await db
+        .selectFrom('property_media')
+        .where('property_id', '=', propertyId)
+        .select(['id', 'sort_order'])
+        .orderBy('sort_order', 'asc')
+        .execute();
+      expect(rows.map((r) => r.id)).toEqual(reversed);
+      expect(rows.map((r) => r.sort_order)).toEqual([0, 1, 2, 3, 4, 5, 6, 7, 8, 9]);
+
+      // GET detail → verify order matches the reversed sequence.
+      const detailRes = await request(app).get(`/api/properties/${propertyId}`);
+      expect(detailRes.status).toBe(200);
+      const detailImages = detailRes.body.images as Array<{ id: string }>;
+      expect(detailImages.map((img) => img.id)).toEqual(reversed);
+    });
   });
 
   describe('GET /uploads/:path', () => {
@@ -688,6 +887,11 @@ describe('media upload routes', () => {
       expect(staticRes.status).toBe(200);
       expect(staticRes.headers['content-type']).toContain('image/webp');
       expect(staticRes.body.subarray(0, 4).toString('ascii')).toBe('RIFF');
+    });
+
+    it('returns 404 for a non-existent uploads path', async () => {
+      const res = await request(app).get('/uploads/nonexistent/file.webp');
+      expect(res.status).toBe(404);
     });
   });
 });

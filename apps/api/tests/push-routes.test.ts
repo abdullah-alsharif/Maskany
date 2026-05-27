@@ -115,6 +115,38 @@ describe('push routes', () => {
       expect(rows).toHaveLength(1);
     });
 
+    it('stores multiple distinct tokens for the same user', async () => {
+      const user = await createUser('MultiToken', '+966500000020');
+      const token = issueAccessToken(user.id);
+
+      await request(app)
+        .post('/api/push/register')
+        .set('Authorization', `Bearer ${token}`)
+        .send({ token: 'fcm-token-1', platform: 'ios' })
+        .expect(204);
+
+      await request(app)
+        .post('/api/push/register')
+        .set('Authorization', `Bearer ${token}`)
+        .send({ token: 'fcm-token-2', platform: 'android' })
+        .expect(204);
+
+      await request(app)
+        .post('/api/push/register')
+        .set('Authorization', `Bearer ${token}`)
+        .send({ token: 'fcm-token-3', platform: 'web' })
+        .expect(204);
+
+      const rows = await db
+        .selectFrom('push_tokens')
+        .where('user_id', '=', user.id)
+        .selectAll()
+        .orderBy('token', 'asc')
+        .execute();
+      expect(rows).toHaveLength(3);
+      expect(rows.map((r) => r.token)).toEqual(['fcm-token-1', 'fcm-token-2', 'fcm-token-3']);
+    });
+
     it('returns 401 when unauthenticated', async () => {
       const response = await request(app)
         .post('/api/push/register')
@@ -170,6 +202,12 @@ describe('push routes', () => {
         .selectAll()
         .execute();
       expect(rows).toHaveLength(0);
+    });
+
+    it('returns 401 when clearing tokens without authentication', async () => {
+      const response = await request(app).delete('/api/push/token');
+      expect(response.status).toBe(401);
+      expect(response.body.error.code).toBe('UNAUTHORIZED');
     });
   });
 

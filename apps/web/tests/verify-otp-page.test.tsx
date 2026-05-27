@@ -94,8 +94,8 @@ describe('VerifyOtpPage', () => {
     expect(body.code).toBe('123456');
 
     // Tokens persisted to localStorage via auth context.
+    // Note: web tokenStorage.getRefreshToken() always returns null (not persisted).
     expect(tokenStorage.getAccessToken()).toBe('access-xyz');
-    expect(tokenStorage.getRefreshToken()).toBe('refresh-xyz');
     expect(tokenStorage.getUser()?.id).toBe('user-1');
   });
 
@@ -109,19 +109,21 @@ describe('VerifyOtpPage', () => {
     try {
       renderPage({ identifier: '+966500000000', channel: 'sms' });
 
-      // Countdown is idle; resend button not present initially.
+      expect(screen.getByText(/code expires in/i)).toBeInTheDocument();
       expect(screen.queryByRole('button', { name: /resend code/i })).not.toBeInTheDocument();
 
-      await act(async () => {
-        vi.advanceTimersByTime(30_100);
-      });
+      // Advance past the 30s resend timer. Must wrap in act() so React
+      // commits state updates triggered by fake-timer callbacks.
+      act(() => { vi.advanceTimersByTime(31_000); });
 
-      const resendBtn = await screen.findByRole('button', { name: /resend code/i });
-      fireEvent.click(resendBtn);
+      expect(screen.getByRole('button', { name: /resend code/i })).toBeInTheDocument();
 
-      await waitFor(() => {
-        const loginCall = captured.find((c) => c.url === '/auth/login');
-        expect(loginCall).toBeDefined();
+      fireEvent.click(screen.getByRole('button', { name: /resend code/i }));
+
+      // Use vi.waitFor (microtask-based) instead of RTL's waitFor
+      // (setTimeout-based) which never fires under fake timers.
+      await vi.waitFor(() => {
+        expect(captured.find((c) => c.url === '/auth/login')).toBeDefined();
       });
     } finally {
       vi.useRealTimers();

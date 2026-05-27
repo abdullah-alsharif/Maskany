@@ -532,4 +532,215 @@ describe('auth routes', () => {
       expect(response.body.error.code).toBe('UNAUTHORIZED');
     });
   });
+
+  describe('rate limiting', () => {
+    it('blocks the 21st rapid registration request (20/15min window)', async () => {
+      for (let i = 0; i < 20; i++) {
+        const res = await request(app)
+          .post('/api/auth/register')
+          .send({
+            fullName: `Rate User ${i}`,
+            phone: `+9665000091${i.toString().padStart(2, '0')}`,
+            userType: 'BROWSER',
+          });
+        expect(res.status).toBe(201);
+      }
+
+      const blocked = await request(app)
+        .post('/api/auth/register')
+        .send({ fullName: 'Blocked', phone: '+966500009200', userType: 'BROWSER' });
+
+      expect(blocked.status).toBe(429);
+      expect(blocked.body.error.code).toBe('RATE_LIMITED');
+    });
+
+    it('rate limit resets with a fresh app instance', async () => {
+      for (let i = 0; i < 20; i++) {
+        const res = await request(app)
+          .post('/api/auth/register')
+          .send({
+            fullName: `Exhaust User ${i}`,
+            phone: `+9665000093${i.toString().padStart(2, '0')}`,
+            userType: 'BROWSER',
+          });
+        expect(res.status).toBe(201);
+      }
+
+      const blocked = await request(app)
+        .post('/api/auth/register')
+        .send({ fullName: 'Exhausted', phone: '+966500009400', userType: 'BROWSER' });
+      expect(blocked.status).toBe(429);
+
+      const freshApp = createApp();
+      const fresh = await request(freshApp)
+        .post('/api/auth/register')
+        .send({ fullName: 'Fresh Start', phone: '+966500009401', userType: 'BROWSER' });
+      expect(fresh.status).toBe(201);
+    });
+
+    it('blocks the 21st rapid login request', async () => {
+      for (let i = 0; i < 20; i++) {
+        const res = await request(app)
+          .post('/api/auth/login')
+          .send({ identifier: `+9665000095${i.toString().padStart(2, '0')}` });
+        expect(res.status).toBe(404);
+      }
+
+      const blocked = await request(app)
+        .post('/api/auth/login')
+        .send({ identifier: '+966500009599' });
+
+      expect(blocked.status).toBe(429);
+      expect(blocked.body.error.code).toBe('RATE_LIMITED');
+    });
+  });
+
+  describe('edge cases', () => {
+    it('returns 404 when logging in with email for a phone-only user', async () => {
+      await db
+        .insertInto('users')
+        .values({ full_name: 'Phone Only', phone: PHONE, user_type: 'BROWSER' })
+        .execute();
+
+      const res = await request(app)
+        .post('/api/auth/login')
+        .send({ identifier: EMAIL });
+
+      expect(res.status).toBe(404);
+      expect(res.body.error.code).toBe('USER_NOT_FOUND');
+    });
+
+    it('returns 400 when OTP type mismatches identifier (SMS code with email)', async () => {
+      await request(app).post('/api/auth/register').send({
+        fullName: 'Mismatch User',
+        phone: PHONE,
+        email: EMAIL,
+        userType: 'BROWSER',
+      });
+
+      const smsCode = await latestOtp(PHONE);
+
+      const res = await request(app).post('/api/auth/verify').send({
+        identifier: EMAIL,
+        code: smsCode,
+      });
+
+      expect(res.status).toBe(400);
+      expect(res.body.error.code).toBe('OTP_INVALID');
+    });
+
+    it('returns 400 for fullName exceeding 120 characters', async () => {
+      const res = await request(app).post('/api/auth/register').send({
+        fullName: 'A'.repeat(121),
+        phone: PHONE,
+        userType: 'BROWSER',
+      });
+
+      expect(res.status).toBe(400);
+      expect(res.body.error.code).toBe('VALIDATION_ERROR');
+    });
+
+    it('returns 401 when replaying a rotated refresh token', async () => {
+      await request(app).post('/api/auth/register').send({
+        fullName: 'Rotate Guard',
+        phone: PHONE,
+        userType: 'BROWSER',
+      });
+      const code = await latestOtp(PHONE);
+      const verify = await request(app).post('/api/auth/verify').send({ identifier: PHONE, code });
+      const rt1 = getRefreshToken(verify);
+
+      const first = await request(app).post('/api/auth/refresh').send({ refreshToken: rt1 });
+      expect(first.status).toBe(200);
+
+      const replay = await request(app).post('/api/auth/refresh').send({ refreshToken: rt1 });
+      expect(replay.status).toBe(401);
+      expect(replay.body.error.code).toBe('UNAUTHORIZED');
+    });
+  });
+
+  describe('full auth lifecycle', () => {
+    it('completes register→login→verify→me→refresh→logout in a single flow', async () => {
+      const userPhone = '+966500009900';
+      const userEmail = 'lifecycle@example.com';
+
+      // 1. Register
+      const reg = await request(app).post('/api/auth/register').send({
+        fullName: 'Lifecycle User',
+        phone: userPhone,
+        email: userEmail,
+        userType: 'BROWSER',
+      });
+      expect(reg.status).toBe(201);
+      const userId = reg.body.userId;
+
+      // 2. Login via email (independent OTP type, no cooldown conflict with SMS)
+      const login = await request(app).post('/api/auth/login').send({ identifier: userEmail });
+      expect(login.status).toBe(200);
+      expect(login.body.type).toBe('email');
+
+      const emailOtp = await latestOtp(userEmail);
+
+      // 3. Verify with wrong code
+      const wrong = await request(app).post('/api/auth/verify').send({
+        identifier: userEmail,
+        code: '000000',
+      });
+      expect(wrong.status).toBe(400);
+      expect(wrong.body.error.code).toBe('OTP_INVALID');
+
+      // 4. Verify with correct code
+      const verify = await request(app).post('/api/auth/verify').send({
+        identifier: userEmail,
+        code: emailOtp,
+      });
+      expect(verify.status).toBe(200);
+      expect(verify.body.accessToken).toEqual(expect.any(String));
+      expect(verify.body.user).toMatchObject({ id: userId, fullName: 'Lifecycle User' });
+      const accessToken1 = verify.body.accessToken;
+      const rt1 = getRefreshToken(verify);
+
+      // 5. GET /me with the original JWT
+      const me1 = await request(app)
+        .get('/api/auth/me')
+        .set('Authorization', `Bearer ${accessToken1}`);
+      expect(me1.status).toBe(200);
+      expect(me1.body.id).toBe(userId);
+
+      // 6. Refresh — rotates token pair
+      const refresh1 = await request(app).post('/api/auth/refresh').send({ refreshToken: rt1 });
+      expect(refresh1.status).toBe(200);
+      expect(refresh1.body.accessToken).toEqual(expect.any(String));
+      const accessToken2 = refresh1.body.accessToken;
+      const rt2 = getRefreshToken(refresh1);
+      expect(rt2).not.toBe(rt1);
+
+      // 7. GET /me with the new JWT
+      const me2 = await request(app)
+        .get('/api/auth/me')
+        .set('Authorization', `Bearer ${accessToken2}`);
+      expect(me2.status).toBe(200);
+      expect(me2.body.id).toBe(userId);
+
+      // 8. The old JWT is stateless and remains valid until expiry.
+      const me3 = await request(app)
+        .get('/api/auth/me')
+        .set('Authorization', `Bearer ${accessToken1}`);
+      expect(me3.status).toBe(200);
+
+      // 9. The old refresh token was consumed in step 6
+      const replay = await request(app).post('/api/auth/refresh').send({ refreshToken: rt1 });
+      expect(replay.status).toBe(401);
+      expect(replay.body.error.code).toBe('UNAUTHORIZED');
+
+      // 10. Logout — revokes active refresh token
+      const logout = await request(app).post('/api/auth/logout').send({ refreshToken: rt2 });
+      expect(logout.status).toBe(200);
+
+      // 11. Revoked token cannot be used after logout
+      const afterLogout = await request(app).post('/api/auth/refresh').send({ refreshToken: rt2 });
+      expect(afterLogout.status).toBe(401);
+      expect(afterLogout.body.error.code).toBe('UNAUTHORIZED');
+    });
+  });
 });

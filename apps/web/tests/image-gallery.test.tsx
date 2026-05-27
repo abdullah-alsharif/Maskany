@@ -76,9 +76,9 @@ describe('ImageGallery', () => {
     expect(screen.getByText('1 / 3')).toBeInTheDocument();
   });
 
-  it('renders a fallback when there are no images', () => {
-    render(<ImageGallery images={[]} alt="Villa" />);
-    expect(screen.getByText(/no images/i)).toBeInTheDocument();
+  it('renders nothing when there are no images', () => {
+    const { container } = render(<ImageGallery images={[]} alt="Villa" />);
+    expect(container).toBeEmptyDOMElement();
   });
 
   it('does not close fullscreen when the image is clicked (T-031 AC)', () => {

@@ -16,3 +16,4 @@ uploads/
 test-results/
 playwright-report/
 .env.production
+/temp/

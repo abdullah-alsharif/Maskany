@@ -42,6 +42,9 @@ export function installAuthInterceptors(
     return config;
   });
 
+  let isRefreshing = false;
+  let refreshPromise: Promise<boolean> | null = null;
+
   const responseId = client.interceptors.response.use(
     (response) => response,
     async (error: AxiosError) => {
@@ -56,26 +59,39 @@ export function installAuthInterceptors(
         return Promise.reject(error);
       }
 
-      try {
-        const refreshResponse = await client.request({
-          url: REFRESH_URL,
-          method: 'POST',
-        });
-        const newAccess = (refreshResponse.data as { accessToken?: string }).accessToken;
-        if (!newAccess) {
-          options.onRefreshFailed();
-          return Promise.reject(error);
-        }
-        options.onTokenRefreshed(newAccess);
-
-        original._authRetried = true;
-        original.headers = original.headers ?? {};
-        (original.headers as Record<string, string>).Authorization = `Bearer ${newAccess}`;
-        return await client.request(original);
-      } catch (retryOrRefreshError) {
-        options.onRefreshFailed();
-        return Promise.reject(retryOrRefreshError);
+      if (!isRefreshing) {
+        isRefreshing = true;
+        refreshPromise = (async () => {
+          try {
+            const refreshResponse = await client.request({
+              url: REFRESH_URL,
+              method: 'POST',
+            });
+            const newAccess = (refreshResponse.data as { accessToken?: string }).accessToken;
+            if (!newAccess) {
+              options.onRefreshFailed();
+              return false;
+            }
+            options.onTokenRefreshed(newAccess);
+            return true;
+          } catch {
+            options.onRefreshFailed();
+            return false;
+          } finally {
+            isRefreshing = false;
+            refreshPromise = null;
+          }
+        })();
       }
+
+      const ok = await refreshPromise;
+      if (!ok) return Promise.reject(error);
+
+      const newToken = options.getAccessToken();
+      original._authRetried = true;
+      original.headers = original.headers ?? {};
+      (original.headers as Record<string, string>).Authorization = `Bearer ${newToken ?? ''}`;
+      return await client.request(original);
     },
   );
 

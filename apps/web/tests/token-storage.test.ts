@@ -72,4 +72,16 @@ describe('tokenStorage', () => {
     localStorage.setItem('maskany:user', '{not valid json');
     expect(tokenStorage.getUser()).toBeNull();
   });
+
+  it('uses the maskany: prefix for all storage keys', () => {
+    tokenStorage.setSession({ accessToken: 'prefix-test', user: USER });
+
+    const keys: string[] = [];
+    for (let i = 0; i < localStorage.length; i++) {
+      keys.push(localStorage.key(i)!);
+    }
+    expect(keys.every((k) => k.startsWith('maskany:'))).toBe(true);
+    expect(keys).toContain('maskany:accessToken');
+    expect(keys).toContain('maskany:user');
+  });
 });
