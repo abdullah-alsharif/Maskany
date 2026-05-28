@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { render } from '@testing-library/react';
-import { SkeletonCard } from '../src/components/skeleton-card';
+import { SkeletonCard, Skeleton } from '../src/components/ui/skeleton';
 
 describe('SkeletonCard', () => {
   it('renders a card-shaped placeholder with a 4:3 image slot', () => {
@@ -24,5 +24,20 @@ describe('SkeletonCard', () => {
     const { container } = render(<SkeletonCard />);
     const placeholders = container.querySelectorAll('div[aria-hidden="true"]');
     expect(placeholders.length).toBeGreaterThan(0);
+  });
+});
+
+describe('Skeleton', () => {
+  it('renders a rounded rectangle by default', () => {
+    const { container } = render(<Skeleton />);
+    const el = container.firstElementChild as HTMLElement;
+    expect(el.className).toContain('rounded-lg');
+  });
+
+  it('renders a circle (aspect-square + rounded-full) when circle is true', () => {
+    const { container } = render(<Skeleton circle />);
+    const el = container.firstElementChild as HTMLElement;
+    expect(el.className).toContain('rounded-full');
+    expect(el.className).toContain('aspect-square');
   });
 });

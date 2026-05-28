@@ -72,4 +72,39 @@ describe('ReviewCard', () => {
     render(<ReviewCard review={makeReview()} onEdit={() => undefined} />);
     expect(screen.queryByRole('button', { name: /edit/i })).toBeNull();
   });
+
+  it('shows "Yesterday" for a review posted 1 day ago', () => {
+    render(<ReviewCard review={makeReview({ createdAt: daysAgoIso(1) })} />);
+    expect(screen.getByText(/yesterday/i)).toBeInTheDocument();
+  });
+
+  it('shows week-ago text for a review posted 7 days ago', () => {
+    render(<ReviewCard review={makeReview({ createdAt: daysAgoIso(7) })} />);
+    expect(screen.getByText(/1 week ago/i)).toBeInTheDocument();
+  });
+
+  it('shows weeks-ago text for a review posted 15 days ago', () => {
+    render(<ReviewCard review={makeReview({ createdAt: daysAgoIso(15) })} />);
+    expect(screen.getByText(/2 weeks ago/i)).toBeInTheDocument();
+  });
+
+  it('shows month-ago text for a review posted 35 days ago', () => {
+    render(<ReviewCard review={makeReview({ createdAt: daysAgoIso(35) })} />);
+    expect(screen.getByText(/1 month ago/i)).toBeInTheDocument();
+  });
+
+  it('shows months-ago text for a review posted 65 days ago', () => {
+    render(<ReviewCard review={makeReview({ createdAt: daysAgoIso(65) })} />);
+    expect(screen.getByText(/2 months ago/i)).toBeInTheDocument();
+  });
+
+  it('shows year-ago text for a review posted 400 days ago', () => {
+    render(<ReviewCard review={makeReview({ createdAt: daysAgoIso(400) })} />);
+    expect(screen.getByText(/1 year ago/i)).toBeInTheDocument();
+  });
+
+  it('shows years-ago text for a review posted 800 days ago', () => {
+    render(<ReviewCard review={makeReview({ createdAt: daysAgoIso(800) })} />);
+    expect(screen.getByText(/2 years ago/i)).toBeInTheDocument();
+  });
 });

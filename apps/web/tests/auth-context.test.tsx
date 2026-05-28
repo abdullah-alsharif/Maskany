@@ -221,3 +221,113 @@ describe('AuthProvider exposes context to children', () => {
     expect(screen.getByTestId('user-name')).toHaveTextContent('Amal Example');
   });
 });
+
+describe('AuthProvider — interceptor callbacks', () => {
+  beforeEach(() => {
+    localStorage.clear();
+    savedAdapter = apiClient.defaults.adapter as AxiosAdapter | undefined;
+  });
+
+  afterEach(() => {
+    localStorage.clear();
+    apiClient.defaults.adapter = savedAdapter;
+  });
+
+  it('invokes onTokenRefreshed and persists the new token on 401 retry', async () => {
+    let callCount = 0;
+    apiClient.defaults.adapter = (async (config: AxiosRequestConfig) => {
+      if (config.url === '/test' && callCount === 0) {
+        callCount++;
+        const err = new Error('Unauthorized') as Error & { response?: AxiosResponse; config?: AxiosRequestConfig; isAxiosError?: boolean };
+        err.response = { data: {}, status: 401, statusText: 'Unauthorized', headers: {}, config } as AxiosResponse;
+        err.config = config;
+        err.isAxiosError = true;
+        throw err;
+      }
+      if (config.url === '/auth/refresh') {
+        return { data: { accessToken: 'refreshed-token' }, status: 200, statusText: 'OK', headers: {}, config } as AxiosResponse;
+      }
+      callCount++;
+      return { data: { ok: true }, status: 200, statusText: 'OK', headers: {}, config } as AxiosResponse;
+    }) as AxiosAdapter;
+
+    tokenStorage.setSession({ accessToken: 'old-token', user: USER });
+    render(
+      <AuthProvider>
+        <div />
+      </AuthProvider>,
+    );
+
+    await waitFor(async () => {
+      await apiClient.get('/test');
+    });
+
+    expect(tokenStorage.getAccessToken()).toBe('refreshed-token');
+  });
+
+  it('invokes onRefreshFailed and clears storage on failed refresh', async () => {
+    apiClient.defaults.adapter = (async (config: AxiosRequestConfig) => {
+      if (config.url === '/test') {
+        const err = new Error('Unauthorized') as Error & { response?: AxiosResponse; config?: AxiosRequestConfig; isAxiosError?: boolean };
+        err.response = { data: {}, status: 401, statusText: 'Unauthorized', headers: {}, config } as AxiosResponse;
+        err.config = config;
+        err.isAxiosError = true;
+        throw err;
+      }
+      if (config.url === '/auth/refresh') {
+        const err = new Error('Unauthorized') as Error & { response?: AxiosResponse; config?: AxiosRequestConfig; isAxiosError?: boolean };
+        err.response = { data: {}, status: 401, statusText: 'Unauthorized', headers: {}, config } as AxiosResponse;
+        err.config = config;
+        err.isAxiosError = true;
+        throw err;
+      }
+      return { data: {}, status: 200, statusText: 'OK', headers: {}, config } as AxiosResponse;
+    }) as AxiosAdapter;
+
+    tokenStorage.setSession({ accessToken: 'will-be-cleared', user: USER });
+    render(
+      <AuthProvider>
+        <div />
+      </AuthProvider>,
+    );
+
+    await expect(apiClient.get('/test')).rejects.toThrow();
+    expect(tokenStorage.getAccessToken()).toBeNull();
+    expect(tokenStorage.getUser()).toBeNull();
+  });
+});
+
+describe('AuthProvider — logout cache cleanup', () => {
+  beforeEach(() => {
+    localStorage.clear();
+    savedAdapter = apiClient.defaults.adapter as AxiosAdapter | undefined;
+    Object.defineProperty(globalThis, 'caches', {
+      configurable: true,
+      value: {
+        delete: vi.fn().mockResolvedValue(true),
+      },
+    });
+  });
+
+  afterEach(() => {
+    localStorage.clear();
+    apiClient.defaults.adapter = savedAdapter;
+    delete (globalThis as Record<string, unknown>).caches;
+  });
+
+  it('deletes api-properties cache on logout', async () => {
+    apiClient.defaults.adapter = (async (config: AxiosRequestConfig) => {
+      return { data: {}, status: 200, statusText: 'OK', headers: {}, config } as AxiosResponse;
+    }) as AxiosAdapter;
+
+    tokenStorage.setSession({ accessToken: 'token', user: USER });
+    const { result } = renderHook(() => useAuth(), { wrapper });
+
+    await act(async () => {
+      await result.current.logout();
+    });
+
+    expect(globalThis.caches.delete).toHaveBeenCalledWith('api-properties');
+    expect(result.current.isAuthenticated).toBe(false);
+  });
+});

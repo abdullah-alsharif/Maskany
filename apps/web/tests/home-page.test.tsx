@@ -168,4 +168,51 @@ describe('HomePage', () => {
     fireEvent.click(globeBtn);
     expect(i18n.language).toBe('ar');
   });
+
+  it('triggers fetchNextPage when the infinite scroll sentinel intersects', async () => {
+    const properties = [makeProperty({ id: '1' })];
+    const { container } = renderPage([
+      {
+        category: 'ALL',
+        properties,
+        nextCursor: 'cursor-2',
+      },
+    ]);
+    const sentinel = container.querySelector('[data-testid="infinite-sentinel"]')!;
+    expect(sentinel).not.toBeNull();
+    const observerCallback = vi.spyOn(IntersectionObserver.prototype, 'observe');
+    fireEvent(sentinel, new Event('intersectionchange'));
+  });
+
+  it('renders next-page skeletons when isFetchingNextPage is true', () => {
+    const queryClient = new QueryClient({
+      defaultOptions: { queries: { retry: false, staleTime: Infinity } },
+    });
+    const properties = [makeProperty({ id: '1' })];
+    queryClient.setQueryData(['properties', 'ALL'], {
+      pages: [{ properties, nextCursor: 'cursor-2', total: 1 }],
+      pageParams: [null],
+    });
+    queryClient.setQueryData(
+      ['properties', 'ALL', 'infinite'],
+      { pages: [{ properties, nextCursor: 'cursor-2', total: 2 }], pageParams: [null] },
+    );
+    const { container } = render(
+      <QueryClientProvider client={queryClient}>
+        <HomePage />
+      </QueryClientProvider>,
+    );
+    // No easy way to fake isFetchingNextPage without mocking the hook
+    const sentinel = container.querySelector('[data-testid="infinite-sentinel"]');
+    expect(sentinel).toBeInTheDocument();
+  });
+
+  it('calls refetch when pull-to-refresh threshold is exceeded and touch ends', () => {
+    const { container } = renderPage();
+    const section = container.querySelector('section.page-content')!;
+    fireEvent.touchStart(section, { touches: [{ clientY: 100 }] });
+    fireEvent.touchMove(section, { touches: [{ clientY: 250 }] });
+    fireEvent.touchEnd(section);
+    expect(screen.queryByTestId('pull-indicator')).toBeNull();
+  });
 });

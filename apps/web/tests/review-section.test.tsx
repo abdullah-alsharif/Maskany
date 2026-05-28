@@ -1,7 +1,9 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import type { AxiosAdapter, AxiosRequestConfig, AxiosResponse } from 'axios';
 import { ReviewSection } from '../src/components/review-section';
+import { apiClient } from '../src/services/api';
 import type { Review, ReviewListResponse, ReviewSummary } from '../src/types/review';
 
 const makeSummary = (overrides: Partial<ReviewSummary> = {}): ReviewSummary => ({
@@ -234,5 +236,126 @@ describe('ReviewSection — own review highlight', () => {
     });
     const textarea = screen.getByRole('textbox', { name: /comment/i }) as HTMLTextAreaElement;
     expect(textarea.value).toBe('My own review');
+  });
+});
+
+describe('ReviewSection — handleCreate submit', () => {
+  let savedAdapter: AxiosAdapter | undefined;
+
+  beforeEach(() => {
+    savedAdapter = apiClient.defaults.adapter as AxiosAdapter | undefined;
+    apiClient.defaults.adapter = (async (config: AxiosRequestConfig) => {
+      if (config.method?.toLowerCase() === 'post' && config.url?.includes('/reviews')) {
+        return {
+          data: { id: 'new-review', rating: 5, comment: 'Great!', userId: 'viewer', propertyId: 'prop-1', user: { id: 'viewer', fullName: 'Viewer' }, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() },
+          status: 201,
+          statusText: 'Created',
+          headers: {},
+          config,
+        } as AxiosResponse;
+      }
+      return { data: {}, status: 200, statusText: 'OK', headers: {}, config } as AxiosResponse;
+    }) as AxiosAdapter;
+  });
+
+  afterEach(() => {
+    apiClient.defaults.adapter = savedAdapter;
+  });
+
+  it('submits a new review and hides the form', async () => {
+    renderSection({
+      summary: makeSummary(),
+      listPages: { 1: makePage([], 0) },
+      currentUser: { id: 'viewer', fullName: 'Viewer' },
+    });
+    const ratingBtn = screen.getByRole('button', { name: /rate 4 stars/i });
+    fireEvent.click(ratingBtn);
+    const textarea = screen.getByRole('textbox', { name: /comment/i });
+    fireEvent.change(textarea, { target: { value: 'Great place!' } });
+    fireEvent.click(screen.getByRole('button', { name: /submit review/i }));
+    await waitFor(() => {
+      expect(screen.queryByRole('button', { name: /submit review/i })).not.toBeInTheDocument();
+    });
+  });
+});
+
+describe('ReviewSection — handleUpdate submit', () => {
+  let savedAdapter: AxiosAdapter | undefined;
+
+  beforeEach(() => {
+    savedAdapter = apiClient.defaults.adapter as AxiosAdapter | undefined;
+    apiClient.defaults.adapter = (async (config: AxiosRequestConfig) => {
+      if (config.method?.toLowerCase() === 'put' && config.url?.includes('/reviews/')) {
+        return {
+          data: { id: 'rev-own', rating: 5, comment: 'Updated!', userId: 'viewer', propertyId: 'prop-1', user: { id: 'viewer', fullName: 'Viewer Yu' }, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() },
+          status: 200,
+          statusText: 'OK',
+          headers: {},
+          config,
+        } as AxiosResponse;
+      }
+      return { data: {}, status: 200, statusText: 'OK', headers: {}, config } as AxiosResponse;
+    }) as AxiosAdapter;
+  });
+
+  afterEach(() => {
+    apiClient.defaults.adapter = savedAdapter;
+  });
+
+  it('submits an updated review via the edit form', async () => {
+    const own = makeReview({
+      id: 'rev-own',
+      userId: 'viewer',
+      user: { id: 'viewer', fullName: 'Viewer Yu' },
+      rating: 4,
+      comment: 'My own review',
+    });
+    renderSection({
+      summary: makeSummary(),
+      listPages: { 1: makePage([own], 1) },
+      currentUser: { id: 'viewer', fullName: 'Viewer Yu' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: /edit/i }));
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: /update review/i })).toBeInTheDocument();
+    });
+    const textarea = screen.getByRole('textbox', { name: /comment/i });
+    fireEvent.change(textarea, { target: { value: 'Updated review!' } });
+    fireEvent.click(screen.getByRole('button', { name: /update review/i }));
+    await waitFor(() => {
+      expect(screen.queryByRole('button', { name: /update review/i })).not.toBeInTheDocument();
+    });
+  });
+});
+
+describe('ReviewSection — handleLoadMore pagination', () => {
+  it('loads more reviews when Load More is clicked', async () => {
+    const page1 = Array.from({ length: 10 }, (_, i) =>
+      makeReview({
+        id: `r${i}`,
+        user: { id: `u${i}`, fullName: `User ${i}` },
+        userId: `u${i}`,
+      }),
+    );
+    const page2 = Array.from({ length: 5 }, (_, i) =>
+      makeReview({
+        id: `r${i + 10}`,
+        user: { id: `u${i + 10}`, fullName: `User ${i + 10}` },
+        userId: `u${i + 10}`,
+      }),
+    );
+    renderSection({
+      summary: makeSummary({ reviewCount: 15 }),
+      listPages: {
+        1: makePage(page1, 15, 'page-2'),
+        2: makePage(page2, 15),
+      },
+      currentUser: null,
+    });
+    const loadMore = screen.getByRole('button', { name: /load more/i });
+    fireEvent.click(loadMore);
+    await waitFor(() => {
+      expect(screen.getByText(/user 13/i)).toBeInTheDocument();
+    });
   });
 });

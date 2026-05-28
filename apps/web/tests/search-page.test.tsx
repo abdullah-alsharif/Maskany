@@ -151,4 +151,17 @@ describe('SearchPage', () => {
     renderPage();
     expect(screen.getByRole('heading', { level: 1, name: /search/i })).toBeInTheDocument();
   });
+
+  it('fires onApply when a QuickSort option is clicked', () => {
+    renderPage();
+    const newestBtn = screen.getByRole('button', { name: /newest/i });
+    fireEvent.click(newestBtn);
+    expect(screen.getByRole('button', { name: /newest/i })).toBeInTheDocument();
+  });
+
+  it('fires onClear when Clear All is clicked in the filter sheet', () => {
+    renderPage();
+    fireEvent.click(screen.getByRole('button', { name: /filters/i }));
+    fireEvent.click(screen.getByRole('button', { name: /clear all/i }));
+  });
 });

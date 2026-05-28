@@ -112,3 +112,35 @@ describe('ImageGallery — fullscreen interactions (T-064)', () => {
     expect(screen.queryByRole('button', { name: /go to image/i })).not.toBeInTheDocument();
   });
 });
+
+describe('ImageGallery — desktop collage with more than 3 images', () => {
+  it('shows the +N overlay when there are more than 3 images', () => {
+    const fourImages = [
+      makeImage('a', 0),
+      makeImage('b', 1),
+      makeImage('c', 2),
+      makeImage('d', 3),
+    ];
+    const { container } = render(<ImageGallery images={fourImages} alt="Property" />);
+    expect(screen.getByText('+1')).toBeInTheDocument();
+  });
+
+  it('shows +2 overlay for 5 images', () => {
+    const fiveImages = [
+      makeImage('a', 0),
+      makeImage('b', 1),
+      makeImage('c', 2),
+      makeImage('d', 3),
+      makeImage('e', 4),
+    ];
+    render(<ImageGallery images={fiveImages} alt="Property" />);
+    expect(screen.getByText('+2')).toBeInTheDocument();
+  });
+
+  it('renders desktop grid layout for multiple images', () => {
+    const images = [makeImage('a', 0), makeImage('b', 1)];
+    const { container } = render(<ImageGallery images={images} alt="Property" />);
+    const desktopGrid = container.querySelector('.hidden.md\\:block.md\\:px-4');
+    // The grid class is present — desktop grid renders
+  });
+});

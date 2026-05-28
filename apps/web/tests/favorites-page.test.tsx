@@ -1,8 +1,10 @@
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import type { AxiosAdapter, AxiosRequestConfig, AxiosResponse } from 'axios';
 import { FavoritesPage } from '../src/views/favorites-page';
 import { FAVORITES_STORAGE_KEY } from '../src/hooks/use-favorites';
+import { apiClient } from '../src/services/api';
 import type { Property } from '../src/types/property';
 
 const makeProperty = (id: string, title: string): Property => ({
@@ -46,6 +48,21 @@ const renderPage = (favorites: string[], seededProperties: Property[] = []) => {
     </QueryClientProvider>,
   );
 };
+
+let savedAdapter: AxiosAdapter | undefined;
+let resolveLoading: (() => void) | undefined;
+
+function renderLoadingPage(favorites: string[]) {
+  window.localStorage.setItem(FAVORITES_STORAGE_KEY, JSON.stringify(favorites));
+  const queryClient = new QueryClient({
+    defaultOptions: { queries: { retry: false, staleTime: Infinity } },
+  });
+  return render(
+    <QueryClientProvider client={queryClient}>
+      <FavoritesPage />
+    </QueryClientProvider>,
+  );
+}
 
 describe('FavoritesPage', () => {
   beforeEach(() => {
@@ -98,5 +115,16 @@ describe('FavoritesPage', () => {
     expect(screen.getByRole('heading', { level: 3, name: /garden villa/i })).toBeInTheDocument();
     // Only one card renders; no broken "undefined" placeholder.
     expect(screen.queryByText(/undefined/i)).not.toBeInTheDocument();
+  });
+
+  it('shows skeleton grid when loading with non-empty favorites', () => {
+    savedAdapter = apiClient.defaults.adapter as AxiosAdapter | undefined;
+    apiClient.defaults.adapter = (() => new Promise(() => {})) as unknown as AxiosAdapter;
+    renderLoadingPage(['a', 'b']);
+    const skeletonGrid = document.querySelector('[data-testid="favorites-skeleton-grid"]');
+    expect(skeletonGrid).not.toBeNull();
+    expect(skeletonGrid!.querySelectorAll('[aria-hidden="true"]').length).toBeGreaterThan(0);
+    apiClient.defaults.adapter = savedAdapter;
+    savedAdapter = undefined;
   });
 });

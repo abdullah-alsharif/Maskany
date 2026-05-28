@@ -373,3 +373,74 @@ describe('PropertyDetailPage — ReviewSection authentication wiring', () => {
     expect(await screen.findByRole('button', { name: /^edit$/i })).toBeInTheDocument();
   });
 });
+
+describe('PropertyDetailPage — singular/plural labels', () => {
+  beforeEach(() => {
+    Object.defineProperty(window, 'location', {
+      value: { href: 'http://localhost/properties/prop-abc' },
+      writable: true,
+    });
+    localStorage.clear();
+    resetRouter();
+  });
+
+  afterEach(() => {
+    localStorage.clear();
+    resetRouter();
+  });
+
+  it('renders singular bedroom label when rooms is 1', () => {
+    renderDetail({ property: makeProperty({ rooms: 1, bathrooms: 1 }) });
+    expect(screen.getByText(/1 bedroom/i)).toBeInTheDocument();
+  });
+
+  it('renders plural bathroom label when bathrooms is 2', () => {
+    renderDetail({ property: makeProperty({ rooms: 2, bathrooms: 2 }) });
+    expect(screen.getByText(/2 bathrooms/i)).toBeInTheDocument();
+  });
+});
+
+describe('PropertyDetailPage — share fallback', () => {
+  beforeEach(() => {
+    Object.defineProperty(window, 'location', {
+      value: { href: 'http://localhost/properties/prop-abc' },
+      writable: true,
+    });
+    localStorage.clear();
+    resetRouter();
+  });
+
+  afterEach(() => {
+    localStorage.clear();
+    resetRouter();
+  });
+
+  it('falls back to clipboard when navigator.share is not available', async () => {
+    Object.defineProperty(navigator, 'share', {
+      configurable: true,
+      value: undefined,
+    });
+    const writeTextMock = vi.fn().mockResolvedValue(undefined);
+    Object.defineProperty(navigator, 'clipboard', {
+      configurable: true,
+      value: { writeText: writeTextMock },
+    });
+    renderDetail({ property: makeProperty() });
+    fireEvent.click(screen.getByRole('button', { name: /share/i }));
+    await waitFor(() => expect(writeTextMock).toHaveBeenCalledTimes(1));
+    expect(writeTextMock).toHaveBeenCalledWith(
+      'http://localhost/properties/prop-abc',
+    );
+  });
+
+  it('handles navigator.share rejection gracefully', async () => {
+    const shareMock = vi.fn().mockRejectedValue(new Error('User cancelled'));
+    Object.defineProperty(navigator, 'share', {
+      configurable: true,
+      value: shareMock,
+    });
+    renderDetail({ property: makeProperty() });
+    fireEvent.click(screen.getByRole('button', { name: /share/i }));
+    await waitFor(() => expect(shareMock).toHaveBeenCalledTimes(1));
+  });
+});
