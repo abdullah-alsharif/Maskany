@@ -107,6 +107,7 @@ describe('property routes', () => {
     app = createApp();
     // Child tables first — property_media and reviews reference properties,
     // properties reference users. CASCADE on FK removes orphans.
+    await db.deleteFrom('property_translations').execute();
     await db.deleteFrom('property_media').execute();
     await db.deleteFrom('reviews').execute();
     await db.deleteFrom('properties').execute();
@@ -1424,6 +1425,238 @@ describe('property routes', () => {
         locale: 'en',
         amenities: [],
       });
+    });
+  });
+
+  describe('PUT /api/properties/:id/translations/:locale', () => {
+    it('saves an Arabic translation for an English property', async () => {
+      const owner = await createUser('Trans Owner', '+966500070001', 'OWNER');
+      const propertyId = await insertProperty(owner.id);
+      const token = issueAccessToken(owner.id);
+
+      const response = await request(app)
+        .put(`/api/properties/${propertyId}/translations/ar`)
+        .set('Authorization', `Bearer ${token}`)
+        .send({
+          title: 'شقة مشرقة من غرفتي نوم',
+          summary: 'شقة مشرقة في وسط الرياض',
+          description: 'مفروشة بالكامل، قريبة من المترو',
+          city: 'الرياض',
+          area: 'العليا',
+          country: 'SA',
+          amenities: ['wifi', 'parking'],
+        });
+
+      expect(response.status).toBe(200);
+      expect(response.body).toEqual({ message: 'Translation saved.' });
+
+      const row = await db
+        .selectFrom('property_translations')
+        .where('property_id', '=', propertyId)
+        .where('locale', '=', 'ar')
+        .selectAll()
+        .executeTakeFirst();
+
+      expect(row).not.toBeNull();
+      expect(row!.title).toBe('شقة مشرقة من غرفتي نوم');
+      expect(row!.city).toBe('الرياض');
+    });
+
+    it('overwrites an existing translation', async () => {
+      const owner = await createUser('Trans Owner 2', '+966500070002', 'OWNER');
+      const propertyId = await insertProperty(owner.id);
+      const token = issueAccessToken(owner.id);
+
+      await request(app)
+        .put(`/api/properties/${propertyId}/translations/ar`)
+        .set('Authorization', `Bearer ${token}`)
+        .send({ title: 'Original title', city: 'Riyadh' });
+
+      const response = await request(app)
+        .put(`/api/properties/${propertyId}/translations/ar`)
+        .set('Authorization', `Bearer ${token}`)
+        .send({ title: 'Updated title', city: 'Jeddah' });
+
+      expect(response.status).toBe(200);
+
+      const row = await db
+        .selectFrom('property_translations')
+        .where('property_id', '=', propertyId)
+        .where('locale', '=', 'ar')
+        .select(['title', 'city'])
+        .executeTakeFirstOrThrow();
+
+      expect(row.title).toBe('Updated title');
+      expect(row.city).toBe('Jeddah');
+    });
+
+    it('returns 401 without an auth token', async () => {
+      const owner = await createUser('Trans Owner 3', '+966500070003', 'OWNER');
+      const propertyId = await insertProperty(owner.id);
+
+      const response = await request(app)
+        .put(`/api/properties/${propertyId}/translations/ar`)
+        .send({ title: 'Test', city: 'Riyadh' });
+
+      expect(response.status).toBe(401);
+    });
+
+    it('returns 403 for a non-owner', async () => {
+      const owner = await createUser('Trans Owner 4', '+966500070004', 'OWNER');
+      const otherOwner = await createUser('Trans Owner 5', '+966500070005', 'OWNER');
+      const propertyId = await insertProperty(owner.id);
+      const otherToken = issueAccessToken(otherOwner.id);
+
+      const response = await request(app)
+        .put(`/api/properties/${propertyId}/translations/ar`)
+        .set('Authorization', `Bearer ${otherToken}`)
+        .send({ title: 'Test', city: 'Riyadh' });
+
+      expect(response.status).toBe(403);
+      expect(response.body.error.code).toBe('FORBIDDEN');
+    });
+
+    it('returns 403 for a BROWSER user', async () => {
+      const owner = await createUser('Trans Owner 6', '+966500070006', 'OWNER');
+      const browser = await createUser('Trans Browser', '+966500070007', 'BROWSER');
+      const propertyId = await insertProperty(owner.id);
+      const browserToken = issueAccessToken(browser.id);
+
+      const response = await request(app)
+        .put(`/api/properties/${propertyId}/translations/ar`)
+        .set('Authorization', `Bearer ${browserToken}`)
+        .send({ title: 'Test', city: 'Riyadh' });
+
+      expect(response.status).toBe(403);
+      expect(response.body.error.code).toBe('FORBIDDEN');
+    });
+
+    it('returns 400 for an invalid locale', async () => {
+      const owner = await createUser('Trans Owner 7', '+966500070008', 'OWNER');
+      const propertyId = await insertProperty(owner.id);
+      const token = issueAccessToken(owner.id);
+
+      const response = await request(app)
+        .put(`/api/properties/${propertyId}/translations/fr`)
+        .set('Authorization', `Bearer ${token}`)
+        .send({ title: 'Test', city: 'Riyadh' });
+
+      expect(response.status).toBe(400);
+      expect(response.body.error.code).toBe('VALIDATION_ERROR');
+    });
+
+    it('returns 400 when adding a translation for the property original locale', async () => {
+      const owner = await createUser('Trans Owner 8', '+966500070009', 'OWNER');
+      // property defaults to locale = 'en'
+      const propertyId = await insertProperty(owner.id);
+      const token = issueAccessToken(owner.id);
+
+      const response = await request(app)
+        .put(`/api/properties/${propertyId}/translations/en`)
+        .set('Authorization', `Bearer ${token}`)
+        .send({ title: 'English title', city: 'Riyadh' });
+
+      expect(response.status).toBe(400);
+      expect(response.body.error.code).toBe('VALIDATION_ERROR');
+    });
+
+    it('returns 400 when title is missing', async () => {
+      const owner = await createUser('Trans Owner 9', '+966500070010', 'OWNER');
+      const propertyId = await insertProperty(owner.id);
+      const token = issueAccessToken(owner.id);
+
+      const response = await request(app)
+        .put(`/api/properties/${propertyId}/translations/ar`)
+        .set('Authorization', `Bearer ${token}`)
+        .send({ city: 'Riyadh' });
+
+      expect(response.status).toBe(400);
+      expect(response.body.error.code).toBe('VALIDATION_ERROR');
+    });
+
+    it('returns 400 when title is empty', async () => {
+      const owner = await createUser('Trans Owner 10', '+966500070011', 'OWNER');
+      const propertyId = await insertProperty(owner.id);
+      const token = issueAccessToken(owner.id);
+
+      const response = await request(app)
+        .put(`/api/properties/${propertyId}/translations/ar`)
+        .set('Authorization', `Bearer ${token}`)
+        .send({ title: '   ', city: 'Riyadh' });
+
+      expect(response.status).toBe(400);
+      expect(response.body.error.code).toBe('VALIDATION_ERROR');
+    });
+
+    it('returns 400 when title exceeds 120 characters', async () => {
+      const owner = await createUser('Trans Owner 11', '+966500070012', 'OWNER');
+      const propertyId = await insertProperty(owner.id);
+      const token = issueAccessToken(owner.id);
+
+      const response = await request(app)
+        .put(`/api/properties/${propertyId}/translations/ar`)
+        .set('Authorization', `Bearer ${token}`)
+        .send({
+          title: 'A'.repeat(121),
+          city: 'Riyadh',
+        });
+
+      expect(response.status).toBe(400);
+      expect(response.body.error.code).toBe('VALIDATION_ERROR');
+    });
+
+    it('returns 400 when city is missing', async () => {
+      const owner = await createUser('Trans Owner 12', '+966500070013', 'OWNER');
+      const propertyId = await insertProperty(owner.id);
+      const token = issueAccessToken(owner.id);
+
+      const response = await request(app)
+        .put(`/api/properties/${propertyId}/translations/ar`)
+        .set('Authorization', `Bearer ${token}`)
+        .send({ title: 'Test' });
+
+      expect(response.status).toBe(400);
+      expect(response.body.error.code).toBe('VALIDATION_ERROR');
+    });
+
+    it('returns 404 when the property does not exist', async () => {
+      const owner = await createUser('Trans Owner 13', '+966500070014', 'OWNER');
+      const token = issueAccessToken(owner.id);
+
+      const response = await request(app)
+        .put('/api/properties/00000000-0000-0000-0000-000000000000/translations/ar')
+        .set('Authorization', `Bearer ${token}`)
+        .send({ title: 'Test', city: 'Riyadh' });
+
+      expect(response.status).toBe(404);
+      expect(response.body.error.code).toBe('PROPERTY_NOT_FOUND');
+    });
+
+    it('accepts a translation with only required fields and applies defaults', async () => {
+      const owner = await createUser('Trans Owner 14', '+966500070015', 'OWNER');
+      const propertyId = await insertProperty(owner.id);
+      const token = issueAccessToken(owner.id);
+
+      const response = await request(app)
+        .put(`/api/properties/${propertyId}/translations/ar`)
+        .set('Authorization', `Bearer ${token}`)
+        .send({ title: 'Minimal translation', city: 'Riyadh' });
+
+      expect(response.status).toBe(200);
+
+      const row = await db
+        .selectFrom('property_translations')
+        .where('property_id', '=', propertyId)
+        .where('locale', '=', 'ar')
+        .selectAll()
+        .executeTakeFirstOrThrow();
+
+      expect(row.title).toBe('Minimal translation');
+      expect(row.summary).toBeNull();
+      expect(row.description).toBeNull();
+      expect(row.area).toBeNull();
+      expect(row.country).toBe('SA');
+      expect(row.amenities).toEqual([]);
     });
   });
 });
