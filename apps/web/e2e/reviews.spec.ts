@@ -1,22 +1,24 @@
 /**
  * E2E — Reviews (PRD §5).
  *
- * Combined into a single test because Playwright resets the page to
- * about:blank between serial tests, which destroys the origin-specific
- * localStorage needed for auth state to survive a full reload.
+ * Combined into a single test because:
+ * 1. Playwright resets the page to about:blank between serial tests
+ * 2. The OTP service has a 30-second cooldown — using the same phone
+ *    across separate tests would cause 429 errors.
  *
  * Flow: login as a seeded browser user → navigate to a property →
- * write a review → edit the comment → confirm the update.
+ * verify rating distribution chart → write a review → edit the
+ * comment → confirm the update.
  */
 import { expect, test } from '@playwright/test';
 import { loginAsUser } from './test-helpers';
 
 const BROWSER_COUNTRY = '+966';
-const BROWSER_PHONE = '500009001'; // dev-browser (no existing reviews)
+const BROWSER_PHONE = '500009001'; // dev-browser
 const REVIEW_COMMENT = 'Great place, highly recommend!';
 const UPDATED_COMMENT = 'Even better after staying longer.';
 
-test('full reviews flow', async ({ page }) => {
+test('[AC-29] rating distribution bar chart + full reviews flow', async ({ page }) => {
   // --- Login and navigate to a property ---
   await loginAsUser(page, BROWSER_COUNTRY, BROWSER_PHONE);
 
@@ -30,6 +32,13 @@ test('full reviews flow', async ({ page }) => {
 
   await link.click();
   await expect(page).toHaveURL(/\/properties\/[0-9a-f-]{36}$/);
+
+  // --- [AC-29] Rating distribution bar chart ---
+  const distribution = page.getByRole('group', { name: /rating distribution/i });
+  await expect(distribution).toBeVisible({ timeout: 10_000 });
+
+  const bars = distribution.locator('[data-testid="distribution-fill"]');
+  expect(await bars.count()).toBeGreaterThanOrEqual(1);
 
   // --- Leave a review ---
   const reviewsSection = page.getByRole('region', { name: 'Reviews', exact: true });

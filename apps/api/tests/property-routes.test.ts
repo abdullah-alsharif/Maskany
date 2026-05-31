@@ -12,6 +12,7 @@
  *     authenticated "my properties" endpoint.
  */
 import request from 'supertest';
+import sharp from 'sharp';
 import { afterAll, beforeEach, describe, expect, it } from 'vitest';
 import { createApp } from '../src/app.js';
 import { db, destroy } from '../src/lib/db.js';
@@ -132,7 +133,7 @@ describe('property routes', () => {
       });
     });
 
-    it('lists only ACTIVE properties and reports the total active count', async () => {
+    it('[AC-10] lists only ACTIVE properties and reports the total active count', async () => {
       const owner = await createUser('Owner A', '+966500010001', 'OWNER');
       await insertProperty(owner.id, { title: 'Active 1', status: 'ACTIVE' });
       await insertProperty(owner.id, { title: 'Active 2', status: 'ACTIVE' });
@@ -268,7 +269,7 @@ describe('property routes', () => {
   });
 
   describe('POST /api/properties', () => {
-    it('creates a property as an OWNER and returns it with 201', async () => {
+    it('[AC-11] creates a property as an OWNER and returns it with 201', async () => {
       const owner = await createUser('Create Owner', '+966500010006', 'OWNER');
       const token = issueAccessToken(owner.id);
 
@@ -343,7 +344,7 @@ describe('property routes', () => {
   });
 
   describe('PUT /api/properties/:id', () => {
-    it("updates the owning user's property and returns the updated record", async () => {
+    it("[AC-12] updates the owning user's property and returns the updated record", async () => {
       const owner = await createUser('Update Owner', '+966500010010', 'OWNER');
       const propertyId = await insertProperty(owner.id, { title: 'Before' });
       const token = issueAccessToken(owner.id);
@@ -420,7 +421,7 @@ describe('property routes', () => {
   });
 
   describe('DELETE /api/properties/:id', () => {
-    it('hard-deletes the property and returns 204', async () => {
+    it('soft-deletes the property and returns 204', async () => {
       const owner = await createUser('Delete Owner', '+966500010015', 'OWNER');
       const propertyId = await insertProperty(owner.id);
       const token = issueAccessToken(owner.id);
@@ -434,12 +435,13 @@ describe('property routes', () => {
       const row = await db
         .selectFrom('properties')
         .where('id', '=', propertyId)
-        .select('id')
+        .select(['id', 'status'])
         .executeTakeFirst();
-      expect(row).toBeUndefined();
+      expect(row).toBeDefined();
+      expect(row!.status).toBe('INACTIVE');
     });
 
-    it('deleted properties are excluded from the public listing', async () => {
+    it('deleted (soft) properties are excluded from the public listing', async () => {
       const owner = await createUser('Hidden Owner', '+966500010016', 'OWNER');
       const visible = await insertProperty(owner.id, { title: 'Visible' });
       const hidden = await insertProperty(owner.id, { title: 'Hidden' });
@@ -481,6 +483,39 @@ describe('property routes', () => {
 
       expect(response.status).toBe(404);
       expect(response.body.error.code).toBe('PROPERTY_NOT_FOUND');
+    });
+
+    it('[AC-13] DELETE sets status=INACTIVE, excluded from public listing, visible in /my/properties', async () => {
+      const owner = await createUser('AC13 Owner', '+966500010080', 'OWNER');
+      const propertyId = await insertProperty(owner.id, { title: 'AC-13 Test' });
+      const token = issueAccessToken(owner.id);
+
+      await request(app)
+        .delete(`/api/properties/${propertyId}`)
+        .set('Authorization', `Bearer ${token}`)
+        .expect(204);
+
+      // Status is INACTIVE in the DB
+      const row = await db
+        .selectFrom('properties')
+        .where('id', '=', propertyId)
+        .select('status')
+        .executeTakeFirstOrThrow();
+      expect(row.status).toBe('INACTIVE');
+
+      // Excluded from public GET /properties
+      const publicList = await request(app).get('/api/properties');
+      const publicIds = publicList.body.properties.map((p: { id: string }) => p.id);
+      expect(publicIds).not.toContain(propertyId);
+
+      // Visible in GET /api/properties/my
+      const myList = await request(app)
+        .get('/api/properties/my')
+        .set('Authorization', `Bearer ${token}`);
+      const myIds = myList.body.properties.map((p: { id: string }) => p.id);
+      expect(myIds).toContain(propertyId);
+      const myProp = myList.body.properties.find((p: { id: string }) => p.id === propertyId);
+      expect(myProp.status).toBe('INACTIVE');
     });
   });
 
@@ -633,7 +668,7 @@ describe('property routes', () => {
       return inserted.id;
     }
 
-    it('filters the listing to properties whose title matches the query', async () => {
+    it('[AC-18] filters the listing to properties whose title matches the query', async () => {
       const owner = await createUser('Search Title', '+966500020001', 'OWNER');
       const match = await insertSearchable(owner.id, {
         title: 'Beachside chalet with pool',
@@ -1016,7 +1051,7 @@ describe('property routes', () => {
       expect(response.body.total).toBe(1);
     });
 
-    it('sorts by price ascending when sort=price_asc', async () => {
+    it('[AC-23] sorts by price ascending when sort=price_asc', async () => {
       const owner = await createUser('SortAsc Owner', '+966500030010', 'OWNER');
       const mid = await insertFiltered(owner.id, { title: 'mid', price: '2000' });
       const low = await insertFiltered(owner.id, { title: 'low', price: '1000' });
@@ -1055,7 +1090,7 @@ describe('property routes', () => {
       expect(ids).toEqual([top, mid, low]);
     });
 
-    it('combines multiple filters via AND logic and reports total matching count', async () => {
+    it('[AC-21] combines multiple filters via AND logic and reports total matching count', async () => {
       const owner = await createUser('FMulti Filter', '+966500030013', 'OWNER');
       // Matches every filter.
       const match = await insertFiltered(owner.id, {
@@ -1216,7 +1251,7 @@ describe('property routes', () => {
   });
 
   describe('DELETE cascade / side effects', () => {
-    it('cascades deletes to reviews and property_media when a property is removed', async () => {
+    it('soft-delete preserves reviews and property_media (status becomes INACTIVE, row remains)', async () => {
       const owner = await createUser('Cascade Owner', '+966500050001', 'OWNER');
       const propertyId = await insertProperty(owner.id, { title: 'Cascade Test' });
       const token = issueAccessToken(owner.id);
@@ -1246,26 +1281,28 @@ describe('property routes', () => {
 
       expect(response.status).toBe(204);
 
+      // Reviews and media are preserved (soft-delete)
       const reviews = await db
         .selectFrom('reviews')
         .where('property_id', '=', propertyId)
         .select('id')
         .execute();
-      expect(reviews).toHaveLength(0);
+      expect(reviews).toHaveLength(1);
 
       const media = await db
         .selectFrom('property_media')
         .where('property_id', '=', propertyId)
         .select('id')
         .execute();
-      expect(media).toHaveLength(0);
+      expect(media).toHaveLength(1);
 
+      // Property row still exists but is INACTIVE
       const property = await db
         .selectFrom('properties')
         .where('id', '=', propertyId)
-        .select('id')
-        .executeTakeFirst();
-      expect(property).toBeUndefined();
+        .select('status')
+        .executeTakeFirstOrThrow();
+      expect(property.status).toBe('INACTIVE');
     });
 
     it('excludes an INACTIVE property from the public listing but includes it in /my', async () => {
@@ -1381,6 +1418,37 @@ describe('property routes', () => {
       expect(row.title).toBe('Updated Title');
       expect(row.city).toBe('Riyadh');
       expect(row.price).toBe('3000.00');
+    });
+
+    it('[AC-14] enforces media limits: up to 10 images and 3 videos per property', async () => {
+      const owner = await createUser('AC14 Owner', '+966500060005', 'OWNER');
+      const propertyId = await insertProperty(owner.id, { title: 'AC-14 Media' });
+      const token = issueAccessToken(owner.id);
+
+      for (let i = 0; i < 10; i += 1) {
+        const img = await sharp({
+          create: { width: 50, height: 50, channels: 3, background: { r: 255, g: 255, b: 255 } },
+        }).jpeg({ quality: 70 }).toBuffer();
+
+        const res = await request(app)
+          .post(`/api/properties/${propertyId}/media`)
+          .set('Authorization', `Bearer ${token}`)
+          .attach('images', img, { filename: `img-${i}.jpg`, contentType: 'image/jpeg' });
+
+        expect(res.status).toBe(201);
+      }
+
+      const overflow = await sharp({
+        create: { width: 50, height: 50, channels: 3, background: { r: 0, g: 0, b: 0 } },
+      }).jpeg({ quality: 70 }).toBuffer();
+
+      const rejected = await request(app)
+        .post(`/api/properties/${propertyId}/media`)
+        .set('Authorization', `Bearer ${token}`)
+        .attach('images', overflow, { filename: 'overflow.jpg', contentType: 'image/jpeg' });
+
+      expect(rejected.status).toBe(400);
+      expect(rejected.body.error.code).toBe('TOO_MANY_IMAGES');
     });
 
     it('returns 400 when whatsappNumber lacks the + prefix', async () => {

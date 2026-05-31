@@ -487,8 +487,9 @@ export async function updateProperty(
 }
 
 /**
- * Permanently delete a property listing. Enforces that the caller is the
- * listing owner. Missing property surfaces as 404.
+ * Soft-delete a property listing by setting its status to INACTIVE.
+ * Enforces that the caller is the listing owner. Missing property
+ * surfaces as 404.
  */
 export async function deleteProperty(userId: string, propertyId: string): Promise<void> {
   const existing = await loadPropertyOrThrow(propertyId);
@@ -501,7 +502,8 @@ export async function deleteProperty(userId: string, propertyId: string): Promis
   }
 
   await db
-    .deleteFrom('properties')
+    .updateTable('properties')
+    .set({ status: 'INACTIVE' })
     .where('id', '=', propertyId)
     .execute();
 }

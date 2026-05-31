@@ -89,7 +89,7 @@ describe('review routes', () => {
   });
 
   describe('POST /api/properties/:id/reviews', () => {
-    it('creates a review and updates the property aggregate', async () => {
+    it('[AC-27] creates a review and updates the property aggregate', async () => {
       const owner = await createUser('Owner A', '+966500020001', 'OWNER');
       const reviewer = await createUser('Reviewer A', '+966500020002');
       const propertyId = await insertProperty(owner.id);
@@ -155,7 +155,7 @@ describe('review routes', () => {
       expect(aggregate.reviewCount).toBe(1);
     });
 
-    it('returns 403 when the property owner tries to review their own listing', async () => {
+    it('[AC-26] returns 403 when the property owner tries to review their own listing', async () => {
       const owner = await createUser('Self Owner', '+966500020007', 'OWNER');
       const propertyId = await insertProperty(owner.id);
       const token = issueAccessToken(owner.id);
@@ -172,7 +172,7 @@ describe('review routes', () => {
       expect(aggregate.reviewCount).toBe(0);
     });
 
-    it('returns 401 without an Authorization header', async () => {
+    it('[AC-24] returns 401 without an Authorization header', async () => {
       const owner = await createUser('Owner Unauth', '+966500020008', 'OWNER');
       const propertyId = await insertProperty(owner.id);
 
@@ -472,7 +472,7 @@ describe('review routes', () => {
   });
 
   describe('GET /api/properties/:id/reviews', () => {
-    it('lists reviews newest first with 10 per page', async () => {
+    it('[AC-28] lists reviews newest first with 10 per page', async () => {
       const owner = await createUser('Owner LIST', '+966500050001', 'OWNER');
       const propertyId = await insertProperty(owner.id);
 
@@ -813,6 +813,44 @@ describe('review routes', () => {
       const aggregate = await fetchPropertyAggregate(propertyId);
       expect(aggregate.reviewCount).toBe(1);
       expect(aggregate.averageRating).toBeCloseTo(4, 1);
+    });
+  });
+
+  describe('PRD §5 — review acceptance', () => {
+    it('[AC-25] user A reviews property, user A tries again → 409, user A updates → OK', async () => {
+      const owner = await createUser('AC25 Owner', '+966500090030', 'OWNER');
+      const userA = await createUser('User A AC25', '+966500090031');
+      const propertyId = await insertProperty(owner.id);
+      const tokenA = issueAccessToken(userA.id);
+
+      // User A creates review
+      const created = await request(app)
+        .post(`/api/properties/${propertyId}/reviews`)
+        .set('Authorization', `Bearer ${tokenA}`)
+        .send({ rating: 4, comment: 'First review' });
+      expect(created.status).toBe(201);
+      const reviewId = created.body.id as string;
+
+      // User A tries again → 409
+      const duplicate = await request(app)
+        .post(`/api/properties/${propertyId}/reviews`)
+        .set('Authorization', `Bearer ${tokenA}`)
+        .send({ rating: 5, comment: 'Second attempt' });
+      expect(duplicate.status).toBe(409);
+      expect(duplicate.body.error.code).toBe('REVIEW_ALREADY_EXISTS');
+
+      // User A updates their review → OK
+      const updated = await request(app)
+        .put(`/api/properties/${propertyId}/reviews/${reviewId}`)
+        .set('Authorization', `Bearer ${tokenA}`)
+        .send({ rating: 5, comment: 'Updated review' });
+      expect(updated.status).toBe(200);
+      expect(updated.body.rating).toBe(5);
+      expect(updated.body.comment).toBe('Updated review');
+
+      const aggregate = await fetchPropertyAggregate(propertyId);
+      expect(aggregate.reviewCount).toBe(1);
+      expect(aggregate.averageRating).toBeCloseTo(5, 1);
     });
   });
 

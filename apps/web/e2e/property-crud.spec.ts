@@ -82,6 +82,9 @@ test('full property CRUD flow', async ({ page }) => {
   // Confirm the delete dialog.
   await page.getByRole('button', { name: 'Yes, delete listing' }).click();
 
-  // Wait for the empty state or the listing to disappear.
-  await expect(page.getByText('No listings yet')).toBeVisible({ timeout: 10_000 });
+  // With soft-delete the property remains visible but marked as Inactive.
+  await expect(page.getByRole('heading', { name: PROPERTY_TITLE })).toBeVisible({
+    timeout: 10_000,
+  });
+  await expect(page.getByText(/inactive/i)).toBeVisible();
 });

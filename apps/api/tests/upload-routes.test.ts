@@ -870,6 +870,39 @@ describe('media upload routes', () => {
     });
   });
 
+  describe('PRD §3.3 — media processing acceptance', () => {
+    it('[AC-15] uploaded image is WebP format and thumbnail file exists on disk', async () => {
+      const owner = await createUser('AC15 Owner', '+966500010080', 'OWNER');
+      const propertyId = await insertProperty(owner.id);
+      const token = issueAccessToken(owner.id);
+      const image = await generateImageBuffer(1200, 800);
+
+      const response = await request(app)
+        .post(`/api/properties/${propertyId}/media`)
+        .set('Authorization', `Bearer ${token}`)
+        .attach('images', image, { filename: 'ac15.jpg', contentType: 'image/jpeg' });
+
+      expect(response.status).toBe(201);
+      const [media] = response.body.media;
+
+      // Main image is WebP
+      expect(media.url).toMatch(/\.webp$/);
+      expect(media.mimeType).toBe('image/webp');
+
+      const mainDisk = path.join(uploadsRoot, media.url.replace(/^\/uploads\//, ''));
+      const mainBuffer = await readFile(mainDisk);
+      expect(mainBuffer.subarray(0, 4).toString('ascii')).toBe('RIFF');
+      expect(mainBuffer.subarray(8, 12).toString('ascii')).toBe('WEBP');
+
+      // Thumbnail file exists and is WebP
+      expect(media.thumbnailUrl).toMatch(/\.webp$/);
+      const thumbDisk = path.join(uploadsRoot, media.thumbnailUrl.replace(/^\/uploads\//, ''));
+      const thumbBuffer = await readFile(thumbDisk);
+      expect(thumbBuffer.subarray(0, 4).toString('ascii')).toBe('RIFF');
+      expect(thumbBuffer.subarray(8, 12).toString('ascii')).toBe('WEBP');
+    });
+  });
+
   describe('GET /uploads/:path', () => {
     it('serves the uploaded main image as WebP bytes', async () => {
       const owner = await createUser('Owner Static', '+966500010040', 'OWNER');

@@ -50,7 +50,7 @@ describe('auth routes', () => {
   });
 
   describe('POST /api/auth/register', () => {
-    it('creates a user, queues an SMS OTP, and returns the new userId', async () => {
+    it('[AC-01] creates a user, queues an SMS OTP, and returns the new userId', async () => {
       const response = await request(app).post('/api/auth/register').send({
         fullName: 'Register User',
         phone: PHONE,
@@ -186,7 +186,7 @@ describe('auth routes', () => {
   });
 
   describe('POST /api/auth/login', () => {
-    it('sends an SMS OTP when the identifier is a phone number', async () => {
+    it('[AC-05] sends an SMS OTP when the identifier is a phone number', async () => {
       await db
         .insertInto('users')
         .values({ full_name: 'Login User', phone: PHONE, user_type: 'BROWSER' })
@@ -249,7 +249,7 @@ describe('auth routes', () => {
   });
 
   describe('POST /api/auth/verify', () => {
-    it('completes the register → verify flow and returns tokens + user', async () => {
+    it('[AC-06] completes the register → verify flow and returns tokens + user', async () => {
       // Register
       const reg = await request(app).post('/api/auth/register').send({
         fullName: 'Flow User',
@@ -439,7 +439,7 @@ describe('auth routes', () => {
   });
 
   describe('POST /api/auth/logout', () => {
-    it('deletes the refresh token and returns a success message', async () => {
+    it('[AC-08] deletes the refresh token and returns a success message', async () => {
       await request(app).post('/api/auth/register').send({
         fullName: 'Logout User',
         phone: PHONE,
@@ -498,7 +498,7 @@ describe('auth routes', () => {
       });
     });
 
-    it('returns 401 when the Authorization header is missing', async () => {
+    it('[AC-09] returns 401 when the Authorization header is missing', async () => {
       const response = await request(app).get('/api/auth/me');
       expect(response.status).toBe(401);
       expect(response.body.error.code).toBe('UNAUTHORIZED');
@@ -534,7 +534,7 @@ describe('auth routes', () => {
   });
 
   describe('rate limiting', () => {
-    it('blocks the 21st rapid registration request (20/15min window)', async () => {
+    it('[AC-39] blocks the 21st rapid registration request (20/15min window)', async () => {
       for (let i = 0; i < 20; i++) {
         const res = await request(app)
           .post('/api/auth/register')
@@ -592,6 +592,97 @@ describe('auth routes', () => {
 
       expect(blocked.status).toBe(429);
       expect(blocked.body.error.code).toBe('RATE_LIMITED');
+    });
+  });
+
+  describe('PRD §2 — acceptance criteria', () => {
+    it('[AC-02] verifies OTP is sent via SMS for phone and via email for email', async () => {
+      // SMS OTP for phone registration
+      const reg = await request(app).post('/api/auth/register').send({
+        fullName: 'AC02 User',
+        phone: '+966500009901',
+        email: 'ac02@example.com',
+        userType: 'BROWSER',
+      });
+      expect(reg.status).toBe(201);
+
+      const smsOtp = await db
+        .selectFrom('otp_codes')
+        .where('identifier', '=', '+966500009901')
+        .where('otp_type', '=', 'SMS')
+        .select('code')
+        .executeTakeFirstOrThrow();
+      expect(smsOtp.code).toMatch(/^\d{6}$/);
+      expect(reg.body).toMatchObject({ message: expect.any(String), userId: expect.any(String) });
+
+      // Email OTP for email login
+      await db
+        .insertInto('users')
+        .values({ full_name: 'AC02 Email', phone: '+966500009902', email: 'ac02-login@example.com', user_type: 'BROWSER' })
+        .execute();
+
+      const login = await request(app).post('/api/auth/login').send({ identifier: 'ac02-login@example.com' });
+      expect(login.status).toBe(200);
+      expect(login.body.type).toBe('email');
+
+      const emailOtp = await db
+        .selectFrom('otp_codes')
+        .where('identifier', '=', 'ac02-login@example.com')
+        .where('otp_type', '=', 'EMAIL')
+        .select('code')
+        .executeTakeFirstOrThrow();
+      expect(emailOtp.code).toMatch(/^\d{6}$/);
+    });
+
+    it('[AC-03] given an expired OTP when verifying then the API returns 400/OTP_EXPIRED', async () => {
+      // Create a user and generate an OTP
+      await request(app).post('/api/auth/register').send({
+        fullName: 'AC03 User',
+        phone: '+966500009903',
+        userType: 'BROWSER',
+      });
+
+      // Directly insert an already-expired OTP
+      const expiredCode = '999999';
+      await db
+        .insertInto('otp_codes')
+        .values({
+          identifier: '+966500009903',
+          code: expiredCode,
+          otp_type: 'SMS',
+          expires_at: new Date(Date.now() - 60_000), // 1 minute in the past
+          verified: false,
+        })
+        .execute();
+
+      const response = await request(app).post('/api/auth/verify').send({
+        identifier: '+966500009903',
+        code: expiredCode,
+      });
+
+      expect(response.status).toBe(400);
+      expect(response.body.error.code).toBe('OTP_EXPIRED');
+    });
+
+    it('[AC-07] full refresh token rotation: use token → get new → use old → 401', async () => {
+      await request(app).post('/api/auth/register').send({
+        fullName: 'AC07 User',
+        phone: '+966500009904',
+        userType: 'BROWSER',
+      });
+      const code = await latestOtp('+966500009904');
+      const verify = await request(app).post('/api/auth/verify').send({ identifier: '+966500009904', code });
+      const rt1 = getRefreshToken(verify);
+
+      // Use refresh token → get new pair
+      const first = await request(app).post('/api/auth/refresh').send({ refreshToken: rt1 });
+      expect(first.status).toBe(200);
+      expect(first.body.accessToken).toEqual(expect.any(String));
+
+      // Old refresh token is now invalidated → 401
+      const replay = await request(app).post('/api/auth/refresh').send({ refreshToken: rt1 });
+      expect(replay.status).toBe(401);
+      expect(replay.body.error.code).toBe('UNAUTHORIZED');
     });
   });
 

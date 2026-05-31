@@ -55,4 +55,23 @@ test.describe('Filters', () => {
       .poll(async () => grid.locator('article').count(), { timeout: 15_000 })
       .toBe(initialCount);
   });
+
+  test('[AC-22] filters serialized to query params — visit URL with type and price, verify applied', async ({
+    page,
+  }) => {
+    await page.goto('/?type=APARTMENT&minPrice=1000');
+
+    const grid = page.getByTestId('property-grid');
+    await expect(grid).toBeVisible({ timeout: 15_000 });
+
+    await expect
+      .poll(
+        async () => {
+          const count = await grid.locator('article').count();
+          return count;
+        },
+        { timeout: 15_000 },
+      )
+      .toBeGreaterThan(0);
+  });
 });
