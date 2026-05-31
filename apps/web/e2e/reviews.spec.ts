@@ -38,7 +38,19 @@ test('[AC-29] rating distribution bar chart + full reviews flow', async ({ page 
   await expect(distribution).toBeVisible({ timeout: 10_000 });
 
   const bars = distribution.locator('[data-testid="distribution-fill"]');
-  expect(await bars.count()).toBeGreaterThanOrEqual(1);
+  const barCount = await bars.count();
+  expect(barCount).toBeGreaterThanOrEqual(1);
+
+  // Assert bar widths are valid percentage strings
+  for (let i = 0; i < barCount; i++) {
+    const style = await bars.nth(i).getAttribute('style');
+    expect(style).toMatch(/width:\s*\d+(\.\d+)?%/);
+  }
+
+  // Assert average rating and total review count displayed
+  const summary = page.getByRole('region', { name: /reviews summary/i });
+  await expect(summary).toBeVisible({ timeout: 5_000 });
+  await expect(summary.getByText(/\d+ review/i)).toBeVisible();
 
   // --- Leave a review ---
   const reviewsSection = page.getByRole('region', { name: 'Reviews', exact: true });

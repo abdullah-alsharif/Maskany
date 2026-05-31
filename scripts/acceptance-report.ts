@@ -124,7 +124,7 @@ const CRITERIA_MAP: Record<string, string> = {
   'AC-39': 'Rate limiting on auth endpoints (429 after 20 attempts)',
   'AC-40': 'WCAG 2.1 AA — keyboard nav, focus mgmt, alt text, contrast',
   'AC-41': 'All pages have semantic HTML5 + meta tags',
-  'AC-FLOW-01': 'Full user journey from registration to property deletion',
+  'AC-42': 'Complete browser-level user journey (E2E acceptance smoke test)',
 };
 
 function main() {
