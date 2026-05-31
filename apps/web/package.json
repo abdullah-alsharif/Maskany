@@ -12,6 +12,7 @@
     "test": "vitest run",
     "test:coverage": "vitest run --coverage",
     "test:e2e": "pnpm --filter @maskany/api build && playwright test",
+    "test:perf": "pnpm --filter @maskany/api build && playwright test --config=tests/performance/playwright.config.ts",
     "cap:add": "cap add",
     "cap:sync": "cap sync",
     "cap:open": "cap open"
