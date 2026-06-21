@@ -36,10 +36,11 @@ columns:
     type: timestamptz
     nullable: false
     default: now()
-unique_constraints:
+indexes:
   - name: reviews_user_property_unique
     columns: [user_id, property_id]
-indexes:
+    unique: true
+    as_constraint: true
   - name: idx_reviews_property
     columns: [property_id]
   - name: idx_reviews_user

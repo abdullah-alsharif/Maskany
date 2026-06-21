@@ -24,9 +24,10 @@ columns:
     type: timestamptz
     nullable: false
     default: now()
-unique_constraints:
+indexes:
   - name: push_tokens_token_unique
     columns: [token]
-indexes:
+    unique: true
+    as_constraint: true
   - name: idx_push_tokens_user
     columns: [user_id]
