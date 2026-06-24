@@ -147,3 +147,38 @@ The elevation system relies primarily on flat surfaces, clean lines, and subtle 
 - **Don't** use border-left or border-right colored stripes on callouts or alert banners.
 - **Don't** use glassmorphism decoratively.
 - **Don't** create identical static card grids without micro-animations on interaction.
+
+## 7. Component Reference
+
+| Component | Import path | Usage |
+|---|---|---|
+| `Button` | `components/ui/button` | primary, secondary, ghost, whatsapp, danger variants |
+| `Badge` | `components/ui/badge` | Property type badges, status |
+| `Skeleton`, `SkeletonCard` | `components/ui/skeleton` | Loading states |
+| `BottomSheet` | `components/ui/bottom-sheet` | Filter panel, mobile modals |
+| `EmptyState`, `NoResults`, `NoFavorites` | `components/ui/empty-state` | Empty/zero states |
+| `BottomNav` | `components/layout/bottom-nav` | Fixed bottom navigation |
+| `Header` | `components/layout/header` | Top header with back/share |
+| `PropertyCard` | `components/property/property-card` | Listing grid cards |
+| `CategoryBar` | `components/property/category-bar` | Category chip selector |
+| `SearchBar` | `components/property/search-bar` | Search input |
+| `ImageGallery` | `components/property/image-gallery` | Swipeable gallery |
+| `FavoriteButton` | `components/property/favorite-button` | Heart toggle |
+| `WhatsAppFab`, `WhatsAppIconButton` | `components/property/whatsapp-button` | WhatsApp contact |
+| `StarRating`, `RatingDistribution` | `components/review/star-rating` | Rating display/input |
+| `ReviewCard` | `components/review/review-card` | Individual review |
+| `OtpInput`, `OtpCountdown` | `components/auth/otp-input` | 6-digit OTP entry |
+
+### Key types
+
+| Types | Import path |
+|---|---|
+| Property | `types/property` |
+| Review | `types/review` |
+| User | `types/user` |
+
+### Design tokens
+
+| Export | Import path |
+|---|---|
+| `colors`, `typography`, `propertyTypeConfig`, `amenityConfig`, `priceUnitLabels` | `styles/design-tokens` |
