@@ -21,17 +21,19 @@ export async function up(db: Kysely<unknown>): Promise<void> {
     .addColumn('full_name', 'text', (cb) => cb.notNull())
     .addColumn('phone', 'text', (cb) => cb.notNull())
     .addColumn('email', 'text')
-    .addColumn('user_type', 'text', (cb) =>
-      cb.notNull().defaultTo(sql`'BROWSER'::text`),
-    )
+    .addColumn('user_type', 'text', (cb) => cb.notNull().defaultTo(sql`'BROWSER'::text`))
     .addColumn('created_at', 'timestamptz', (cb) => cb.notNull().defaultTo(sql`now()`))
     .addColumn('updated_at', 'timestamptz', (cb) => cb.notNull().defaultTo(sql`now()`))
     .addPrimaryKeyConstraint('pk_users', ['id'])
     .execute();
 
-  await sql`ALTER TABLE users ADD CONSTRAINT chk_users_user_type CHECK (user_type = ANY (ARRAY['BROWSER'::text, 'OWNER'::text]))`.execute(db);
+  await sql`ALTER TABLE users ADD CONSTRAINT chk_users_user_type CHECK (user_type = ANY (ARRAY['BROWSER'::text, 'OWNER'::text]))`.execute(
+    db,
+  );
   await sql`CREATE UNIQUE INDEX idx_users_phone ON users (phone)`.execute(db);
-  await sql`CREATE UNIQUE INDEX idx_users_email ON users (email) WHERE (email IS NOT NULL)`.execute(db);
+  await sql`CREATE UNIQUE INDEX idx_users_email ON users (email) WHERE (email IS NOT NULL)`.execute(
+    db,
+  );
   await sql`
     CREATE TRIGGER trg_users_updated_at
     BEFORE UPDATE ON users
@@ -51,7 +53,9 @@ export async function up(db: Kysely<unknown>): Promise<void> {
     .addPrimaryKeyConstraint('pk_otp_codes', ['id'])
     .execute();
 
-  await sql`ALTER TABLE otp_codes ADD CONSTRAINT chk_otp_codes_otp_type CHECK (otp_type = ANY (ARRAY['SMS'::text, 'EMAIL'::text]))`.execute(db);
+  await sql`ALTER TABLE otp_codes ADD CONSTRAINT chk_otp_codes_otp_type CHECK (otp_type = ANY (ARRAY['SMS'::text, 'EMAIL'::text]))`.execute(
+    db,
+  );
 
   await db.schema
     .createTable('properties')
@@ -67,15 +71,11 @@ export async function up(db: Kysely<unknown>): Promise<void> {
     .addColumn('lng', 'double precision')
     .addColumn('price', sql`numeric(12,2)`, (cb) => cb.notNull().defaultTo(sql`'0'`))
     .addColumn('currency', 'text', (cb) => cb.notNull().defaultTo(sql`'SAR'::text`))
-    .addColumn('price_unit', 'text', (cb) =>
-      cb.notNull().defaultTo(sql`'per_month'::text`),
-    )
+    .addColumn('price_unit', 'text', (cb) => cb.notNull().defaultTo(sql`'per_month'::text`))
     .addColumn('rooms', 'integer', (cb) => cb.notNull().defaultTo(0))
     .addColumn('bathrooms', 'integer', (cb) => cb.notNull().defaultTo(0))
     .addColumn('area_sqm', sql`numeric(10,2)`)
-    .addColumn('amenities', sql`text[]`, (cb) =>
-      cb.notNull().defaultTo(sql`'{}'::text[]`),
-    )
+    .addColumn('amenities', sql`text[]`, (cb) => cb.notNull().defaultTo(sql`'{}'::text[]`))
     .addColumn('locale', 'text', (cb) => cb.notNull().defaultTo(sql`'en'::text`))
     .addColumn('whatsapp_number', 'text', (cb) => cb.notNull())
     .addColumn('owner_id', 'uuid', (cb) => cb.notNull())
@@ -90,12 +90,24 @@ export async function up(db: Kysely<unknown>): Promise<void> {
     )
     .execute();
 
-  await sql`ALTER TABLE properties ADD CONSTRAINT chk_properties_title_length CHECK (char_length(title) <= 120)`.execute(db);
-  await sql`ALTER TABLE properties ADD CONSTRAINT chk_properties_summary_length CHECK (char_length(summary) <= 300)`.execute(db);
-  await sql`ALTER TABLE properties ADD CONSTRAINT chk_properties_property_type CHECK (property_type = ANY (ARRAY['APARTMENT'::text, 'ROOM'::text, 'CHALET'::text, 'VILLA'::text, 'HOUSE'::text, 'STUDIO'::text, 'PENTHOUSE'::text, 'DUPLEX'::text, 'OTHER'::text]))`.execute(db);
-  await sql`ALTER TABLE properties ADD CONSTRAINT chk_properties_price_unit CHECK (price_unit = ANY (ARRAY['per_night'::text, 'per_month'::text, 'per_year'::text, 'total'::text]))`.execute(db);
-  await sql`ALTER TABLE properties ADD CONSTRAINT chk_properties_locale CHECK (locale = ANY (ARRAY['en'::text, 'ar'::text]))`.execute(db);
-  await sql`ALTER TABLE properties ADD CONSTRAINT chk_properties_status CHECK (status = ANY (ARRAY['ACTIVE'::text, 'INACTIVE'::text, 'DRAFT'::text]))`.execute(db);
+  await sql`ALTER TABLE properties ADD CONSTRAINT chk_properties_title_length CHECK (char_length(title) <= 120)`.execute(
+    db,
+  );
+  await sql`ALTER TABLE properties ADD CONSTRAINT chk_properties_summary_length CHECK (char_length(summary) <= 300)`.execute(
+    db,
+  );
+  await sql`ALTER TABLE properties ADD CONSTRAINT chk_properties_property_type CHECK (property_type = ANY (ARRAY['APARTMENT'::text, 'ROOM'::text, 'CHALET'::text, 'VILLA'::text, 'HOUSE'::text, 'STUDIO'::text, 'PENTHOUSE'::text, 'DUPLEX'::text, 'OTHER'::text]))`.execute(
+    db,
+  );
+  await sql`ALTER TABLE properties ADD CONSTRAINT chk_properties_price_unit CHECK (price_unit = ANY (ARRAY['per_night'::text, 'per_month'::text, 'per_year'::text, 'total'::text]))`.execute(
+    db,
+  );
+  await sql`ALTER TABLE properties ADD CONSTRAINT chk_properties_locale CHECK (locale = ANY (ARRAY['en'::text, 'ar'::text]))`.execute(
+    db,
+  );
+  await sql`ALTER TABLE properties ADD CONSTRAINT chk_properties_status CHECK (status = ANY (ARRAY['ACTIVE'::text, 'INACTIVE'::text, 'DRAFT'::text]))`.execute(
+    db,
+  );
 
   await sql`CREATE INDEX idx_properties_owner ON properties (owner_id)`.execute(db);
   await sql`CREATE INDEX idx_properties_type ON properties (property_type)`.execute(db);
@@ -122,18 +134,22 @@ export async function up(db: Kysely<unknown>): Promise<void> {
     .addColumn('city', 'text', (cb) => cb.notNull())
     .addColumn('area', 'text')
     .addColumn('country', 'text', (cb) => cb.notNull())
-    .addColumn('amenities', sql`text[]`, (cb) =>
-      cb.notNull().defaultTo(sql`'{}'::text[]`),
-    )
+    .addColumn('amenities', sql`text[]`, (cb) => cb.notNull().defaultTo(sql`'{}'::text[]`))
     .addColumn('created_at', 'timestamptz', (cb) => cb.notNull().defaultTo(sql`now()`))
     .addColumn('updated_at', 'timestamptz', (cb) => cb.notNull().defaultTo(sql`now()`))
     .addPrimaryKeyConstraint('pk_property_translations', ['property_id', 'locale'])
-    .addForeignKeyConstraint('fk_property_translations_property', ['property_id'], 'properties', ['id'], (cb) =>
-      cb.onDelete('cascade'),
+    .addForeignKeyConstraint(
+      'fk_property_translations_property',
+      ['property_id'],
+      'properties',
+      ['id'],
+      (cb) => cb.onDelete('cascade'),
     )
     .execute();
 
-  await sql`ALTER TABLE property_translations ADD CONSTRAINT chk_property_translations_locale CHECK (locale = ANY (ARRAY['en'::text, 'ar'::text]))`.execute(db);
+  await sql`ALTER TABLE property_translations ADD CONSTRAINT chk_property_translations_locale CHECK (locale = ANY (ARRAY['en'::text, 'ar'::text]))`.execute(
+    db,
+  );
 
   await sql`
     CREATE TRIGGER trg_property_translations_updated_at
@@ -158,12 +174,18 @@ export async function up(db: Kysely<unknown>): Promise<void> {
     .addColumn('sort_order', 'integer', (cb) => cb.notNull().defaultTo(0))
     .addColumn('created_at', 'timestamptz', (cb) => cb.notNull().defaultTo(sql`now()`))
     .addPrimaryKeyConstraint('pk_property_media', ['id'])
-    .addForeignKeyConstraint('fk_property_media_property', ['property_id'], 'properties', ['id'], (cb) =>
-      cb.onDelete('cascade'),
+    .addForeignKeyConstraint(
+      'fk_property_media_property',
+      ['property_id'],
+      'properties',
+      ['id'],
+      (cb) => cb.onDelete('cascade'),
     )
     .execute();
 
-  await sql`ALTER TABLE property_media ADD CONSTRAINT chk_property_media_media_type CHECK (media_type = ANY (ARRAY['IMAGE'::text, 'VIDEO'::text]))`.execute(db);
+  await sql`ALTER TABLE property_media ADD CONSTRAINT chk_property_media_media_type CHECK (media_type = ANY (ARRAY['IMAGE'::text, 'VIDEO'::text]))`.execute(
+    db,
+  );
   await sql`CREATE INDEX idx_property_media_property ON property_media (property_id)`.execute(db);
 
   await db.schema
@@ -184,9 +206,15 @@ export async function up(db: Kysely<unknown>): Promise<void> {
     )
     .execute();
 
-  await sql`ALTER TABLE reviews ADD CONSTRAINT chk_reviews_rating CHECK (rating >= 1.0 AND rating <= 5.0)`.execute(db);
-  await sql`ALTER TABLE reviews ADD CONSTRAINT chk_reviews_comment_length CHECK (char_length(comment) <= 1000)`.execute(db);
-  await sql`ALTER TABLE reviews ADD CONSTRAINT uq_reviews_user_property UNIQUE (user_id, property_id)`.execute(db);
+  await sql`ALTER TABLE reviews ADD CONSTRAINT chk_reviews_rating CHECK (rating >= 1.0 AND rating <= 5.0)`.execute(
+    db,
+  );
+  await sql`ALTER TABLE reviews ADD CONSTRAINT chk_reviews_comment_length CHECK (char_length(comment) <= 1000)`.execute(
+    db,
+  );
+  await sql`ALTER TABLE reviews ADD CONSTRAINT uq_reviews_user_property UNIQUE (user_id, property_id)`.execute(
+    db,
+  );
   await sql`CREATE INDEX idx_reviews_property ON reviews (property_id)`.execute(db);
 
   await sql`
@@ -225,7 +253,9 @@ export async function up(db: Kysely<unknown>): Promise<void> {
     )
     .execute();
 
-  await sql`ALTER TABLE push_tokens ADD CONSTRAINT chk_push_tokens_platform CHECK (platform = ANY (ARRAY['ios'::text, 'android'::text, 'web'::text]))`.execute(db);
+  await sql`ALTER TABLE push_tokens ADD CONSTRAINT chk_push_tokens_platform CHECK (platform = ANY (ARRAY['ios'::text, 'android'::text, 'web'::text]))`.execute(
+    db,
+  );
   await sql`CREATE UNIQUE INDEX idx_push_tokens_token ON push_tokens (token)`.execute(db);
   await sql`CREATE INDEX idx_push_tokens_user ON push_tokens (user_id)`.execute(db);
 
@@ -242,7 +272,9 @@ export async function up(db: Kysely<unknown>): Promise<void> {
     )
     .execute();
 
-  await sql`CREATE UNIQUE INDEX idx_recovery_codes_code_hash ON recovery_codes (code_hash)`.execute(db);
+  await sql`CREATE UNIQUE INDEX idx_recovery_codes_code_hash ON recovery_codes (code_hash)`.execute(
+    db,
+  );
   await sql`CREATE INDEX idx_recovery_codes_user ON recovery_codes (user_id)`.execute(db);
 }
 
