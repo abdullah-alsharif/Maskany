@@ -1,8 +1,0 @@
-name: set_updated_timestamp
-language: plpgsql
-returns: trigger
-body: |
-  BEGIN
-    NEW.updated_at = NOW();
-    RETURN NEW;
-  END;

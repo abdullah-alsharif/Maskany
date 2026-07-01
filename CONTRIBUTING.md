@@ -24,7 +24,7 @@ pnpm dev                      # api:3001, web:3000
 
 - **Frontend:** TanStack Query for data fetching, axios client, lucide-react icons, Tailwind 4
 - **Backend:** Thin routes in `routes/`, logic in `services/`, zod validation on all inputs
-- **DB:** Kysely for queries, schema-flow for migrations (`pnpm db:migrate`), snake_case everywhere
+- **DB:** Kysely for queries and migrations (`pnpm db:migrate`), snake_case everywhere
 - **Testing:** Real DB only, no mocks. Use `supertest` for API, `@testing-library/react` for frontend
 - **Media:** sharp for images (WebP, thumbnails), ffmpeg for video poster frames, max 10 images + 3 videos per property
 

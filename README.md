@@ -22,5 +22,5 @@ pnpm dev                      # api :3001, web :3000
 | `pnpm test`          | Run unit/integration tests (auto-manages test DB) |
 | `pnpm test:e2e`      | Run Playwright E2E tests                          |
 | `pnpm test:coverage` | Run tests with coverage report                    |
-| `pnpm db:migrate`    | Apply schema-flow migrations                      |
+| `pnpm db:migrate`    | Apply Kysely migrations                           |
 | `pnpm db:seed`       | Seed database with fixture data                   |

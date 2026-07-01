@@ -575,7 +575,7 @@ export async function upsertPropertyTranslation(
       amenities: data.amenities ?? [],
     })
     .onConflict((oc) =>
-      oc.constraint('property_translations_pkey').doUpdateSet({
+      oc.constraint('pk_property_translations').doUpdateSet({
         title: data.title,
         summary: data.summary ?? null,
         description: data.description ?? null,

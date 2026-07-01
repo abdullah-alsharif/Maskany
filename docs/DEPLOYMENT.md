@@ -96,7 +96,7 @@ curl http://localhost/api/health
 The stack starts in this order:
 
 1. `postgres` — waits until healthy (pg_isready).
-2. `api` — runs database migrations via `schema-flow run`, then starts the Express server.
+2. `api` — runs database migrations via `pnpm db:migrate`, then starts the Express server.
 3. `web` — starts the Next.js server.
 4. `nginx` — begins accepting traffic on port 80 once the other services are up.
 
@@ -108,7 +108,7 @@ Migrations run automatically inside the `api` container on every startup via the
 `docker-entrypoint.sh` script. To run them manually:
 
 ```bash
-docker compose -f docker-compose.deploy.yml exec api sh -c "schema-flow run --dir /app/schema"
+docker compose -f docker-compose.deploy.yml exec api sh -c "pnpm db:migrate"
 ```
 
 ---

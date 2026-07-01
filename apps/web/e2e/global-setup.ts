@@ -7,7 +7,7 @@
  * `seed-cli.ts` entry — the same script the integration suite exercises
  * — with `DATABASE_URL` overridden to point at port 5433.
  *
- * The schema-flow YAML schema is assumed to be already applied (the test
+ * The Kysely migration is assumed to be already applied (the test
  * database is provisioned out-of-band by `pnpm docker:test` + `pnpm
  * db:migrate`). Re-running the migration here would slow each Playwright
  * launch by 5-10 s for no gain, so we skip it and only re-seed.

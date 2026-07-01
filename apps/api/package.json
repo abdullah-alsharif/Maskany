@@ -11,7 +11,11 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:coverage": "vitest run --coverage",
-    "db:seed": "dotenv -e ../../.env -- tsx src/scripts/seed-cli.ts"
+    "db:reset": "dotenv -e ../../.env -- tsx src/scripts/reset-db.ts",
+    "db:migrate": "dotenv -e ../../.env -- tsx src/scripts/migrate.ts",
+    "db:migrate:down": "dotenv -e ../../.env -- tsx src/scripts/migrate.ts down",
+    "db:seed": "dotenv -e ../../.env -- tsx src/scripts/seed-cli.ts",
+    "db:setup": "pnpm db:reset && pnpm db:migrate && pnpm db:seed"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1032.0",

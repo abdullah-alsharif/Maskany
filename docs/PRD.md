@@ -17,7 +17,7 @@ Maskany is a mobile-first property listing web application that allows users to 
 
 - **Frontend**: React 19 + TypeScript + Vite + Tailwind CSS 4
 - **Backend**: Node.js + Express + TypeScript
-- **Database**: PostgreSQL — schema managed by `@smplcty/schema-flow` (declarative YAML), queries via `Kysely` (type-safe SQL builder)
+- **Database**: PostgreSQL — schema managed by `Kysely` migrations (TypeScript schema builder), queries via `Kysely` (type-safe SQL builder)
 - **Testing**: Vitest (unit/integration with real DB), Playwright (E2E)
 - **Mobile**: Capacitor
 - **Auth**: Twilio SMS OTP + Email OTP via Nodemailer

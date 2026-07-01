@@ -28,18 +28,14 @@ WORKDIR /app
 
 RUN corepack enable && corepack prepare pnpm@10.15.1 --activate
 
-# Install schema-flow globally so the entrypoint can run migrations
-RUN npm install -g @smplcty/schema-flow
-
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 COPY apps/api/package.json ./apps/api/
 RUN mkdir -p apps/web && echo '{"name":"@maskany/web","version":"0.0.1","private":true}' > apps/web/package.json
 
 RUN pnpm install --no-frozen-lockfile --filter @maskany/api... --prod
 
-# Copy compiled output and database schema
+# Copy compiled output and migrations
 COPY --from=builder /app/apps/api/dist ./apps/api/dist
-COPY schema ./schema
 
 # Entrypoint script runs migrations then starts the server
 COPY apps/api/docker-entrypoint.sh ./docker-entrypoint.sh
