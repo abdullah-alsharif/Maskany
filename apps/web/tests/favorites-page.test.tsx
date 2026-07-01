@@ -39,8 +39,8 @@ const renderPage = (favorites: string[], seededProperties: Property[] = []) => {
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false, staleTime: Infinity } },
   });
-  for (const property of seededProperties) {
-    queryClient.setQueryData(['property', property.id], property);
+  if (favorites.length > 0) {
+    queryClient.setQueryData(['favorite-properties', favorites], seededProperties);
   }
   return render(
     <QueryClientProvider client={queryClient}>
@@ -50,7 +50,6 @@ const renderPage = (favorites: string[], seededProperties: Property[] = []) => {
 };
 
 let savedAdapter: AxiosAdapter | undefined;
-let resolveLoading: (() => void) | undefined;
 
 function renderLoadingPage(favorites: string[]) {
   window.localStorage.setItem(FAVORITES_STORAGE_KEY, JSON.stringify(favorites));
@@ -110,7 +109,7 @@ describe('FavoritesPage', () => {
 
   it('skips favorites whose property data failed to load (e.g. deleted listings)', () => {
     const a = makeProperty('a', 'Garden Villa');
-    // "b" is in favorites but no property data is seeded for it.
+    // "b" is in favorites but only "a" is in the bulk response (simulating a missing/deleted listing).
     renderPage(['a', 'b'], [a]);
     expect(screen.getByRole('heading', { level: 3, name: /garden villa/i })).toBeInTheDocument();
     // Only one card renders; no broken "undefined" placeholder.

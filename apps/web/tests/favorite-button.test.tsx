@@ -1,6 +1,6 @@
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
-import { FavoriteButton } from '../src/components/favorite-button';
+import { FavoriteButton } from '../src/components/property/favorite-button';
 
 describe('FavoriteButton', () => {
   it('renders with aria-pressed=false and an outlined heart when not favorited', () => {
@@ -45,8 +45,7 @@ describe('FavoriteButton', () => {
     expect(parentClick).not.toHaveBeenCalled();
   });
 
-  it('exposes the canonical export path apps/web/src/components/favorite-button', () => {
-    // Importing through the barrel path must resolve to the themed button component.
+  it('exports a function component', () => {
     expect(typeof FavoriteButton).toBe('function');
   });
 

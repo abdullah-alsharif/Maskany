@@ -1,6 +1,6 @@
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
-import { ImageGallery } from '../src/components/image-gallery';
+import { ImageGallery } from '../src/components/property/image-gallery';
 import type { PropertyMedia } from '../src/types/property';
 
 const makeImage = (id: string, i: number): PropertyMedia => ({
@@ -115,12 +115,7 @@ describe('ImageGallery — fullscreen interactions (T-064)', () => {
 
 describe('ImageGallery — desktop collage with more than 3 images', () => {
   it('shows the +N overlay when there are more than 3 images', () => {
-    const fourImages = [
-      makeImage('a', 0),
-      makeImage('b', 1),
-      makeImage('c', 2),
-      makeImage('d', 3),
-    ];
+    const fourImages = [makeImage('a', 0), makeImage('b', 1), makeImage('c', 2), makeImage('d', 3)];
     const { container } = render(<ImageGallery images={fourImages} alt="Property" />);
     expect(screen.getByText('+1')).toBeInTheDocument();
   });

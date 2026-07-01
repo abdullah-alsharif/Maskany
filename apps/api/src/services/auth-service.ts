@@ -127,3 +127,40 @@ export async function consumeRefreshToken(token: string): Promise<string> {
 export async function deleteRefreshToken(token: string): Promise<void> {
   await db.deleteFrom('refresh_tokens').where('token', '=', token).execute();
 }
+
+/**
+ * If a user exists with the given identifier but registration was never
+ * completed (no verified OTP was ever created for this identifier), delete
+ * the stale row so re-registration can proceed. Otherwise throw.
+ *
+ * Users created outside the OTP flow (seed scripts, admin panel) have no
+ * OTP history and are always considered fully registered.
+ */
+export async function guardIdentifier(value: string, field: 'phone' | 'email'): Promise<void> {
+  const column = field === 'phone' ? 'phone' : 'email';
+  const existing = await db
+    .selectFrom('users')
+    .where(column, '=', value)
+    .select('id')
+    .executeTakeFirst();
+  if (!existing) return;
+
+  const otpRecord = await db
+    .selectFrom('otp_codes')
+    .where('identifier', '=', value)
+    .select('verified')
+    .executeTakeFirst();
+
+  // No OTP history → user was created outside the registration flow.
+  // Verified OTP exists → user completed registration. Both are conflicts.
+  if (!otpRecord || otpRecord.verified) {
+    throw new HttpError(
+      409,
+      field === 'phone' ? ErrorCode.PHONE_ALREADY_REGISTERED : ErrorCode.EMAIL_ALREADY_REGISTERED,
+      `${field === 'phone' ? 'Phone number' : 'Email address'} is already registered.`,
+    );
+  }
+
+  // User has OTP attempts but never verified — stale row.
+  await db.deleteFrom('users').where('id', '=', existing.id).execute();
+}

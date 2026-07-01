@@ -83,8 +83,6 @@ describe('Property page metadata (T-049)', () => {
     const { generateMetadata } = await import('../src/app/properties/[id]/page');
     await generateMetadata({ params: Promise.resolve({ id: 'prop-1' }) });
 
-    expect(globalThis.fetch).toHaveBeenCalledWith(
-      'https://api.example.com/api/properties/prop-1',
-    );
+    expect(globalThis.fetch).toHaveBeenCalledWith('https://api.example.com/api/properties/prop-1');
   });
 });

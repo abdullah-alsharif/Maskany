@@ -3,21 +3,12 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import {
-  Bed,
-  Bath,
-  Expand,
-  ImageIcon,
-  Pencil,
-  Plus,
-  Power,
-  Trash2,
-} from 'lucide-react';
+import { Bed, Bath, Expand, ImageIcon, Pencil, Plus, Power, Trash2 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { Badge } from '../components/ui/badge';
 import { Button } from '../components/ui/button';
 import { NoProperties } from '../components/ui/empty-state';
-import { SkeletonCard } from '../components/skeleton-card';
+import { SkeletonCard } from '../components/ui/skeleton';
 import { SeoHead } from '../components/seo-head';
 import {
   useDeleteProperty,
@@ -107,8 +98,7 @@ function PropertyRow({
   const isActive = property.status === 'ACTIVE';
   const toggleLabel = isActive ? 'myProperties.deactivate' : 'myProperties.activate';
 
-  const staggerClass =
-    index < 6 ? `animate-stagger-${index + 1}` : '';
+  const staggerClass = index < 6 ? `animate-stagger-${index + 1}` : '';
 
   return (
     <article
@@ -153,7 +143,9 @@ function PropertyRow({
           <div className="flex flex-wrap items-center gap-x-5 gap-y-1.5 text-sm text-stone-600">
             <span className="inline-flex items-center gap-1.5">
               <span className="text-stone-400">{t('myProperties.propertyType')}:</span>
-              <span className="font-medium text-stone-700">{t(`propertyType.${property.propertyType}`)}</span>
+              <span className="font-medium text-stone-700">
+                {t(`propertyType.${property.propertyType}`)}
+              </span>
             </span>
             <span className="inline-flex items-center gap-1.5">
               <span className="text-stone-400">{t('myProperties.price')}:</span>
@@ -164,7 +156,9 @@ function PropertyRow({
                   maximumFractionDigits: 0,
                 }).format(property.price)}
               </span>
-              <span className="text-stone-400 text-xs">/{t(`priceUnit.${property.priceUnit}`)}</span>
+              <span className="text-stone-400 text-xs">
+                /{t(`priceUnit.${property.priceUnit}`)}
+              </span>
             </span>
           </div>
 
@@ -172,9 +166,7 @@ function PropertyRow({
           <div className="flex items-center gap-5 text-sm text-stone-500">
             <span className="inline-flex items-center gap-1.5">
               <Bed size={15} className="text-stone-400" strokeWidth={1.5} />
-              {property.rooms > 0
-                ? t('myProperties.rooms', { count: property.rooms })
-                : '—'}
+              {property.rooms > 0 ? t('myProperties.rooms', { count: property.rooms }) : '—'}
             </span>
             <span className="inline-flex items-center gap-1.5">
               <Bath size={15} className="text-stone-400" strokeWidth={1.5} />
@@ -254,8 +246,12 @@ export function MyPropertiesPage() {
       <SeoHead title="My properties | Maskany" description="Manage your property listings." />
       <header className="px-4 pt-8 pb-3 flex items-end justify-between gap-4">
         <div>
-          <h1 className="font-display text-4xl text-stone-950 leading-tight">{t('myProperties.heading')}</h1>
-          <p className="mt-1.5 text-sm text-stone-500 leading-relaxed">{t('myProperties.subheading')}</p>
+          <h1 className="font-display text-4xl text-stone-950 leading-tight">
+            {t('myProperties.heading')}
+          </h1>
+          <p className="mt-1.5 text-sm text-stone-500 leading-relaxed">
+            {t('myProperties.subheading')}
+          </p>
           {properties.length > 0 && (
             <p className="mt-0.5 text-xs text-stone-400 font-medium tracking-wide uppercase">
               {t('myProperties.listingsCount', { count: properties.length })}

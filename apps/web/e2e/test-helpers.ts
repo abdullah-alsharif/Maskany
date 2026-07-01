@@ -66,7 +66,11 @@ export async function closeTestHelperPool(): Promise<void> {
  * Navigates to /login, submits the phone number, reads the OTP from the DB,
  * types it into the verify-otp page, and waits for redirect to the home page.
  */
-export async function loginAsUser(page: Page, countryCode: string, phoneLocal: string): Promise<void> {
+export async function loginAsUser(
+  page: Page,
+  countryCode: string,
+  phoneLocal: string,
+): Promise<void> {
   const fullPhone = `${countryCode}${phoneLocal}`;
 
   await page.goto('/login');

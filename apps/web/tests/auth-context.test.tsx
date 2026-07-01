@@ -85,7 +85,9 @@ describe('AuthProvider + useAuth', () => {
 
   it('logout sets isLoading to true during the operation', async () => {
     let resolveLogout: (value: unknown) => void;
-    const logoutGate = new Promise((r) => { resolveLogout = r; });
+    const logoutGate = new Promise((r) => {
+      resolveLogout = r;
+    });
 
     const saved = apiClient.defaults.adapter;
     apiClient.defaults.adapter = (async (config: AxiosRequestConfig) => {
@@ -238,17 +240,39 @@ describe('AuthProvider — interceptor callbacks', () => {
     apiClient.defaults.adapter = (async (config: AxiosRequestConfig) => {
       if (config.url === '/test' && callCount === 0) {
         callCount++;
-        const err = new Error('Unauthorized') as Error & { response?: AxiosResponse; config?: AxiosRequestConfig; isAxiosError?: boolean };
-        err.response = { data: {}, status: 401, statusText: 'Unauthorized', headers: {}, config } as AxiosResponse;
+        const err = new Error('Unauthorized') as Error & {
+          response?: AxiosResponse;
+          config?: AxiosRequestConfig;
+          isAxiosError?: boolean;
+        };
+        err.response = {
+          data: {},
+          status: 401,
+          statusText: 'Unauthorized',
+          headers: {},
+          config,
+        } as AxiosResponse;
         err.config = config;
         err.isAxiosError = true;
         throw err;
       }
       if (config.url === '/auth/refresh') {
-        return { data: { accessToken: 'refreshed-token' }, status: 200, statusText: 'OK', headers: {}, config } as AxiosResponse;
+        return {
+          data: { accessToken: 'refreshed-token' },
+          status: 200,
+          statusText: 'OK',
+          headers: {},
+          config,
+        } as AxiosResponse;
       }
       callCount++;
-      return { data: { ok: true }, status: 200, statusText: 'OK', headers: {}, config } as AxiosResponse;
+      return {
+        data: { ok: true },
+        status: 200,
+        statusText: 'OK',
+        headers: {},
+        config,
+      } as AxiosResponse;
     }) as AxiosAdapter;
 
     tokenStorage.setSession({ accessToken: 'old-token', user: USER });
@@ -268,15 +292,35 @@ describe('AuthProvider — interceptor callbacks', () => {
   it('invokes onRefreshFailed and clears storage on failed refresh', async () => {
     apiClient.defaults.adapter = (async (config: AxiosRequestConfig) => {
       if (config.url === '/test') {
-        const err = new Error('Unauthorized') as Error & { response?: AxiosResponse; config?: AxiosRequestConfig; isAxiosError?: boolean };
-        err.response = { data: {}, status: 401, statusText: 'Unauthorized', headers: {}, config } as AxiosResponse;
+        const err = new Error('Unauthorized') as Error & {
+          response?: AxiosResponse;
+          config?: AxiosRequestConfig;
+          isAxiosError?: boolean;
+        };
+        err.response = {
+          data: {},
+          status: 401,
+          statusText: 'Unauthorized',
+          headers: {},
+          config,
+        } as AxiosResponse;
         err.config = config;
         err.isAxiosError = true;
         throw err;
       }
       if (config.url === '/auth/refresh') {
-        const err = new Error('Unauthorized') as Error & { response?: AxiosResponse; config?: AxiosRequestConfig; isAxiosError?: boolean };
-        err.response = { data: {}, status: 401, statusText: 'Unauthorized', headers: {}, config } as AxiosResponse;
+        const err = new Error('Unauthorized') as Error & {
+          response?: AxiosResponse;
+          config?: AxiosRequestConfig;
+          isAxiosError?: boolean;
+        };
+        err.response = {
+          data: {},
+          status: 401,
+          statusText: 'Unauthorized',
+          headers: {},
+          config,
+        } as AxiosResponse;
         err.config = config;
         err.isAxiosError = true;
         throw err;

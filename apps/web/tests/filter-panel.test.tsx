@@ -31,22 +31,22 @@ describe('FilterPanel', () => {
     expect(screen.getByLabelText(/sort by/i)).toBeInTheDocument();
   });
 
-  it('renders a checkbox for every supported property type', () => {
+  it('renders a pill chip button for every supported property type', () => {
     render(
       <FilterPanel value={emptyFilters} onApply={() => undefined} onClear={() => undefined} />,
     );
     const typeGroup = screen.getByRole('group', { name: /property type/i });
-    const checkboxes = within(typeGroup).getAllByRole('checkbox');
+    const pills = within(typeGroup).getAllByRole('button');
     // PropertyType enum has 9 values (APARTMENT, ROOM, CHALET, VILLA, HOUSE,
     // STUDIO, PENTHOUSE, DUPLEX, OTHER).
-    expect(checkboxes.length).toBe(9);
+    expect(pills.length).toBe(9);
   });
 
-  it('toggles a property type checkbox into the draft and apply emits it', () => {
+  it('toggles a property type pill into the draft and apply emits it', () => {
     const onApply = vi.fn();
     render(<FilterPanel value={emptyFilters} onApply={onApply} onClear={() => undefined} />);
     const typeGroup = screen.getByRole('group', { name: /property type/i });
-    const apartment = within(typeGroup).getByLabelText(/apartment/i);
+    const apartment = within(typeGroup).getByRole('button', { name: /apartment/i });
     act(() => {
       apartment.click();
     });
@@ -162,8 +162,8 @@ describe('FilterPanel', () => {
     };
     render(<FilterPanel value={value} onApply={() => undefined} onClear={() => undefined} />);
     const typeGroup = screen.getByRole('group', { name: /property type/i });
-    const villa = within(typeGroup).getByLabelText(/villa/i) as HTMLInputElement;
-    expect(villa.checked).toBe(true);
+    const villa = within(typeGroup).getByRole('button', { name: /villa/i });
+    expect(villa).toHaveAttribute('aria-pressed', 'true');
 
     expect((screen.getByLabelText(/min price/i) as HTMLInputElement).value).toBe('100');
     expect((screen.getByLabelText(/max price/i) as HTMLInputElement).value).toBe('500');

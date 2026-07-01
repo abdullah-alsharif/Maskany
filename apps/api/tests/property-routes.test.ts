@@ -1225,9 +1225,7 @@ describe('property routes', () => {
         await insertFiltered(owner.id, { title: `Villa ${i}`, propertyType: 'VILLA' });
       }
 
-      const first = await request(app)
-        .get('/api/properties')
-        .query({ type: 'VILLA' });
+      const first = await request(app).get('/api/properties').query({ type: 'VILLA' });
 
       expect(first.status).toBe(200);
       expect(first.body.total).toBe(25);
@@ -1368,9 +1366,7 @@ describe('property routes', () => {
           .execute();
       }
 
-      const first = await request(app)
-        .get('/api/properties')
-        .query({ sort: 'price_asc' });
+      const first = await request(app).get('/api/properties').query({ sort: 'price_asc' });
 
       expect(first.status).toBe(200);
       expect(first.body.properties).toHaveLength(20);
@@ -1428,7 +1424,9 @@ describe('property routes', () => {
       for (let i = 0; i < 10; i += 1) {
         const img = await sharp({
           create: { width: 50, height: 50, channels: 3, background: { r: 255, g: 255, b: 255 } },
-        }).jpeg({ quality: 70 }).toBuffer();
+        })
+          .jpeg({ quality: 70 })
+          .toBuffer();
 
         const res = await request(app)
           .post(`/api/properties/${propertyId}/media`)
@@ -1440,7 +1438,9 @@ describe('property routes', () => {
 
       const overflow = await sharp({
         create: { width: 50, height: 50, channels: 3, background: { r: 0, g: 0, b: 0 } },
-      }).jpeg({ quality: 70 }).toBuffer();
+      })
+        .jpeg({ quality: 70 })
+        .toBuffer();
 
       const rejected = await request(app)
         .post(`/api/properties/${propertyId}/media`)

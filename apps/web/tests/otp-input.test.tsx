@@ -99,7 +99,9 @@ describe('OtpCountdown (T-056)', () => {
     vi.useFakeTimers();
     render(<OtpCountdown seconds={120} onExpired={vi.fn()} onResend={vi.fn()} />);
     expect(screen.queryByRole('button', { name: /resend code/i })).not.toBeInTheDocument();
-    act(() => { vi.advanceTimersByTime(31_000); });
+    act(() => {
+      vi.advanceTimersByTime(31_000);
+    });
     expect(screen.getByRole('button', { name: /resend code/i })).toBeInTheDocument();
     vi.useRealTimers();
   });
@@ -108,7 +110,9 @@ describe('OtpCountdown (T-056)', () => {
     vi.useFakeTimers();
     const onExpired = vi.fn();
     render(<OtpCountdown seconds={2} onExpired={onExpired} onResend={vi.fn()} />);
-    act(() => { vi.advanceTimersByTime(3000); });
+    act(() => {
+      vi.advanceTimersByTime(3000);
+    });
     expect(onExpired).toHaveBeenCalled();
     vi.useRealTimers();
   });
@@ -117,7 +121,9 @@ describe('OtpCountdown (T-056)', () => {
     vi.useFakeTimers();
     const onResend = vi.fn();
     render(<OtpCountdown seconds={120} onExpired={vi.fn()} onResend={onResend} />);
-    act(() => { vi.advanceTimersByTime(31_000); });
+    act(() => {
+      vi.advanceTimersByTime(31_000);
+    });
 
     fireEvent.click(screen.getByRole('button', { name: /resend code/i }));
     expect(onResend).toHaveBeenCalledTimes(1);

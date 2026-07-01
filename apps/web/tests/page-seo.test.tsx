@@ -7,7 +7,6 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { render } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { HomePage } from '../src/views/home-page';
-import { SearchPage } from '../src/views/search-page';
 import { FavoritesPage } from '../src/views/favorites-page';
 import { ProfilePage } from '../src/views/profile-page';
 import { PropertyDetailPage } from '../src/views/property-detail-page';
@@ -24,9 +23,7 @@ beforeEach(() => {
 
 afterEach(() => {
   document.title = originalTitle;
-  document.head
-    .querySelectorAll('[data-seo-head]')
-    .forEach((el) => el.parentNode?.removeChild(el));
+  document.head.querySelectorAll('[data-seo-head]').forEach((el) => el.parentNode?.removeChild(el));
   resetRouter();
   localStorage.clear();
 });
@@ -54,8 +51,8 @@ describe('Page-level SEO integration (T-025)', () => {
     expect(document.title).toBe('Maskany - Find Your Perfect Property');
   });
 
-  it('SearchPage sets a page-specific title', () => {
-    renderPage(<SearchPage />);
+  it('SearchPage (via HomePage mode=search) sets a page-specific title', () => {
+    renderPage(<HomePage mode="search" />);
     expect(document.title).toBe('Search | Maskany');
   });
 

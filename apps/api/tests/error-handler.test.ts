@@ -19,7 +19,9 @@ describe('notFoundHandler', () => {
 });
 
 describe('errorHandler', () => {
-  function buildApp(handler: (req: express.Request, res: express.Response, next: express.NextFunction) => void): express.Express {
+  function buildApp(
+    handler: (req: express.Request, res: express.Response, next: express.NextFunction) => void,
+  ): express.Express {
     const app = express();
     app.use(requestId);
     app.get('/error', handler);
@@ -54,7 +56,9 @@ describe('errorHandler', () => {
 
   it('includes optional details from HttpError', async () => {
     const err = new HttpError(400, ErrorCode.VALIDATION_ERROR, 'Validation failed.');
-    (err as HttpError & { details: unknown }).details = [{ path: 'email', message: 'Invalid email' }];
+    (err as HttpError & { details: unknown }).details = [
+      { path: 'email', message: 'Invalid email' },
+    ];
 
     const app = buildApp((_req, _res, next) => next(err));
     const response = await request(app).get('/error');

@@ -24,4 +24,3 @@ pnpm dev                      # api :3001, web :3000
 | `pnpm test:coverage` | Run tests with coverage report                    |
 | `pnpm db:migrate`    | Apply schema-flow migrations                      |
 | `pnpm db:seed`       | Seed database with fixture data                   |
-| `pnpm ralph`         | Run Ralph AI development loop                     |

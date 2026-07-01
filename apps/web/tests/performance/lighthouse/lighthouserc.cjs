@@ -1,3 +1,4 @@
+/* global module */
 module.exports = {
   ci: {
     collect: {
@@ -23,7 +24,7 @@ module.exports = {
         'largest-contentful-paint': ['max', { value: 2500 }],
         'cumulative-layout-shift': ['max', { value: 0.1 }],
         'total-blocking-time': ['max', { value: 200 }],
-        'interactive': ['max', { value: 3500 }],
+        interactive: ['max', { value: 3500 }],
         'uses-responsive-images': 'error',
         'offscreen-images': 'error',
         'unminified-javascript': 'error',

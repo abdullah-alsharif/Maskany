@@ -16,10 +16,14 @@ describe('DirectionSync (T-047)', () => {
     document.documentElement.lang = '';
     document.documentElement.dir = '';
     render(<DirectionSync />);
-    act(() => { void i18n.changeLanguage('ar'); });
+    act(() => {
+      void i18n.changeLanguage('ar');
+    });
     expect(document.documentElement.lang).toBe('ar');
     expect(document.documentElement.dir).toBe('rtl');
-    act(() => { void i18n.changeLanguage('en'); });
+    act(() => {
+      void i18n.changeLanguage('en');
+    });
   });
 });
 

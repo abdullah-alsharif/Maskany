@@ -18,6 +18,7 @@ import { type ReactNode, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Button } from './ui/button';
 import { ImageUploader } from './image-uploader';
+import { TranslationEditor, type TranslationData } from './translation-editor';
 
 export type PropertyFormValues = {
   title: string;
@@ -240,8 +241,6 @@ const inputErrorClass =
   'h-12 w-full rounded-xl border border-red-400 bg-white px-3 text-base focus:outline-none focus:border-red-500 focus:ring-2 focus:ring-red-100 transition-all duration-200';
 const textareaClass =
   'min-h-[120px] w-full rounded-xl border border-stone-300 bg-white p-3 text-base focus:outline-none focus:border-terracotta-400 focus:ring-2 focus:ring-terracotta-100 transition-all duration-200';
-const textareaErrorClass =
-  'min-h-[120px] w-full rounded-xl border border-red-400 bg-white p-3 text-base focus:outline-none focus:border-red-500 focus:ring-2 focus:ring-red-100 transition-all duration-200';
 
 export function PropertyForm({ mode, initialValues, onSubmit, submitting }: PropertyFormProps) {
   const { t } = useTranslation();
@@ -292,7 +291,12 @@ export function PropertyForm({ mode, initialValues, onSubmit, submitting }: Prop
       ? `+${values.whatsappNumber.replace(/\D/g, '')}`
       : values.whatsappNumber;
     const hasTranslation = translation.title.trim().length > 0;
-    onSubmit?.({ ...values, whatsappNumber, images, translation: hasTranslation ? translation : null });
+    onSubmit?.({
+      ...values,
+      whatsappNumber,
+      images,
+      translation: hasTranslation ? translation : null,
+    });
   };
 
   const toggleAmenity = (amenity: string) => {
@@ -390,7 +394,11 @@ export function PropertyForm({ mode, initialValues, onSubmit, submitting }: Prop
                 ))}
               </select>
             </Field>
-            <Field id="property-bedrooms" label={t('propertyForm.bedrooms')} error={fieldErrors.rooms}>
+            <Field
+              id="property-bedrooms"
+              label={t('propertyForm.bedrooms')}
+              error={fieldErrors.rooms}
+            >
               <input
                 id="property-bedrooms"
                 type="number"
@@ -400,7 +408,11 @@ export function PropertyForm({ mode, initialValues, onSubmit, submitting }: Prop
                 className={fieldErrors.rooms ? inputErrorClass : inputClass}
               />
             </Field>
-            <Field id="property-bathrooms" label={t('propertyForm.bathrooms')} error={fieldErrors.bathrooms}>
+            <Field
+              id="property-bathrooms"
+              label={t('propertyForm.bathrooms')}
+              error={fieldErrors.bathrooms}
+            >
               <input
                 id="property-bathrooms"
                 type="number"
@@ -410,7 +422,11 @@ export function PropertyForm({ mode, initialValues, onSubmit, submitting }: Prop
                 className={fieldErrors.bathrooms ? inputErrorClass : inputClass}
               />
             </Field>
-            <Field id="property-area-sqm" label={t('propertyForm.area')} error={fieldErrors.areaSqm}>
+            <Field
+              id="property-area-sqm"
+              label={t('propertyForm.area')}
+              error={fieldErrors.areaSqm}
+            >
               <input
                 id="property-area-sqm"
                 type="text"
@@ -420,7 +436,11 @@ export function PropertyForm({ mode, initialValues, onSubmit, submitting }: Prop
                 className={fieldErrors.areaSqm ? inputErrorClass : inputClass}
               />
             </Field>
-            <Field id="property-currency" label={t('propertyForm.currency')} error={fieldErrors.currency}>
+            <Field
+              id="property-currency"
+              label={t('propertyForm.currency')}
+              error={fieldErrors.currency}
+            >
               <input
                 id="property-currency"
                 type="text"
@@ -506,7 +526,11 @@ export function PropertyForm({ mode, initialValues, onSubmit, submitting }: Prop
       {step === 5 && (
         <section className="space-y-4 animate-fade-in">
           <StepHeader step={5} labelKey="propertyForm.stepContact" t={t} />
-          <Field id="property-whatsapp" label={t('propertyForm.whatsappNumber')} error={fieldErrors.whatsappNumber}>
+          <Field
+            id="property-whatsapp"
+            label={t('propertyForm.whatsappNumber')}
+            error={fieldErrors.whatsappNumber}
+          >
             <input
               id="property-whatsapp"
               type="tel"
@@ -533,43 +557,13 @@ export function PropertyForm({ mode, initialValues, onSubmit, submitting }: Prop
           </dl>
 
           {mode === 'create' && (
-            <section className="rounded-2xl bg-white p-4 shadow-[var(--shadow-card)] space-y-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <h3 className="font-semibold text-stone-900 text-base">
-                    {t('propertyForm.translationHeading') || 'Translation'}
-                  </h3>
-                  <p className="text-xs text-stone-500">
-                    {t('propertyForm.translationHintOptional') || 'Optionally add content in the other language'}
-                  </p>
-                </div>
-                <Button type="button" variant="secondary" size="sm" onClick={() => setTransOpen(!transOpen)}>
-                  {transOpen ? (t('propertyForm.hide') || 'Hide') : (t('propertyForm.addTranslationOptional') || 'Add translation')}
-                </Button>
-              </div>
-              {transOpen && (
-                <div className="space-y-3 pt-2 border-t border-stone-100">
-                  <div className="flex flex-col">
-                    <label className="text-xs font-medium text-stone-500 mb-1">{t('propertyForm.title')}</label>
-                    <input type="text" value={translation.title} onChange={(e) => setTranslation((p) => ({ ...p, title: e.target.value }))} className="h-12 w-full rounded-xl border border-stone-300 bg-white px-3 text-base focus:outline-none focus:border-terracotta-400 focus:ring-2 focus:ring-terracotta-100 transition-all duration-200" />
-                  </div>
-                  <div className="flex flex-col">
-                    <label className="text-xs font-medium text-stone-500 mb-1">{t('propertyForm.description')}</label>
-                    <textarea value={translation.description} onChange={(e) => setTranslation((p) => ({ ...p, description: e.target.value }))} className="min-h-[80px] w-full rounded-xl border border-stone-300 bg-white p-3 text-base focus:outline-none focus:border-terracotta-400 focus:ring-2 focus:ring-terracotta-100 transition-all duration-200" />
-                  </div>
-                  <div className="grid grid-cols-2 gap-3">
-                    <div className="flex flex-col">
-                      <label className="text-xs font-medium text-stone-500 mb-1">{t('propertyForm.city')}</label>
-                      <input type="text" value={translation.city} onChange={(e) => setTranslation((p) => ({ ...p, city: e.target.value }))} className="h-12 w-full rounded-xl border border-stone-300 bg-white px-3 text-base focus:outline-none focus:border-terracotta-400 focus:ring-2 focus:ring-terracotta-100 transition-all duration-200" />
-                    </div>
-                    <div className="flex flex-col">
-                      <label className="text-xs font-medium text-stone-500 mb-1">{t('propertyForm.areaNeighborhood')}</label>
-                      <input type="text" value={translation.area} onChange={(e) => setTranslation((p) => ({ ...p, area: e.target.value }))} className="h-12 w-full rounded-xl border border-stone-300 bg-white px-3 text-base focus:outline-none focus:border-terracotta-400 focus:ring-2 focus:ring-terracotta-100 transition-all duration-200" />
-                    </div>
-                  </div>
-                </div>
-              )}
-            </section>
+            <TranslationEditor
+              mode="create"
+              open={transOpen}
+              onToggle={() => setTransOpen(!transOpen)}
+              value={translation}
+              onChange={(data: TranslationData) => setTranslation(data)}
+            />
           )}
         </section>
       )}

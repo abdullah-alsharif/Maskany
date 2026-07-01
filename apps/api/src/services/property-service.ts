@@ -411,7 +411,10 @@ export async function getPropertyDetail(propertyId: string): Promise<PropertyDet
     .executeTakeFirstOrThrow();
 
   const summary = toSummary(property, null);
-  const translation = await getPropertyTranslation(propertyId, property.locale === 'en' ? 'ar' : 'en');
+  const translation = await getPropertyTranslation(
+    propertyId,
+    property.locale === 'en' ? 'ar' : 'en',
+  );
   return {
     ...summary,
     description: property.description,
@@ -526,11 +529,7 @@ export async function updatePropertyStatus(
     );
   }
 
-  await db
-    .updateTable('properties')
-    .set({ status })
-    .where('id', '=', propertyId)
-    .execute();
+  await db.updateTable('properties').set({ status }).where('id', '=', propertyId).execute();
 }
 
 /**
@@ -556,7 +555,11 @@ export async function upsertPropertyTranslation(
     throw new HttpError(403, ErrorCode.FORBIDDEN, 'Only the listing owner can add translations.');
   }
   if (property.locale === locale) {
-    throw new HttpError(400, ErrorCode.VALIDATION_ERROR, 'Cannot add a translation for the property\'s original language.');
+    throw new HttpError(
+      400,
+      ErrorCode.VALIDATION_ERROR,
+      "Cannot add a translation for the property's original language.",
+    );
   }
   await db
     .insertInto('property_translations')
@@ -605,6 +608,18 @@ export async function getPropertyTranslation(
     country: row.country,
     amenities: row.amenities,
   };
+}
+
+export async function getPropertiesByIds(ids: string[]): Promise<PropertySummary[]> {
+  if (ids.length === 0) return [];
+  const rows = await db
+    .selectFrom('properties')
+    .where('id', 'in', ids)
+    .where('status', '=', 'ACTIVE')
+    .select(PROPERTY_COLUMNS)
+    .execute();
+  const covers = await fetchCoverImages(rows.map((r) => r.id));
+  return rows.map((row) => toSummary(row, covers.get(row.id) ?? null));
 }
 
 export async function listMyProperties(userId: string): Promise<PropertySummary[]> {

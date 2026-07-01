@@ -25,7 +25,7 @@ function Img({
       <img
         src={src}
         alt={alt}
-        className={`${className ?? ''} transition-opacity duration-500 ${loaded ? 'opacity-100' : 'opacity-0'}`}
+        className={`${className ?? ''} transition-opacity duration-500 ease-[var(--ease-out-expo)] ${loaded ? 'opacity-100' : 'opacity-0'}`}
         loading={loading}
         onLoad={() => setLoaded(true)}
       />
@@ -69,16 +69,24 @@ export function ImageGallery({ images, alt }: ImageGalleryProps) {
     return () => document.removeEventListener('keydown', onKeyDown);
   }, [isFullscreen, goNext, goPrev]);
 
+  const [swipeOffset, setSwipeOffset] = useState(0);
+  const isSwiping = useRef(false);
+
   const handleTouchStart = (e: React.TouchEvent) => {
     touchStartX.current = e.touches[0].clientX;
     touchDeltaX.current = 0;
+    isSwiping.current = true;
   };
 
   const handleTouchMove = (e: React.TouchEvent) => {
-    touchDeltaX.current = e.touches[0].clientX - touchStartX.current;
+    const delta = e.touches[0].clientX - touchStartX.current;
+    touchDeltaX.current = delta;
+    setSwipeOffset(delta * 0.3);
   };
 
   const handleTouchEnd = () => {
+    isSwiping.current = false;
+    setSwipeOffset(0);
     const threshold = 50;
     if (touchDeltaX.current < -threshold) goNext();
     else if (touchDeltaX.current > threshold) goPrev();
@@ -92,8 +100,9 @@ export function ImageGallery({ images, alt }: ImageGalleryProps) {
     <div
       className="flex h-full transition-transform duration-300"
       style={{
-        transform: `translateX(-${currentIndex * 100}%)`,
+        transform: `translateX(calc(-${currentIndex * 100}% + ${isSwiping.current ? swipeOffset : 0}px))`,
         transitionTimingFunction: 'var(--ease-out-expo)',
+        transitionDuration: isSwiping.current ? '0ms' : '300ms',
       }}
     >
       {images.map((image, i) => (
@@ -104,6 +113,8 @@ export function ImageGallery({ images, alt }: ImageGalleryProps) {
             className={`w-full h-full ${inFullscreen ? 'object-contain' : 'object-cover'}`}
             loading={i === 0 ? 'eager' : 'lazy'}
           />
+          {/* Gradient overlay at bottom for caption depth */}
+          <div className="absolute bottom-0 inset-x-0 h-20 bg-gradient-to-t from-black/40 to-transparent pointer-events-none" />
         </div>
       ))}
     </div>

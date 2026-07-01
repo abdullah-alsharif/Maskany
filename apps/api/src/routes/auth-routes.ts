@@ -17,8 +17,10 @@
 import { createHash, randomBytes } from 'node:crypto';
 import { type Request, type Response, Router } from 'express';
 import { z } from 'zod';
+import { asyncHandler } from '../lib/async-handler.js';
 import { db } from '../lib/db.js';
 import { ErrorCode, HttpError } from '../lib/http-error.js';
+import { logger } from '../lib/logger.js';
 import { parseOrThrow } from '../lib/validation.js';
 import {
   type AuthenticatedRequest,
@@ -29,17 +31,14 @@ import {
   consumeRefreshToken,
   createRefreshToken,
   deleteRefreshToken,
+  guardIdentifier,
   issueAccessToken,
   REFRESH_TOKEN_TTL_MS,
 } from '../services/auth-service.js';
 import { isValidEmail, sendOtpEmail } from '../services/email-service.js';
 import { generateOtp, verifyOtp } from '../services/otp-service.js';
-import {
-  formatOtpMessage,
-  isValidPhoneNumber,
-  maskPhoneNumber,
-  sendSms,
-} from '../services/sms-service.js';
+import { maskPhone } from '../lib/mask.js';
+import { formatOtpMessage, isValidPhoneNumber, sendSms } from '../services/sms-service.js';
 import { PHONE_REGEX } from '../validators/property-validators.js';
 
 const registerSchema = z.object({
@@ -122,48 +121,12 @@ async function findUserByIdentifier(identifier: string): Promise<UserRow | undef
     : query.where('phone', '=', identifier).executeTakeFirst();
 }
 
-/**
- * If a user exists with the given identifier but registration was never
- * completed (no verified OTP was ever created for this identifier), delete
- * the stale row so re-registration can proceed. Otherwise throw.
- *
- * Users created outside the OTP flow (seed scripts, admin panel) have no
- * OTP history and are always considered fully registered.
- */
-async function guardIdentifier(value: string, field: 'phone' | 'email'): Promise<void> {
-  const column = field === 'phone' ? 'phone' : 'email';
-  const existing = await db
-    .selectFrom('users')
-    .where(column, '=', value)
-    .select('id')
-    .executeTakeFirst();
-  if (!existing) return;
-
-  const otpRecord = await db
-    .selectFrom('otp_codes')
-    .where('identifier', '=', value)
-    .select('verified')
-    .executeTakeFirst();
-
-  // No OTP history → user was created outside the registration flow.
-  // Verified OTP exists → user completed registration. Both are conflicts.
-  if (!otpRecord || otpRecord.verified) {
-    throw new HttpError(
-      409,
-      field === 'phone' ? ErrorCode.PHONE_ALREADY_REGISTERED : ErrorCode.EMAIL_ALREADY_REGISTERED,
-      `${field === 'phone' ? 'Phone number' : 'Email address'} is already registered.`,
-    );
-  }
-
-  // User has OTP attempts but never verified — stale row.
-  await db.deleteFrom('users').where('id', '=', existing.id).execute();
-}
-
 export function createAuthRouter(): Router {
   const router = Router();
 
-  router.post('/register', async (req, res, next) => {
-    try {
+  router.post(
+    '/register',
+    asyncHandler(async (req, res) => {
       const body = parseOrThrow(registerSchema, req.body);
 
       await guardIdentifier(body.phone, 'phone');
@@ -187,8 +150,8 @@ export function createAuthRouter(): Router {
         await sendSms(body.phone, formatOtpMessage(code));
       } catch (smsErr) {
         if (body.email) {
-          console.warn('[SMS] delivery failed, falling back to email', {
-            phone: maskPhoneNumber(body.phone),
+          logger.warn('[SMS] delivery failed, falling back to email', {
+            phone: maskPhone(body.phone),
             error: smsErr instanceof Error ? smsErr.message : 'Unknown',
           });
           await sendOtpEmail(body.email, code);
@@ -201,13 +164,12 @@ export function createAuthRouter(): Router {
         message: 'Registration started. Enter the code we sent to verify your account.',
         userId: inserted.id,
       });
-    } catch (err) {
-      next(err);
-    }
-  });
+    }),
+  );
 
-  router.post('/login', async (req, res, next) => {
-    try {
+  router.post(
+    '/login',
+    asyncHandler(async (req, res) => {
       const body = parseOrThrow(loginSchema, req.body);
       const channel = classifyIdentifier(body.identifier);
 
@@ -229,8 +191,8 @@ export function createAuthRouter(): Router {
           await sendSms(body.identifier, formatOtpMessage(code));
         } catch (smsErr) {
           if (user.email) {
-            console.warn('[SMS] delivery failed, falling back to email', {
-              phone: maskPhoneNumber(body.identifier),
+            logger.warn('[SMS] delivery failed, falling back to email', {
+              phone: maskPhone(body.identifier),
               error: smsErr instanceof Error ? smsErr.message : 'Unknown',
             });
             await sendOtpEmail(user.email, code);
@@ -246,13 +208,12 @@ export function createAuthRouter(): Router {
         message: 'OTP sent. Enter the code to finish signing in.',
         type: channel === 'SMS' ? 'sms' : 'email',
       });
-    } catch (err) {
-      next(err);
-    }
-  });
+    }),
+  );
 
-  router.post('/verify', async (req, res, next) => {
-    try {
+  router.post(
+    '/verify',
+    asyncHandler(async (req, res) => {
       const body = parseOrThrow(verifySchema, req.body);
       const channel = classifyIdentifier(body.identifier);
 
@@ -284,13 +245,12 @@ export function createAuthRouter(): Router {
         user: toUserDto(user),
         ...(recoveryCodes ? { recoveryCodes } : {}),
       });
-    } catch (err) {
-      next(err);
-    }
-  });
+    }),
+  );
 
-  router.post('/refresh', async (req, res, next) => {
-    try {
+  router.post(
+    '/refresh',
+    asyncHandler(async (req, res) => {
       const refreshToken = extractRefreshToken(req);
       if (!refreshToken) {
         throw new HttpError(401, ErrorCode.UNAUTHORIZED, 'Missing refresh token.');
@@ -305,23 +265,20 @@ export function createAuthRouter(): Router {
       setRefreshTokenCookie(res, newRefreshToken);
 
       res.status(200).json({ accessToken });
-    } catch (err) {
-      next(err);
-    }
-  });
+    }),
+  );
 
-  router.post('/logout', async (req, res, next) => {
-    try {
+  router.post(
+    '/logout',
+    asyncHandler(async (req, res) => {
       const refreshToken = extractRefreshToken(req);
       if (refreshToken) {
         await deleteRefreshToken(refreshToken);
       }
       clearRefreshTokenCookie(res);
       res.status(200).json({ message: 'Logged out.' });
-    } catch (err) {
-      next(err);
-    }
-  });
+    }),
+  );
 
   async function createRecoveryCodes(userId: string): Promise<string[]> {
     const codes: { plaintext: string; code_hash: string }[] = [];
@@ -344,8 +301,9 @@ export function createAuthRouter(): Router {
     code: z.string().regex(/^[0-9a-f]{10}$/, 'Recovery code must be 10 characters.'),
   });
 
-  router.post('/recover', async (req, res, next) => {
-    try {
+  router.post(
+    '/recover',
+    asyncHandler(async (req, res) => {
       const body = parseOrThrow(recoverSchema, req.body);
 
       const user = await findUserByIdentifier(body.identifier);
@@ -376,13 +334,13 @@ export function createAuthRouter(): Router {
         accessToken,
         user: toUserDto(user),
       });
-    } catch (err) {
-      next(err);
-    }
-  });
+    }),
+  );
 
-  router.get('/me', requireAuth, async (req: AuthenticatedRequest, res, next) => {
-    try {
+  router.get(
+    '/me',
+    requireAuth,
+    asyncHandler(async (req: AuthenticatedRequest, res) => {
       const userId = requireUserId(req);
 
       const user = await db
@@ -396,10 +354,8 @@ export function createAuthRouter(): Router {
       }
 
       res.status(200).json(toUserDto(user));
-    } catch (err) {
-      next(err);
-    }
-  });
+    }),
+  );
 
   return router;
 }

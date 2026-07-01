@@ -72,15 +72,33 @@ describe('apiClient — response interceptor', () => {
           config?: AxiosRequestConfig;
           isAxiosError?: boolean;
         };
-        err.response = { data: {}, status: 401, statusText: 'Unauthorized', headers: {}, config } as AxiosResponse;
+        err.response = {
+          data: {},
+          status: 401,
+          statusText: 'Unauthorized',
+          headers: {},
+          config,
+        } as AxiosResponse;
         err.config = config;
         err.isAxiosError = true;
         throw err;
       }
       if (config.url === '/auth/refresh') {
-        return { data: { accessToken: 'refreshed' }, status: 200, statusText: 'OK', headers: {}, config } as AxiosResponse;
+        return {
+          data: { accessToken: 'refreshed' },
+          status: 200,
+          statusText: 'OK',
+          headers: {},
+          config,
+        } as AxiosResponse;
       }
-      return { data: { ok: true }, status: 200, statusText: 'OK', headers: {}, config } as AxiosResponse;
+      return {
+        data: { ok: true },
+        status: 200,
+        statusText: 'OK',
+        headers: {},
+        config,
+      } as AxiosResponse;
     }) as AxiosAdapter;
 
     const eject = installAuthInterceptors(apiClient, {

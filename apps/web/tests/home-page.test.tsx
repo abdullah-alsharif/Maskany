@@ -193,10 +193,10 @@ describe('HomePage', () => {
       pages: [{ properties, nextCursor: 'cursor-2', total: 1 }],
       pageParams: [null],
     });
-    queryClient.setQueryData(
-      ['properties', 'ALL', 'infinite'],
-      { pages: [{ properties, nextCursor: 'cursor-2', total: 2 }], pageParams: [null] },
-    );
+    queryClient.setQueryData(['properties', 'ALL', 'infinite'], {
+      pages: [{ properties, nextCursor: 'cursor-2', total: 2 }],
+      pageParams: [null],
+    });
     const { container } = render(
       <QueryClientProvider client={queryClient}>
         <HomePage />

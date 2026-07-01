@@ -1,12 +1,12 @@
 'use client';
 
 import { Suspense } from 'react';
-import { SearchPage } from '../../views/search-page';
+import { HomePage } from '../../views/home-page';
 
 export default function Page() {
   return (
     <Suspense>
-      <SearchPage />
+      <HomePage mode="search" />
     </Suspense>
   );
 }

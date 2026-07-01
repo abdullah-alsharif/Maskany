@@ -1,8 +1,8 @@
 import { beforeEach, afterEach, describe, it, expect } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { WhatsAppFab, WhatsAppIconButton } from '../src/components/whatsapp-button';
-import { PropertyCard } from '../src/components/property-card';
+import { WhatsAppFab, WhatsAppIconButton } from '../src/components/property/whatsapp-button';
+import { PropertyCard } from '../src/components/property/property-card';
 import { PropertyDetailPage } from '../src/views/property-detail-page';
 import { generateWhatsAppLink } from '../src/services/whatsapp-service';
 import { AuthProvider } from '../src/context/auth-context';
@@ -75,7 +75,11 @@ describe('WhatsAppFab', () => {
     );
 
     const link = screen.getByRole('link', { name: /whatsapp/i });
-    const expected = generateWhatsAppLink('+966 50 123 4567', 'Modern Apartment', 'prop-xyz');
+    const expected = generateWhatsAppLink(
+      '+966 50 123 4567',
+      'Modern Apartment',
+      `${window.location.origin}/properties/prop-xyz`,
+    );
     expect(expected).not.toBeNull();
     expect(link.getAttribute('href')).toBe(expected);
   });
@@ -121,7 +125,11 @@ describe('WhatsAppIconButton', () => {
       />,
     );
     const link = screen.getByRole('link', { name: /whatsapp/i });
-    const expected = generateWhatsAppLink('966501234567', 'Villa', 'prop-99');
+    const expected = generateWhatsAppLink(
+      '966501234567',
+      'Villa',
+      `${window.location.origin}/properties/prop-99`,
+    );
     expect(link.getAttribute('href')).toBe(expected);
   });
 
@@ -170,7 +178,11 @@ describe('WhatsApp button integration with PropertyCard', () => {
   it('renders a WhatsApp link on the property card with the correct deep link', () => {
     render(<PropertyCard property={makeProperty()} />);
     const link = screen.getByRole('link', { name: /whatsapp/i });
-    const expected = generateWhatsAppLink('966501234567', 'Sunlit Downtown Apartment', 'prop-abc');
+    const expected = generateWhatsAppLink(
+      '966501234567',
+      'Sunlit Downtown Apartment',
+      `${window.location.origin}/properties/prop-abc`,
+    );
     expect(link.getAttribute('href')).toBe(expected);
   });
 });
@@ -195,7 +207,11 @@ describe('WhatsApp button integration with PropertyDetailPage (E2E-style)', () =
     renderDetailRoute(makeProperty());
 
     const link = screen.getByRole('link', { name: /contact property owner on whatsapp/i });
-    const expected = generateWhatsAppLink('966501234567', 'Sunlit Downtown Apartment', 'prop-abc');
+    const expected = generateWhatsAppLink(
+      '966501234567',
+      'Sunlit Downtown Apartment',
+      `${window.location.origin}/properties/prop-abc`,
+    );
     expect(link.getAttribute('href')).toBe(expected);
     expect(link.getAttribute('href')).toContain('wa.me/966501234567');
 

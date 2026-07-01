@@ -9,7 +9,6 @@ import { useRouter, useParams } from 'next/navigation';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { Header } from '../components/layout/header';
-import { Button } from '../components/ui/button';
 import { EmptyState } from '../components/ui/empty-state';
 import {
   PropertyForm,
@@ -20,6 +19,7 @@ import { SeoHead } from '../components/seo-head';
 import { SkeletonDetailPage } from '../components/ui/skeleton';
 import { useProperty } from '../hooks/use-property';
 import { updateProperty, savePropertyTranslation } from '../services/property-service';
+import { TranslationEditor, type TranslationData } from '../components/translation-editor';
 import type { Property } from '../types/property';
 
 function toFormValues(property: Property): PropertyFormValues {
@@ -41,9 +41,6 @@ function toFormValues(property: Property): PropertyFormValues {
     whatsappNumber: property.whatsappNumber,
   };
 }
-
-const inputClass =
-  'h-12 w-full rounded-xl border border-stone-300 bg-white px-3 text-base focus:outline-none focus:border-terracotta-400 focus:ring-2 focus:ring-terracotta-100 transition-all duration-200';
 
 export function EditPropertyPage() {
   const { t } = useTranslation();
@@ -83,27 +80,29 @@ export function EditPropertyPage() {
     },
   });
 
-  const handleTransOpen = () => {
-    if (property?.translation) {
-      setTransForm({
-        title: property.translation.title,
-        summary: property.translation.summary ?? '',
-        description: property.translation.description ?? '',
-        city: property.translation.city,
-        area: property.translation.area ?? '',
-        country: property.translation.country,
-      });
-    } else {
-      setTransForm({
-        title: '',
-        summary: '',
-        description: '',
-        city: '',
-        area: '',
-        country: '',
-      });
+  const handleToggleTrans = () => {
+    if (!transOpen) {
+      if (property?.translation) {
+        setTransForm({
+          title: property.translation.title,
+          summary: property.translation.summary ?? '',
+          description: property.translation.description ?? '',
+          city: property.translation.city,
+          area: property.translation.area ?? '',
+          country: property.translation.country,
+        });
+      } else {
+        setTransForm({
+          title: '',
+          summary: '',
+          description: '',
+          city: '',
+          area: '',
+          country: '',
+        });
+      }
     }
-    setTransOpen(true);
+    setTransOpen(!transOpen);
   };
 
   const saveTrans = async () => {
@@ -172,95 +171,17 @@ export function EditPropertyPage() {
           </p>
         )}
 
-        {/* Translation section */}
-        <section className="rounded-2xl bg-white p-4 shadow-[var(--shadow-card)] space-y-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <h3 className="font-semibold text-stone-900 text-base">
-                {t('propertyForm.translationHeading') || 'Translation'}
-              </h3>
-              <p className="text-xs text-stone-500">
-                {t('propertyForm.translationHint', { lang: targetLang })}
-              </p>
-            </div>
-            <Button type="button" variant="secondary" size="sm" onClick={handleTransOpen}>
-              {transOpen
-                ? (t('propertyForm.hide') || 'Hide')
-                : t('propertyForm.addTranslation', { lang: targetLang })}
-            </Button>
-          </div>
-
-          {transOpen && (
-            <div className="space-y-3 pt-2 border-t border-stone-100">
-              <div className="flex flex-col">
-                <label className="text-xs font-medium text-stone-500 mb-1">
-                  {t('propertyForm.title')}
-                </label>
-                <input
-                  type="text"
-                  value={transForm.title}
-                  onChange={(e) => setTransForm((p) => ({ ...p, title: e.target.value }))}
-                  className={inputClass}
-                />
-              </div>
-              <div className="flex flex-col">
-                <label className="text-xs font-medium text-stone-500 mb-1">
-                  {t('propertyForm.summary') || 'Summary'}
-                </label>
-                <input
-                  type="text"
-                  value={transForm.summary}
-                  onChange={(e) => setTransForm((p) => ({ ...p, summary: e.target.value }))}
-                  className={inputClass}
-                />
-              </div>
-              <div className="flex flex-col">
-                <label className="text-xs font-medium text-stone-500 mb-1">
-                  {t('propertyForm.description')}
-                </label>
-                <textarea
-                  value={transForm.description}
-                  onChange={(e) => setTransForm((p) => ({ ...p, description: e.target.value }))}
-                  className="min-h-[80px] w-full rounded-xl border border-stone-300 bg-white p-3 text-base focus:outline-none focus:border-terracotta-400 focus:ring-2 focus:ring-terracotta-100 transition-all duration-200"
-                />
-              </div>
-              <div className="grid grid-cols-2 gap-3">
-                <div className="flex flex-col">
-                  <label className="text-xs font-medium text-stone-500 mb-1">
-                    {t('propertyForm.city')}
-                  </label>
-                  <input
-                    type="text"
-                    value={transForm.city}
-                    onChange={(e) => setTransForm((p) => ({ ...p, city: e.target.value }))}
-                    className={inputClass}
-                  />
-                </div>
-                <div className="flex flex-col">
-                  <label className="text-xs font-medium text-stone-500 mb-1">
-                    {t('propertyForm.areaNeighborhood')}
-                  </label>
-                  <input
-                    type="text"
-                    value={transForm.area}
-                    onChange={(e) => setTransForm((p) => ({ ...p, area: e.target.value }))}
-                    className={inputClass}
-                  />
-                </div>
-              </div>
-              <div className="flex justify-end">
-                <Button type="button" size="sm" onClick={saveTrans} loading={transSaving}>
-                  {t('propertyForm.saveTranslation') || 'Save translation'}
-                </Button>
-              </div>
-              {transMsg && (
-                <p role="alert" className="text-sm text-stone-600 font-medium">
-                  {transMsg}
-                </p>
-              )}
-            </div>
-          )}
-        </section>
+        <TranslationEditor
+          mode="edit"
+          open={transOpen}
+          onToggle={handleToggleTrans}
+          value={transForm}
+          onChange={(data: TranslationData) => setTransForm(data)}
+          onSave={saveTrans}
+          saving={transSaving}
+          message={transMsg}
+          targetLangLabel={targetLang}
+        />
       </div>
     </section>
   );

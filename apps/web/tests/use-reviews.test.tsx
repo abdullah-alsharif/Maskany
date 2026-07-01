@@ -4,7 +4,12 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import type { AxiosAdapter, AxiosRequestConfig, AxiosResponse } from 'axios';
 import type { ReactNode } from 'react';
 import { apiClient } from '../src/services/api';
-import { useCreateReview, useReviewSummary, useReviews, useUpdateReview } from '../src/hooks/use-reviews';
+import {
+  useCreateReview,
+  useReviewSummary,
+  useReviews,
+  useUpdateReview,
+} from '../src/hooks/use-reviews';
 import type { ReviewListResponse, ReviewSummary } from '../src/types/review';
 
 type CapturedRequest = {
@@ -13,9 +18,9 @@ type CapturedRequest = {
   data?: unknown;
 };
 
-function installAdapter(
-  respond: (req: CapturedRequest) => Partial<AxiosResponse>,
-): { captured: CapturedRequest[] } {
+function installAdapter(respond: (req: CapturedRequest) => Partial<AxiosResponse>): {
+  captured: CapturedRequest[];
+} {
   const captured: CapturedRequest[] = [];
   const adapter: AxiosAdapter = async (config) => {
     const req: CapturedRequest = {
@@ -277,7 +282,11 @@ describe('useUpdateReview', () => {
     });
 
     await act(async () => {
-      await result.current.mutateAsync({ reviewId: 'review-1', rating: 3, comment: 'Updated comment' });
+      await result.current.mutateAsync({
+        reviewId: 'review-1',
+        rating: 3,
+        comment: 'Updated comment',
+      });
     });
 
     expect(captured[0].method?.toLowerCase()).toBe('put');

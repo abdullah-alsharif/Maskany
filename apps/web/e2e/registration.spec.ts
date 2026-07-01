@@ -13,7 +13,6 @@ const COUNTRY_CODE = '+966';
 const PHONE_LOCAL = '502000001';
 const FULL_PHONE = `${COUNTRY_CODE}${PHONE_LOCAL}`;
 const EMAIL = 'testregister@example.com';
-const USER_TYPE = 'BROWSER';
 
 test.describe.serial('Registration', () => {
   test('register a new browser user via the create-account flow', async ({ page }) => {

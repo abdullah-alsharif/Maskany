@@ -15,6 +15,7 @@
  */
 import { Router } from 'express';
 import { z } from 'zod';
+import { asyncHandler } from '../lib/async-handler.js';
 import { parseOrThrow } from '../lib/validation.js';
 import { ErrorCode, HttpError } from '../lib/http-error.js';
 import {
@@ -26,6 +27,7 @@ import { parseAmenitiesParam, parseTypesParam } from '../services/filter-service
 import {
   createProperty,
   deleteProperty,
+  getPropertiesByIds,
   getPropertyDetail,
   listActiveProperties,
   listMyProperties,
@@ -46,18 +48,19 @@ export function createPropertyRouter(): Router {
 
   // `/my` must be registered before `/:id` so Express routes the literal
   // path to the authenticated handler instead of treating "my" as a UUID.
-  router.get('/my', requireAuth, async (req: AuthenticatedRequest, res, next) => {
-    try {
+  router.get(
+    '/my',
+    requireAuth,
+    asyncHandler(async (req: AuthenticatedRequest, res) => {
       const userId = requireUserId(req);
       const properties = await listMyProperties(userId);
       res.status(200).json({ properties });
-    } catch (err) {
-      next(err);
-    }
-  });
+    }),
+  );
 
-  router.get('/', async (req, res, next) => {
-    try {
+  router.get(
+    '/',
+    asyncHandler(async (req, res) => {
       const query = parseOrThrow(listPropertiesQuerySchema, req.query);
       const types = parseTypesParam(query.type);
       const amenities = parseAmenitiesParam(query.amenities);
@@ -78,69 +81,94 @@ export function createPropertyRouter(): Router {
         },
       });
       res.status(200).json(page);
-    } catch (err) {
-      next(err);
-    }
-  });
+    }),
+  );
 
-  router.get('/:id', async (req, res, next) => {
-    try {
+  router.get(
+    '/bulk',
+    asyncHandler(async (req, res) => {
+      const idsRaw = req.query['ids'] as string | undefined;
+      if (!idsRaw) {
+        throw new HttpError(400, ErrorCode.VALIDATION_ERROR, 'Query parameter "ids" is required.');
+      }
+      const ids = idsRaw
+        .split(',')
+        .map((s) => s.trim())
+        .filter(Boolean);
+      if (ids.length === 0) {
+        throw new HttpError(400, ErrorCode.VALIDATION_ERROR, 'At least one id is required.');
+      }
+      if (ids.length > 100) {
+        throw new HttpError(
+          400,
+          ErrorCode.VALIDATION_ERROR,
+          'Cannot request more than 100 properties at once.',
+        );
+      }
+      const properties = await getPropertiesByIds(ids);
+      res.status(200).json(properties);
+    }),
+  );
+
+  router.get(
+    '/:id',
+    asyncHandler(async (req, res) => {
       const params = parseOrThrow(propertyIdParamSchema, req.params);
       const property = await getPropertyDetail(params.id);
       res.status(200).json(property);
-    } catch (err) {
-      next(err);
-    }
-  });
+    }),
+  );
 
-  router.post('/', requireAuth, async (req: AuthenticatedRequest, res, next) => {
-    try {
+  router.post(
+    '/',
+    requireAuth,
+    asyncHandler(async (req: AuthenticatedRequest, res) => {
       const userId = requireUserId(req);
       const body = parseOrThrow(createPropertySchema, req.body);
       const property = await createProperty(userId, body);
       res.status(201).json(property);
-    } catch (err) {
-      next(err);
-    }
-  });
+    }),
+  );
 
-  router.put('/:id', requireAuth, async (req: AuthenticatedRequest, res, next) => {
-    try {
+  router.put(
+    '/:id',
+    requireAuth,
+    asyncHandler(async (req: AuthenticatedRequest, res) => {
       const userId = requireUserId(req);
       const params = parseOrThrow(propertyIdParamSchema, req.params);
       const body = parseOrThrow(updatePropertySchema, req.body);
       const property = await updateProperty(userId, params.id, body);
       res.status(200).json(property);
-    } catch (err) {
-      next(err);
-    }
-  });
+    }),
+  );
 
-  router.delete('/:id', requireAuth, async (req: AuthenticatedRequest, res, next) => {
-    try {
+  router.delete(
+    '/:id',
+    requireAuth,
+    asyncHandler(async (req: AuthenticatedRequest, res) => {
       const userId = requireUserId(req);
       const params = parseOrThrow(propertyIdParamSchema, req.params);
       await deleteProperty(userId, params.id);
       res.status(204).send();
-    } catch (err) {
-      next(err);
-    }
-  });
+    }),
+  );
 
-  router.patch('/:id/status', requireAuth, async (req: AuthenticatedRequest, res, next) => {
-    try {
+  router.patch(
+    '/:id/status',
+    requireAuth,
+    asyncHandler(async (req: AuthenticatedRequest, res) => {
       const userId = requireUserId(req);
       const params = parseOrThrow(propertyIdParamSchema, req.params);
       const body = parseOrThrow(updatePropertyStatusSchema, req.body);
       await updatePropertyStatus(userId, params.id, body.status);
       res.status(200).json({ status: body.status });
-    } catch (err) {
-      next(err);
-    }
-  });
+    }),
+  );
 
-  router.put('/:id/translations/:locale', requireAuth, async (req: AuthenticatedRequest, res, next) => {
-    try {
+  router.put(
+    '/:id/translations/:locale',
+    requireAuth,
+    asyncHandler(async (req: AuthenticatedRequest, res) => {
       const userId = requireUserId(req);
       const params = parseOrThrow(propertyIdParamSchema, req.params);
       const locale = req.params['locale'] as string;
@@ -159,10 +187,8 @@ export function createPropertyRouter(): Router {
       const body = parseOrThrow(translationSchema, req.body);
       await upsertPropertyTranslation(params.id, userId, locale as 'en' | 'ar', body);
       res.status(200).json({ message: 'Translation saved.' });
-    } catch (err) {
-      next(err);
-    }
-  });
+    }),
+  );
 
   return router;
 }

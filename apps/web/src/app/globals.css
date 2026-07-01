@@ -116,7 +116,7 @@
   }
 
   body {
-    @apply font-sans text-stone-950 bg-sand-50;
+    @apply font-sans text-stone-950 bg-sand-50 leading-[1.6];
     font-feature-settings: 'cv11', 'ss01';
     letter-spacing: -0.011em;
   }
@@ -171,52 +171,68 @@
 
 /* ─── Animation Utilities ─── */
 @layer utilities {
-  .animate-fade-in {
-    opacity: 0;
-    animation: fade-in 0.4s var(--ease-out-expo) forwards;
+  /* All motion gated behind prefers-reduced-motion */
+  @media (prefers-reduced-motion: no-preference) {
+    .animate-fade-in {
+      opacity: 0;
+      animation: fade-in 0.4s var(--ease-out-expo) forwards;
+    }
+
+    .animate-slide-up {
+      opacity: 0;
+      transform: translateY(16px);
+      animation: slide-up 0.5s var(--ease-out-expo) forwards;
+    }
+
+    .animate-scale-in {
+      opacity: 0;
+      transform: scale(0.9);
+      animation: scale-in 0.3s var(--ease-spring) forwards;
+    }
+
+    .animate-sheet-up {
+      animation: sheet-up 0.4s var(--ease-out-expo) forwards;
+    }
+
+    .animate-heart-pop {
+      animation: heart-pop 0.4s var(--ease-spring) forwards;
+    }
+
+    .animate-skeleton {
+      animation: skeleton-pulse 1.8s ease-in-out infinite;
+    }
+
+    .animate-stagger-1 {
+      animation-delay: 0.05s;
+    }
+    .animate-stagger-2 {
+      animation-delay: 0.1s;
+    }
+    .animate-stagger-3 {
+      animation-delay: 0.15s;
+    }
+    .animate-stagger-4 {
+      animation-delay: 0.2s;
+    }
+    .animate-stagger-5 {
+      animation-delay: 0.25s;
+    }
+    .animate-stagger-6 {
+      animation-delay: 0.3s;
+    }
   }
 
-  .animate-slide-up {
-    opacity: 0;
-    transform: translateY(16px);
-    animation: slide-up 0.5s var(--ease-out-expo) forwards;
-  }
-
-  .animate-scale-in {
-    opacity: 0;
-    transform: scale(0.9);
-    animation: scale-in 0.3s var(--ease-spring) forwards;
-  }
-
-  .animate-sheet-up {
-    animation: sheet-up 0.4s var(--ease-out-expo) forwards;
-  }
-
-  .animate-heart-pop {
-    animation: heart-pop 0.4s var(--ease-spring) forwards;
-  }
-
-  .animate-skeleton {
-    animation: skeleton-pulse 1.8s ease-in-out infinite;
-  }
-
-  .animate-stagger-1 {
-    animation-delay: 0.05s;
-  }
-  .animate-stagger-2 {
-    animation-delay: 0.1s;
-  }
-  .animate-stagger-3 {
-    animation-delay: 0.15s;
-  }
-  .animate-stagger-4 {
-    animation-delay: 0.2s;
-  }
-  .animate-stagger-5 {
-    animation-delay: 0.25s;
-  }
-  .animate-stagger-6 {
-    animation-delay: 0.3s;
+  /* Reduced-motion fallback: show elements immediately */
+  @media (prefers-reduced-motion: reduce) {
+    .animate-fade-in,
+    .animate-slide-up,
+    .animate-scale-in,
+    .animate-sheet-up,
+    .animate-heart-pop {
+      opacity: 1;
+      transform: none;
+      animation: none;
+    }
   }
 }
 
@@ -279,9 +295,9 @@
 @keyframes skeleton-pulse {
   0%,
   100% {
-    opacity: 0.4;
+    background-color: #faf8f3;
   }
   50% {
-    opacity: 0.7;
+    background-color: #fad5c7;
   }
 }

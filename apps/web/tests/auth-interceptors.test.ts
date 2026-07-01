@@ -210,7 +210,9 @@ describe('installAuthInterceptors — 401 refresh', () => {
     });
     const client = axios.create({ adapter });
     let stored = 'old';
-    const onTokenRefreshed = vi.fn((t: string) => { stored = t; });
+    const onTokenRefreshed = vi.fn((t: string) => {
+      stored = t;
+    });
     const onRefreshFailed = vi.fn();
     installAuthInterceptors(client, {
       getAccessToken: () => stored,

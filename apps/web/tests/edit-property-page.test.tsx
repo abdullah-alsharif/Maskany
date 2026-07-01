@@ -149,7 +149,9 @@ describe('EditPropertyPage', () => {
 
   it('shows loading skeleton while property is being fetched', async () => {
     let resolveGet: (v: AxiosResponse) => void;
-    const getPromise = new Promise<AxiosResponse>((r) => { resolveGet = r; });
+    const getPromise = new Promise<AxiosResponse>((r) => {
+      resolveGet = r;
+    });
     const orig = apiClient.defaults.adapter as AxiosAdapter;
     apiClient.defaults.adapter = ((config: AxiosRequestConfig) => {
       captured.push(config);
@@ -164,7 +166,11 @@ describe('EditPropertyPage', () => {
     expect(screen.queryByLabelText(/title/i)).toBeNull();
 
     resolveGet!({
-      data: makeProperty(), status: 200, statusText: 'OK', headers: {}, config: {} as AxiosRequestConfig,
+      data: makeProperty(),
+      status: 200,
+      statusText: 'OK',
+      headers: {},
+      config: {} as AxiosRequestConfig,
     } as AxiosResponse);
     await waitFor(() =>
       expect((screen.getByLabelText(/title/i) as HTMLInputElement).value).toBe('Original Villa'),
@@ -233,21 +239,40 @@ describe('EditPropertyPage', () => {
         captured.push(config);
         if (config.method?.toLowerCase() === 'get' && config.url === '/properties/p1') {
           return Promise.resolve({
-            data: translatedProperty, status: 200, statusText: 'OK', headers: {}, config,
+            data: translatedProperty,
+            status: 200,
+            statusText: 'OK',
+            headers: {},
+            config,
           } as AxiosResponse);
         }
-        if (config.method?.toLowerCase() === 'put' && config.url?.startsWith('/properties/p1/translations/')) {
+        if (
+          config.method?.toLowerCase() === 'put' &&
+          config.url?.startsWith('/properties/p1/translations/')
+        ) {
           return Promise.resolve({
-            data: null, status: 200, statusText: 'OK', headers: {}, config,
+            data: null,
+            status: 200,
+            statusText: 'OK',
+            headers: {},
+            config,
           } as AxiosResponse);
         }
         if (config.method?.toLowerCase() === 'put') {
           return Promise.resolve({
-            data: { ...translatedProperty, title: 'Updated' }, status: 200, statusText: 'OK', headers: {}, config,
+            data: { ...translatedProperty, title: 'Updated' },
+            status: 200,
+            statusText: 'OK',
+            headers: {},
+            config,
           } as AxiosResponse);
         }
         return Promise.resolve({
-          data: {}, status: 200, statusText: 'OK', headers: {}, config,
+          data: {},
+          status: 200,
+          statusText: 'OK',
+          headers: {},
+          config,
         } as AxiosResponse);
       }) as AxiosAdapter;
     }
@@ -260,7 +285,9 @@ describe('EditPropertyPage', () => {
         expect((screen.getByLabelText(/title/i) as HTMLInputElement).value).toBe('Original Villa'),
       );
 
-      const translationSection = screen.getByRole('heading', { name: /translation/i }).closest('section')!;
+      const translationSection = screen
+        .getByRole('heading', { name: /translation/i })
+        .closest('section')!;
       fireEvent.click(within(translationSection).getByRole('button', { name: /add.*العربية/i }));
       expect(within(translationSection).getByDisplayValue('فيلا أصلية')).toBeInTheDocument();
       expect(within(translationSection).getByDisplayValue('ملخص')).toBeInTheDocument();
@@ -276,7 +303,9 @@ describe('EditPropertyPage', () => {
         expect((screen.getByLabelText(/title/i) as HTMLInputElement).value).toBe('Original Villa'),
       );
 
-      const translationSection = screen.getByRole('heading', { name: /translation/i }).closest('section')!;
+      const translationSection = screen
+        .getByRole('heading', { name: /translation/i })
+        .closest('section')!;
       fireEvent.click(within(translationSection).getByRole('button', { name: /add.*العربية/i }));
       const inputs = within(translationSection).queryAllByRole('textbox');
       for (const input of inputs) {
@@ -292,10 +321,16 @@ describe('EditPropertyPage', () => {
         expect((screen.getByLabelText(/title/i) as HTMLInputElement).value).toBe('Original Villa'),
       );
 
-      const translationSection = screen.getByRole('heading', { name: /translation/i }).closest('section')!;
+      const translationSection = screen
+        .getByRole('heading', { name: /translation/i })
+        .closest('section')!;
       fireEvent.click(within(translationSection).getByRole('button', { name: /add.*العربية/i }));
-      fireEvent.change(within(translationSection).getByDisplayValue('فيلا أصلية'), { target: { value: 'فيلا محدثة' } });
-      fireEvent.click(within(translationSection).getByRole('button', { name: /save translation/i }));
+      fireEvent.change(within(translationSection).getByDisplayValue('فيلا أصلية'), {
+        target: { value: 'فيلا محدثة' },
+      });
+      fireEvent.click(
+        within(translationSection).getByRole('button', { name: /save translation/i }),
+      );
 
       await waitFor(() =>
         expect(within(translationSection).getByText('Translation saved.')).toBeInTheDocument(),
@@ -309,14 +344,25 @@ describe('EditPropertyPage', () => {
         captured.push(config);
         if (config.method?.toLowerCase() === 'get' && config.url === '/properties/p1') {
           return Promise.resolve({
-            data: translatedProperty, status: 200, statusText: 'OK', headers: {}, config,
+            data: translatedProperty,
+            status: 200,
+            statusText: 'OK',
+            headers: {},
+            config,
           } as AxiosResponse);
         }
-        if (config.method?.toLowerCase() === 'put' && config.url?.startsWith('/properties/p1/translations/')) {
+        if (
+          config.method?.toLowerCase() === 'put' &&
+          config.url?.startsWith('/properties/p1/translations/')
+        ) {
           return Promise.reject(new Error('Server error'));
         }
         return Promise.resolve({
-          data: {}, status: 200, statusText: 'OK', headers: {}, config,
+          data: {},
+          status: 200,
+          statusText: 'OK',
+          headers: {},
+          config,
         } as AxiosResponse);
       }) as AxiosAdapter;
       apiClient.defaults.adapter = failingAdapter;
@@ -325,12 +371,18 @@ describe('EditPropertyPage', () => {
         expect((screen.getByLabelText(/title/i) as HTMLInputElement).value).toBe('Original Villa'),
       );
 
-      const translationSection = screen.getByRole('heading', { name: /translation/i }).closest('section')!;
+      const translationSection = screen
+        .getByRole('heading', { name: /translation/i })
+        .closest('section')!;
       fireEvent.click(within(translationSection).getByRole('button', { name: /add.*العربية/i }));
-      fireEvent.click(within(translationSection).getByRole('button', { name: /save translation/i }));
+      fireEvent.click(
+        within(translationSection).getByRole('button', { name: /save translation/i }),
+      );
 
       await waitFor(() =>
-        expect(within(translationSection).getByText('Could not save translation.')).toBeInTheDocument(),
+        expect(
+          within(translationSection).getByText('Could not save translation.'),
+        ).toBeInTheDocument(),
       );
       apiClient.defaults.adapter = orig;
     });

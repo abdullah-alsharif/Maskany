@@ -1,9 +1,0 @@
-{
-  "language": "TypeScript",
-  "packageManager": "pnpm",
-  "testingFramework": "Vitest",
-  "qualityCheck": "pnpm check",
-  "testCommand": "pnpm test:only",
-  "agent": "claude",
-  "fileNaming": "kebab-case"
-}

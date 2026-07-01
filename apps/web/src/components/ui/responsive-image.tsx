@@ -1,16 +1,7 @@
-/**
- * ResponsiveImage — lazy-loading responsive image component (T-024, PRD §8.1).
- *
- * Renders a `<picture>` with a WebP source preferred over an optional fallback
- * raster (`fallbackSrc`) and an inner `<img>` carrying the responsive
- * `srcSet` + `sizes` attributes. Defaults to `loading="lazy"` so images below
- * the fold do not block the initial paint; pass `priority` for hero/above-fold
- * imagery.
- *
- * Cards pass the small thumbnail as `src` and the full-resolution image as
- * `fullSrc` so smaller viewports download the lighter asset while larger
- * viewports upgrade to the higher-resolution variant via `srcSet`.
- */
+'use client';
+
+import { useState, useCallback } from 'react';
+
 type ResponsiveImageProps = {
   /** Primary (small/thumbnail) image URL. Used as the default `src`. */
   src: string;
@@ -36,7 +27,6 @@ function buildSrcSet(src: string, fullSrc: string | undefined): string {
   if (!fullSrc || fullSrc === src) {
     return `${src} 1x`;
   }
-  // Thumbnail at the small descriptor, full image at the wide descriptor.
   return `${src} 400w, ${fullSrc} 1200w`;
 }
 
@@ -48,11 +38,13 @@ export function ResponsiveImage({
   priority = false,
   width,
   height,
-  className,
+  className = '',
 }: ResponsiveImageProps) {
+  const [loaded, setLoaded] = useState(false);
   const srcSet = buildSrcSet(src, fullSrc);
   const loading = priority ? 'eager' : 'lazy';
   const decoding = priority ? 'sync' : 'async';
+  const onLoad = useCallback(() => setLoaded(true), []);
 
   const img = (
     <img
@@ -64,18 +56,32 @@ export function ResponsiveImage({
       decoding={decoding}
       width={width}
       height={height}
-      className={className}
+      onLoad={onLoad}
+      className={`${className} transition-opacity duration-500 ${loaded ? 'opacity-100' : 'opacity-0'}`}
     />
   );
 
-  if (!fallbackSrc) {
-    return img;
-  }
-
-  return (
+  const content = !fallbackSrc ? (
+    img
+  ) : (
     <picture>
       <source type="image/webp" srcSet={srcSet} sizes={DEFAULT_SIZES} />
       {img}
     </picture>
+  );
+
+  return (
+    <div className="relative overflow-hidden">
+      {/* Blur-up placeholder: show thumbnail blurred until full image loads */}
+      {!loaded && src && (
+        <img
+          src={src}
+          alt=""
+          aria-hidden="true"
+          className="absolute inset-0 w-full h-full object-cover blur-xl scale-110"
+        />
+      )}
+      {content}
+    </div>
   );
 }

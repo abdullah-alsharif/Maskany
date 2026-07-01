@@ -52,9 +52,7 @@ test.describe('PRD §3.4 — Property Detail View', () => {
     expect(waHref).toMatch(/^https:\/\/wa\.me\/\d{7,15}\?text=/);
   });
 
-  test('[AC-30] WhatsApp FAB opens wa.me deep link with pre-filled message', async ({
-    page,
-  }) => {
+  test('[AC-30] WhatsApp FAB opens wa.me deep link with pre-filled message', async ({ page }) => {
     await page.goto('/');
     const grid = page.getByTestId('property-grid');
     await expect(grid).toBeVisible({ timeout: 15_000 });
@@ -82,9 +80,7 @@ test.describe('PRD §3.4 — Property Detail View', () => {
     expect(message).toMatch(/ref/i);
   });
 
-  test('[AC-31] WhatsApp number is in international format (no +, no spaces)', async ({
-    page,
-  }) => {
+  test('[AC-31] WhatsApp number is in international format (no +, no spaces)', async ({ page }) => {
     await page.goto('/');
     const grid = page.getByTestId('property-grid');
     await expect(grid).toBeVisible({ timeout: 15_000 });
@@ -111,10 +107,7 @@ test.describe('PRD §3.4 — Property Detail View', () => {
     await expect(grid).toBeVisible({ timeout: 15_000 });
 
     // Card-level WhatsApp: small, icon-only (no visible text label)
-    const cardWa = grid
-      .locator('article')
-      .first()
-      .locator('a[href*="wa.me"], [class*="whatsapp"]');
+    const cardWa = grid.locator('article').first().locator('a[href*="wa.me"], [class*="whatsapp"]');
     if ((await cardWa.count()) > 0) {
       // Icon-only: aria-label present but no button text visible
       await expect(cardWa).toHaveAttribute('aria-label', /whatsapp/i);

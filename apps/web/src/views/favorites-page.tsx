@@ -2,9 +2,9 @@
 
 import { useRouter } from 'next/navigation';
 import { useTranslation } from 'react-i18next';
-import { PropertyCard } from '../components/property-card';
+import { PropertyCard } from '../components/property/property-card';
 import { SeoHead } from '../components/seo-head';
-import { SkeletonCard } from '../components/skeleton-card';
+import { SkeletonCard } from '../components/ui/skeleton';
 import { NoFavorites } from '../components/ui/empty-state';
 import { useFavorites } from '../hooks/use-favorites';
 import { useFavoriteProperties } from '../hooks/use-favorite-properties';

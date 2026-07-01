@@ -3,7 +3,12 @@ import { fireEvent, render, screen } from '@testing-library/react';
 import { QuickSort } from '../src/components/property/quick-sort';
 import type { Filters, SortOption } from '../src/hooks/use-filters';
 
-const baseFilters: Filters = { city: '', propertyType: undefined, minPrice: undefined, maxPrice: undefined };
+const baseFilters: Filters = {
+  city: '',
+  propertyType: undefined,
+  minPrice: undefined,
+  maxPrice: undefined,
+};
 
 describe('QuickSort (T-063)', () => {
   it('renders sort options with newest selected by default', () => {

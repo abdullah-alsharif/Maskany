@@ -75,10 +75,7 @@ test.describe('Filters', () => {
 
     // Wait for results to load
     await expect
-      .poll(
-        async () => grid.locator('article').count(),
-        { timeout: 15_000 },
-      )
+      .poll(async () => grid.locator('article').count(), { timeout: 15_000 })
       .toBeGreaterThan(0);
 
     // Reload page with those query params directly
@@ -92,10 +89,7 @@ test.describe('Filters', () => {
 
     // Assert search results match the filter
     await expect
-      .poll(
-        async () => grid.locator('article').count(),
-        { timeout: 15_000 },
-      )
+      .poll(async () => grid.locator('article').count(), { timeout: 15_000 })
       .toBeGreaterThan(0);
   });
 });

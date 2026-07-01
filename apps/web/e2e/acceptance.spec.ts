@@ -7,7 +7,7 @@
  *
  * 375x812 viewport, 120s timeout (set via test.setTimeout).
  */
-import { expect, test } from '@playwright/test';
+import { expect, test, type Page } from '@playwright/test';
 import { getLatestOtpCode } from './test-helpers';
 
 const USER1_NAME = 'E2E Acceptance Browser';
@@ -26,7 +26,7 @@ const PROPERTY_TITLE = 'E2E Acceptance Test Property';
 const EDITED_TITLE = 'E2E Acceptance Test Property (Updated)';
 const REVIEW_COMMENT = 'Great property, very satisfied!';
 
-async function submitOtp(page: import('@playwright/test').Page, fullPhone: string) {
+async function submitOtp(page: Page, fullPhone: string) {
   let code: string | null = null;
   await expect
     .poll(
@@ -43,7 +43,7 @@ async function submitOtp(page: import('@playwright/test').Page, fullPhone: strin
   }
 }
 
-async function dismissRecovery(page: import('@playwright/test').Page) {
+async function dismissRecovery(page: Page) {
   const btn = page.getByRole('button', { name: "I've saved these codes" });
   try {
     await btn.waitFor({ timeout: 5_000 });
@@ -96,9 +96,9 @@ test('[AC-42] Complete acceptance workflow (E2E smoke test)', async ({ page }) =
   const propHref = await propLink.getAttribute('href');
   await page.goto(propHref!);
   await expect(page).toHaveURL(/\/properties\/[0-9a-f-]{36}/);
-  await expect(
-    page.getByRole('heading', { level: 1, name: expectedTitle }),
-  ).toBeVisible({ timeout: 15_000 });
+  await expect(page.getByRole('heading', { level: 1, name: expectedTitle })).toBeVisible({
+    timeout: 15_000,
+  });
   await expect(page.getByLabel('Property specifications')).toBeVisible();
   await expect(page.getByRole('heading', { name: 'Amenities' })).toBeVisible();
 
@@ -137,7 +137,10 @@ test('[AC-42] Complete acceptance workflow (E2E smoke test)', async ({ page }) =
   // 7. User browses as authenticated → favorites button active
   // ====================================================================
   await expect(grid).toBeVisible({ timeout: 15_000 });
-  const favBtn = grid.locator('article').first().getByRole('button', { name: /add to favorites/i });
+  const favBtn = grid
+    .locator('article')
+    .first()
+    .getByRole('button', { name: /add to favorites/i });
   await expect(favBtn).toBeVisible();
 
   // ====================================================================
@@ -145,7 +148,10 @@ test('[AC-42] Complete acceptance workflow (E2E smoke test)', async ({ page }) =
   // ====================================================================
   await favBtn.click();
   await expect(
-    grid.locator('article').first().getByRole('button', { name: /remove from favorites/i }),
+    grid
+      .locator('article')
+      .first()
+      .getByRole('button', { name: /remove from favorites/i }),
   ).toBeVisible({ timeout: 10_000 });
 
   // ====================================================================
@@ -201,9 +207,9 @@ test('[AC-42] Complete acceptance workflow (E2E smoke test)', async ({ page }) =
   // 13. Owner creates property listing
   // ====================================================================
   await page.goto('/my-properties');
-  await expect(
-    page.getByRole('heading', { level: 1, name: 'My properties' }),
-  ).toBeVisible({ timeout: 10_000 });
+  await expect(page.getByRole('heading', { level: 1, name: 'My properties' })).toBeVisible({
+    timeout: 10_000,
+  });
 
   await page.getByRole('link', { name: 'New listing' }).click();
   await expect(page).toHaveURL(/\/properties\/create$/);
@@ -238,9 +244,9 @@ test('[AC-42] Complete acceptance workflow (E2E smoke test)', async ({ page }) =
   await page.getByRole('button', { name: 'Publish listing' }).click();
 
   await expect(page).toHaveURL(/\/properties\/[0-9a-f-]{36}$/, { timeout: 15_000 });
-  await expect(
-    page.getByRole('heading', { level: 1, name: PROPERTY_TITLE }),
-  ).toBeVisible({ timeout: 10_000 });
+  await expect(page.getByRole('heading', { level: 1, name: PROPERTY_TITLE })).toBeVisible({
+    timeout: 10_000,
+  });
 
   // Capture property URL for later
   const propertyUrl = page.url();
@@ -249,9 +255,9 @@ test('[AC-42] Complete acceptance workflow (E2E smoke test)', async ({ page }) =
   // 14. Owner edits property → changes reflected
   // ====================================================================
   await page.goto('/my-properties');
-  await expect(
-    page.getByRole('heading', { level: 1, name: 'My properties' }),
-  ).toBeVisible({ timeout: 10_000 });
+  await expect(page.getByRole('heading', { level: 1, name: 'My properties' })).toBeVisible({
+    timeout: 10_000,
+  });
 
   // Click edit link for the property
   const editLink = page.getByRole('link', { name: /edit/i });
@@ -288,16 +294,16 @@ test('[AC-42] Complete acceptance workflow (E2E smoke test)', async ({ page }) =
   await page.getByRole('button', { name: 'Publish changes' }).click();
 
   await expect(page).toHaveURL(/\/properties\/[0-9a-f-]{36}$/, { timeout: 15_000 });
-  await expect(
-    page.getByRole('heading', { level: 1, name: EDITED_TITLE }),
-  ).toBeVisible({ timeout: 10_000 });
+  await expect(page.getByRole('heading', { level: 1, name: EDITED_TITLE })).toBeVisible({
+    timeout: 10_000,
+  });
 
   // ====================================================================
   // 15. Owner views their listing — can't review own property
   // ====================================================================
-  await expect(
-    page.getByText(/owners cannot review their own property/i),
-  ).toBeVisible({ timeout: 10_000 });
+  await expect(page.getByText(/owners cannot review their own property/i)).toBeVisible({
+    timeout: 10_000,
+  });
 
   // ====================================================================
   // 16. First user reviews owner's property → rating + comment saved
@@ -330,9 +336,9 @@ test('[AC-42] Complete acceptance workflow (E2E smoke test)', async ({ page }) =
 
   // Go to the owner's property
   await page.goto(propertyUrl);
-  await expect(
-    page.getByRole('heading', { level: 1, name: EDITED_TITLE }),
-  ).toBeVisible({ timeout: 10_000 });
+  await expect(page.getByRole('heading', { level: 1, name: EDITED_TITLE })).toBeVisible({
+    timeout: 10_000,
+  });
 
   // Leave a review
   const reviewsSection = page.getByRole('region', { name: 'Reviews', exact: true });
@@ -389,9 +395,9 @@ test('[AC-42] Complete acceptance workflow (E2E smoke test)', async ({ page }) =
 
     // Navigate to my-properties and delete
     await page.goto('/my-properties');
-    await expect(
-      page.getByRole('heading', { level: 1, name: 'My properties' }),
-    ).toBeVisible({ timeout: 10_000 });
+    await expect(page.getByRole('heading', { level: 1, name: 'My properties' })).toBeVisible({
+      timeout: 10_000,
+    });
 
     // Click delete button for the test property
     await page.getByRole('button', { name: `Delete ${PROPERTY_TITLE}` }).click();

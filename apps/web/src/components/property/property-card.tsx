@@ -39,10 +39,13 @@ export function PropertyCard({ property }: PropertyCardProps) {
         group relative flex flex-col
         rounded-2xl overflow-hidden
         bg-white
+        border border-stone-200
+        hover:border-terracotta-200
         shadow-[var(--shadow-card)]
         hover:shadow-[var(--shadow-card-hover)]
         transition-all duration-300 ease-out
-        hover:-translate-y-0.5
+        hover:-translate-y-1
+        focus-within:border-terracotta-200 focus-within:shadow-[var(--shadow-card-hover)]
       "
     >
       {/* Media Wrapper */}

@@ -14,9 +14,9 @@ type CapturedRequest = {
   params?: Record<string, unknown>;
 };
 
-function installAdapter(
-  respond: (req: CapturedRequest) => Partial<AxiosResponse>,
-): { captured: CapturedRequest[] } {
+function installAdapter(respond: (req: CapturedRequest) => Partial<AxiosResponse>): {
+  captured: CapturedRequest[];
+} {
   const captured: CapturedRequest[] = [];
   const adapter: AxiosAdapter = async (config) => {
     const req: CapturedRequest = {

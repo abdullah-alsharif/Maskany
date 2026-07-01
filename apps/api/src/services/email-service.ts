@@ -21,7 +21,9 @@
  * can surface a consistent error envelope to the client.
  */
 import nodemailer from 'nodemailer';
+import { maskEmail } from '../lib/mask.js';
 import { HttpError } from '../lib/http-error.js';
+import { logger } from '../lib/logger.js';
 
 /**
  * RFC-5321 practical upper bound on the full email address length.
@@ -64,26 +66,6 @@ export function isValidEmail(email: string): boolean {
     return false;
   }
   return EMAIL_PATTERN.test(email);
-}
-
-/**
- * Return a log-safe representation of `email` that reveals only the first
- * character of the local part and the full domain. The rest of the local part
- * is replaced with a fixed `***` marker so a leaked log line cannot be used
- * to recover the full address.
- *
- * @example
- *   maskEmail('alice@example.com') → 'a***@example.com'
- */
-export function maskEmail(email: string): string {
-  const atIndex = email.indexOf('@');
-  if (atIndex <= 0) {
-    // No local part, or unable to parse — redact entirely.
-    return '***';
-  }
-  const firstLocalChar = email.charAt(0);
-  const domain = email.slice(atIndex);
-  return `${firstLocalChar}***${domain}`;
 }
 
 /**
@@ -166,7 +148,7 @@ export async function sendEmail(to: string, subject: string, html: string): Prom
     // masked recipient — never the subject, HTML body, or OTP code — so that
     // captured stdout (e.g., CI logs, `docker logs`) cannot be replayed to
     // compromise an account. PRD §8.2 / T-029.
-    console.log(`[EMAIL] OTP sent to: ${maskEmail(to)}`);
+    logger.info(`[EMAIL] OTP sent to: ${maskEmail(to)}`);
     return;
   }
 
@@ -222,7 +204,7 @@ function logEmailFailure(to: string, err: unknown): void {
     (err as { code?: string; responseCode?: number } | undefined)?.code ??
     (err as { responseCode?: number } | undefined)?.responseCode ??
     'UNKNOWN';
-  console.error('[EMAIL] delivery failed', { to: maskEmail(to), errorCode: code });
+  logger.error('[EMAIL] delivery failed', { to: maskEmail(to), errorCode: code });
 }
 
 /**
@@ -232,7 +214,7 @@ function logEmailFailure(to: string, err: unknown): void {
  */
 export async function sendOtpEmail(to: string, code: string): Promise<void> {
   if (process.env.NODE_ENV !== 'production') {
-    console.log(`[EMAIL] OTP for ${maskEmail(to)}: ${code}`);
+    logger.info(`[EMAIL] OTP for ${maskEmail(to)}: ${code}`);
   }
   await sendEmail(to, formatOtpEmailSubject(), formatOtpEmailHtml(code));
 }

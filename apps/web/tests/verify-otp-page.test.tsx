@@ -114,7 +114,9 @@ describe('VerifyOtpPage', () => {
 
       // Advance past the 30s resend timer. Must wrap in act() so React
       // commits state updates triggered by fake-timer callbacks.
-      act(() => { vi.advanceTimersByTime(31_000); });
+      act(() => {
+        vi.advanceTimersByTime(31_000);
+      });
 
       expect(screen.getByRole('button', { name: /resend code/i })).toBeInTheDocument();
 

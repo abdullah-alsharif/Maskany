@@ -12,13 +12,10 @@
  * path consumes, plus the environment gate that selects the branch.
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { maskPhone } from '../src/lib/mask.js';
 import { HttpError } from '../src/lib/http-error.js';
-import {
-  formatOtpMessage,
-  isValidPhoneNumber,
-  maskPhoneNumber,
-  sendSms,
-} from '../src/services/sms-service.js';
+import { logger } from '../src/lib/logger.js';
+import { formatOtpMessage, isValidPhoneNumber, sendSms } from '../src/services/sms-service.js';
 
 describe('sms-service', () => {
   describe('formatOtpMessage', () => {
@@ -71,18 +68,18 @@ describe('sms-service', () => {
     });
   });
 
-  describe('maskPhoneNumber', () => {
+  describe('maskPhone', () => {
     it('keeps the country-code prefix and last four digits, hiding the middle', () => {
-      expect(maskPhoneNumber('+966500001234')).toBe('+966***1234');
+      expect(maskPhone('+966500001234')).toBe('+966***1234');
     });
 
     it('masks a US number preserving + and last four digits', () => {
-      expect(maskPhoneNumber('+14155551234')).toBe('+141***1234');
+      expect(maskPhone('+14155551234')).toBe('+141***1234');
     });
 
     it('never reveals the middle digits of the source number', () => {
       const source = '+447700900123';
-      const masked = maskPhoneNumber(source);
+      const masked = maskPhone(source);
       // Middle section must be replaced with *** — the original middle digits
       // (index 4..length-4) must not appear in the masked output.
       const middle = source.slice(4, source.length - 4);
@@ -96,7 +93,7 @@ describe('sms-service', () => {
     let logSpy: ReturnType<typeof vi.spyOn>;
 
     beforeEach(() => {
-      logSpy = vi.spyOn(console, 'log').mockImplementation(() => {
+      logSpy = vi.spyOn(logger, 'info').mockImplementation(() => {
         // Silence during tests — we assert on the spy's call arguments,
         // real stdout noise is not needed.
       });

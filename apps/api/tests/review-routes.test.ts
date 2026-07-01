@@ -584,7 +584,10 @@ describe('review routes', () => {
 
       const base = Date.now() - 25 * 1000;
       for (let i = 0; i < 25; i += 1) {
-        const user = await createUser(`P25 Reviewer ${i}`, `+96650009${String(i + 20).padStart(4, '0')}`);
+        const user = await createUser(
+          `P25 Reviewer ${i}`,
+          `+96650009${String(i + 20).padStart(4, '0')}`,
+        );
         await db
           .insertInto('reviews')
           .values({
@@ -626,7 +629,10 @@ describe('review routes', () => {
 
       const base = Date.now() - 5 * 1000;
       for (let i = 0; i < 5; i += 1) {
-        const user = await createUser(`P999 Reviewer ${i}`, `+96650009${String(i + 50).padStart(4, '0')}`);
+        const user = await createUser(
+          `P999 Reviewer ${i}`,
+          `+96650009${String(i + 50).padStart(4, '0')}`,
+        );
         await db
           .insertInto('reviews')
           .values({

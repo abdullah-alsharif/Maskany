@@ -10,7 +10,7 @@ export function Skeleton({ className = '', circle, ...props }: SkeletonProps) {
     <div
       aria-hidden="true"
       className={`
-        animate-skeleton bg-stone-200
+        animate-skeleton bg-sand-100
         ${circle ? 'rounded-full aspect-square' : 'rounded-lg'}
         ${className}
       `}

@@ -11,12 +11,13 @@
  * the validator, and the environment gate that selects the branch.
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { maskEmail } from '../src/lib/mask.js';
 import { HttpError } from '../src/lib/http-error.js';
+import { logger } from '../src/lib/logger.js';
 import {
   formatOtpEmailHtml,
   formatOtpEmailSubject,
   isValidEmail,
-  maskEmail,
   sendEmail,
   sendOtpEmail,
 } from '../src/services/email-service.js';
@@ -128,7 +129,7 @@ describe('email-service', () => {
     let logSpy: ReturnType<typeof vi.spyOn>;
 
     beforeEach(() => {
-      logSpy = vi.spyOn(console, 'log').mockImplementation(() => {
+      logSpy = vi.spyOn(logger, 'info').mockImplementation(() => {
         // Silence during tests — we assert on the spy's call arguments,
         // real stdout noise is not needed.
       });
@@ -181,7 +182,7 @@ describe('email-service', () => {
     let logSpy: ReturnType<typeof vi.spyOn>;
 
     beforeEach(() => {
-      logSpy = vi.spyOn(console, 'log').mockImplementation(() => {
+      logSpy = vi.spyOn(logger, 'info').mockImplementation(() => {
         // Silence during tests — assertions run against the spy, not stdout.
       });
     });

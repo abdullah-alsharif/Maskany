@@ -58,9 +58,10 @@ type FilterPanelProps = {
   value: Filters;
   onApply: (filters: Filters) => void;
   onClear: () => void;
+  filterCounts?: Record<string, number>;
 };
 
-export function FilterPanel({ value, onApply, onClear }: FilterPanelProps) {
+export function FilterPanel({ value, onApply, onClear, filterCounts }: FilterPanelProps) {
   const { t } = useTranslation();
   const [draft, setDraft] = useState<Filters>(value);
 
@@ -104,29 +105,35 @@ export function FilterPanel({ value, onApply, onClear }: FilterPanelProps) {
 
   return (
     <div className="flex flex-col gap-6">
-      {/* Property Type */}
+      {/* Property Type — pill chips */}
       <fieldset role="group" aria-label={t('filter.propertyType')} className="flex flex-col gap-2">
         <legend className="text-sm font-semibold text-stone-900 mb-1">
           {t('filter.propertyType')}
         </legend>
-        <div className="grid grid-cols-2 gap-2">
+        <div className="flex flex-wrap gap-2">
           {PROPERTY_TYPE_ORDER.map((type) => {
             const checked = draft.types.includes(type);
             return (
-              <label
+              <button
                 key={type}
-                className="flex items-center gap-2 px-3 py-2 rounded-lg border border-stone-200 bg-white cursor-pointer hover:bg-stone-50 min-h-[44px]"
+                type="button"
+                aria-pressed={checked}
+                onClick={() => toggleType(type)}
+                className={`inline-flex items-center gap-1.5 px-3.5 py-2 rounded-full text-sm font-medium min-h-[36px] transition-colors ${
+                  checked
+                    ? 'bg-terracotta-500 text-white'
+                    : 'bg-stone-100 text-stone-800 hover:bg-stone-200'
+                }`}
               >
-                <input
-                  type="checkbox"
-                  checked={checked}
-                  onChange={() => toggleType(type)}
-                  className="accent-terracotta-500 w-4 h-4"
-                />
-                <span className="text-sm text-stone-800">
-                  {t(`propertyType.${type}`, { defaultValue: propertyTypeConfig[type].label })}
-                </span>
-              </label>
+                {t(`propertyType.${type}`, { defaultValue: propertyTypeConfig[type].label })}
+                {filterCounts?.[type] !== undefined && (
+                  <span
+                    className={`text-xs ml-0.5 ${checked ? 'text-white/70' : 'text-stone-400'}`}
+                  >
+                    {filterCounts[type]}
+                  </span>
+                )}
+              </button>
             );
           })}
         </div>
@@ -304,7 +311,7 @@ export function FilterPanel({ value, onApply, onClear }: FilterPanelProps) {
       </div>
 
       {/* Actions */}
-      <div className="flex gap-3 pt-2 sticky bottom-0 bg-white pb-1">
+      <div className="flex gap-3 pt-4 sticky bottom-0 bg-white pb-1 border-t border-stone-100 shadow-[0_-4px_12px_rgba(43,38,33,0.04)]">
         <Button
           type="button"
           variant="secondary"

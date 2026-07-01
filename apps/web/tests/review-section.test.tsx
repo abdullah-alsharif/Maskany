@@ -247,7 +247,16 @@ describe('ReviewSection — handleCreate submit', () => {
     apiClient.defaults.adapter = (async (config: AxiosRequestConfig) => {
       if (config.method?.toLowerCase() === 'post' && config.url?.includes('/reviews')) {
         return {
-          data: { id: 'new-review', rating: 5, comment: 'Great!', userId: 'viewer', propertyId: 'prop-1', user: { id: 'viewer', fullName: 'Viewer' }, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() },
+          data: {
+            id: 'new-review',
+            rating: 5,
+            comment: 'Great!',
+            userId: 'viewer',
+            propertyId: 'prop-1',
+            user: { id: 'viewer', fullName: 'Viewer' },
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+          },
           status: 201,
           statusText: 'Created',
           headers: {},
@@ -287,7 +296,16 @@ describe('ReviewSection — handleUpdate submit', () => {
     apiClient.defaults.adapter = (async (config: AxiosRequestConfig) => {
       if (config.method?.toLowerCase() === 'put' && config.url?.includes('/reviews/')) {
         return {
-          data: { id: 'rev-own', rating: 5, comment: 'Updated!', userId: 'viewer', propertyId: 'prop-1', user: { id: 'viewer', fullName: 'Viewer Yu' }, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() },
+          data: {
+            id: 'rev-own',
+            rating: 5,
+            comment: 'Updated!',
+            userId: 'viewer',
+            propertyId: 'prop-1',
+            user: { id: 'viewer', fullName: 'Viewer Yu' },
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+          },
           status: 200,
           statusText: 'OK',
           headers: {},

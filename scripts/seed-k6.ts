@@ -8,7 +8,6 @@
  */
 import { sql } from 'kysely';
 import { db, destroy } from '../apps/api/src/lib/db.js';
-import type { Database } from '../apps/api/src/lib/db-types.js';
 
 type Trx = typeof db;
 
@@ -17,15 +16,58 @@ const BATCH = 500;
 const TRUNCATE = process.argv.includes('--truncate');
 
 const FIRST_NAMES = [
-  'Ahmed', 'Mohammed', 'Sara', 'Noor', 'Layla', 'Omar', 'Fatima', 'Khalid',
-  'Aisha', 'Yusuf', 'Zainab', 'Abdullah', 'Mariam', 'Hassan', 'Amira',
-  'Hussein', 'Lina', 'Ibrahim', 'Rana', 'Tariq', 'Samira', 'Jamal',
-  'Nadia', 'Rashid', 'Huda', 'Majid', 'Salma', 'Faisal', 'Dana', 'Sami',
+  'Ahmed',
+  'Mohammed',
+  'Sara',
+  'Noor',
+  'Layla',
+  'Omar',
+  'Fatima',
+  'Khalid',
+  'Aisha',
+  'Yusuf',
+  'Zainab',
+  'Abdullah',
+  'Mariam',
+  'Hassan',
+  'Amira',
+  'Hussein',
+  'Lina',
+  'Ibrahim',
+  'Rana',
+  'Tariq',
+  'Samira',
+  'Jamal',
+  'Nadia',
+  'Rashid',
+  'Huda',
+  'Majid',
+  'Salma',
+  'Faisal',
+  'Dana',
+  'Sami',
 ];
 const LAST_NAMES = [
-  'Al-Mansouri', 'Haddad', 'El-Sayed', 'Rahman', 'Nassar', 'Al-Rashid',
-  'Qasim', 'Farouk', 'Nouri', 'Al-Saud', 'Habib', 'Malik', 'Shaheen',
-  'Abbas', 'Jaber', 'Al-Ali', 'Mousa', 'Zidan', 'Karam', 'Badawi',
+  'Al-Mansouri',
+  'Haddad',
+  'El-Sayed',
+  'Rahman',
+  'Nassar',
+  'Al-Rashid',
+  'Qasim',
+  'Farouk',
+  'Nouri',
+  'Al-Saud',
+  'Habib',
+  'Malik',
+  'Shaheen',
+  'Abbas',
+  'Jaber',
+  'Al-Ali',
+  'Mousa',
+  'Zidan',
+  'Karam',
+  'Badawi',
 ];
 const CITIES = [
   { city: 'Riyadh', country: 'SA' },
@@ -39,19 +81,42 @@ const CITIES = [
   { city: 'Muscat', country: 'OM' },
 ];
 const AREAS = [
-  'Al Olaya', 'Hittin', 'Al Nakheel', 'Downtown', 'Al Hamra',
-  'Palm Jumeirah', 'Abdoun', 'Zamalek', 'West Bay', 'Juffair',
-  'Salmiya', 'Al Khuwair', 'Al Malaz', 'Ar Rawdah', 'Al Zahra',
+  'Al Olaya',
+  'Hittin',
+  'Al Nakheel',
+  'Downtown',
+  'Al Hamra',
+  'Palm Jumeirah',
+  'Abdoun',
+  'Zamalek',
+  'West Bay',
+  'Juffair',
+  'Salmiya',
+  'Al Khuwair',
+  'Al Malaz',
+  'Ar Rawdah',
+  'Al Zahra',
 ];
 const PROPERTY_TYPES: Array<
   'APARTMENT' | 'ROOM' | 'CHALET' | 'VILLA' | 'HOUSE' | 'STUDIO' | 'PENTHOUSE' | 'DUPLEX' | 'OTHER'
-> = [
-  'APARTMENT', 'ROOM', 'CHALET', 'VILLA', 'HOUSE', 'STUDIO', 'PENTHOUSE', 'DUPLEX', 'OTHER',
-];
+> = ['APARTMENT', 'ROOM', 'CHALET', 'VILLA', 'HOUSE', 'STUDIO', 'PENTHOUSE', 'DUPLEX', 'OTHER'];
 const AMENITIES_POOL = [
-  'wifi', 'parking', 'pool', 'gym', 'ac', 'furnished', 'kitchen',
-  'elevator', 'security', 'balcony', 'garden', 'maid', 'generator',
-  'central_ac', 'smart_lock', 'pet_friendly',
+  'wifi',
+  'parking',
+  'pool',
+  'gym',
+  'ac',
+  'furnished',
+  'kitchen',
+  'elevator',
+  'security',
+  'balcony',
+  'garden',
+  'maid',
+  'generator',
+  'central_ac',
+  'smart_lock',
+  'pet_friendly',
 ];
 const REVIEW_COMMENTS = [
   'Great place, highly recommended!',
@@ -76,11 +141,26 @@ const REVIEW_COMMENTS = [
   'Convenient parking and easy access.',
 ];
 const TITLE_PREFIXES = [
-  'Modern', 'Spacious', 'Cozy', 'Luxury', 'Charming', 'Stylish',
-  'Bright', 'Elegant', 'Contemporary', 'Minimalist',
+  'Modern',
+  'Spacious',
+  'Cozy',
+  'Luxury',
+  'Charming',
+  'Stylish',
+  'Bright',
+  'Elegant',
+  'Contemporary',
+  'Minimalist',
 ];
 const TITLE_SUFFIXES = [
-  'Apartment', 'Studio', 'Villa', 'Suite', 'Flat', 'Home', 'Residence', 'Duplex',
+  'Apartment',
+  'Studio',
+  'Villa',
+  'Suite',
+  'Flat',
+  'Home',
+  'Residence',
+  'Duplex',
 ];
 
 class RNG {
@@ -129,7 +209,9 @@ function generateEmail(rng: RNG, name: string, index: number): string | null {
 }
 
 async function truncateAll(client: Trx): Promise<void> {
-  await sql`TRUNCATE TABLE reviews, property_media, properties, property_translations, otp_codes, refresh_tokens, users RESTART IDENTITY CASCADE`.execute(client);
+  await sql`TRUNCATE TABLE reviews, property_media, properties, property_translations, otp_codes, refresh_tokens, users RESTART IDENTITY CASCADE`.execute(
+    client,
+  );
 }
 
 async function main(): Promise<void> {
@@ -185,7 +267,9 @@ async function main(): Promise<void> {
     if (u.user_type === 'OWNER') ownerIds.push(u.id);
     else browserIds.push(u.id);
   }
-  console.log(`[seed-k6] inserted ${insertedUsers.length} users (${ownerIds.length} owners, ${browserIds.length} browsers)`);
+  console.log(
+    `[seed-k6] inserted ${insertedUsers.length} users (${ownerIds.length} owners, ${browserIds.length} browsers)`,
+  );
 
   console.log('[seed-k6] seeding 5,000 properties...');
   const propertyValues: Array<{
@@ -215,10 +299,36 @@ async function main(): Promise<void> {
     const suffix = rng.pick(TITLE_SUFFIXES);
     const title = `${prefix} ${suffix} in ${cityInfo.city}`;
 
-    const basePrice = propType === 'VILLA' ? 8000 : propType === 'PENTHOUSE' ? 10000 : propType === 'HOUSE' ? 5000 : propType === 'CHALET' ? 3000 : propType === 'APARTMENT' ? 2500 : propType === 'DUPLEX' ? 4000 : propType === 'STUDIO' ? 1500 : 1000;
+    const basePrice =
+      propType === 'VILLA'
+        ? 8000
+        : propType === 'PENTHOUSE'
+          ? 10000
+          : propType === 'HOUSE'
+            ? 5000
+            : propType === 'CHALET'
+              ? 3000
+              : propType === 'APARTMENT'
+                ? 2500
+                : propType === 'DUPLEX'
+                  ? 4000
+                  : propType === 'STUDIO'
+                    ? 1500
+                    : 1000;
     const price = basePrice + rng.int(-500, 5000);
 
-    const rooms = propType === 'STUDIO' ? 1 : propType === 'ROOM' ? 1 : propType === 'APARTMENT' ? rng.int(1, 3) : propType === 'VILLA' ? rng.int(4, 7) : propType === 'HOUSE' ? rng.int(3, 5) : rng.int(2, 4);
+    const rooms =
+      propType === 'STUDIO'
+        ? 1
+        : propType === 'ROOM'
+          ? 1
+          : propType === 'APARTMENT'
+            ? rng.int(1, 3)
+            : propType === 'VILLA'
+              ? rng.int(4, 7)
+              : propType === 'HOUSE'
+                ? rng.int(3, 5)
+                : rng.int(2, 4);
     const bathrooms = propType === 'STUDIO' ? 1 : Math.max(1, rooms - rng.int(0, 1));
 
     propertyValues.push({
@@ -230,7 +340,29 @@ async function main(): Promise<void> {
       area: rng.pick(AREAS),
       country: cityInfo.country,
       price: formatPrice(price),
-      currency: cityInfo.country === 'AE' ? 'AED' : cityInfo.country === 'JO' || cityInfo.country === 'EG' || cityInfo.country === 'OM' || cityInfo.country === 'QA' || cityInfo.country === 'BH' || cityInfo.country === 'KW' ? (cityInfo.country === 'EG' ? 'EGP' : cityInfo.country === 'OM' ? 'OMR' : cityInfo.country === 'QA' ? 'QAR' : cityInfo.country === 'BH' ? 'BHD' : cityInfo.country === 'KW' ? 'KWD' : cityInfo.country === 'JO' ? 'JOD' : 'USD') : 'SAR',
+      currency:
+        cityInfo.country === 'AE'
+          ? 'AED'
+          : cityInfo.country === 'JO' ||
+              cityInfo.country === 'EG' ||
+              cityInfo.country === 'OM' ||
+              cityInfo.country === 'QA' ||
+              cityInfo.country === 'BH' ||
+              cityInfo.country === 'KW'
+            ? cityInfo.country === 'EG'
+              ? 'EGP'
+              : cityInfo.country === 'OM'
+                ? 'OMR'
+                : cityInfo.country === 'QA'
+                  ? 'QAR'
+                  : cityInfo.country === 'BH'
+                    ? 'BHD'
+                    : cityInfo.country === 'KW'
+                      ? 'KWD'
+                      : cityInfo.country === 'JO'
+                        ? 'JOD'
+                        : 'USD'
+            : 'SAR',
       price_unit: rng.next() > 0.7 ? 'per_night' : 'per_month',
       rooms,
       bathrooms,
@@ -335,9 +467,11 @@ async function main(): Promise<void> {
   console.log(`  reviews:    ${reviewValues.length}`);
 }
 
-main().catch((err: unknown) => {
-  console.error('[seed-k6] failed:', err);
-  process.exitCode = 1;
-}).finally(() => {
-  destroy().catch(() => {});
-});
+main()
+  .catch((err: unknown) => {
+    console.error('[seed-k6] failed:', err);
+    process.exitCode = 1;
+  })
+  .finally(() => {
+    destroy().catch(() => {});
+  });

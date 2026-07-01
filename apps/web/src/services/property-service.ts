@@ -9,7 +9,7 @@
  */
 import i18n from 'i18next';
 import { apiClient } from './api';
-import type { Property, PropertyMedia, PropertyTranslation } from '../types/property';
+import type { Property, PropertyMedia } from '../types/property';
 import type { PropertyFormValues } from '../components/property-form';
 
 export type PropertyPayload = {

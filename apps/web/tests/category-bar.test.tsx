@@ -1,6 +1,6 @@
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
-import { CategoryBar } from '../src/components/category-bar';
+import { CategoryBar } from '../src/components/property/category-bar';
 
 const REQUIRED_CATEGORIES = [
   'All',

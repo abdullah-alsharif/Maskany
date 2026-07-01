@@ -6,6 +6,7 @@
  */
 import { Router } from 'express';
 import { z } from 'zod';
+import { asyncHandler } from '../lib/async-handler.js';
 import { parseOrThrow } from '../lib/validation.js';
 import {
   type AuthenticatedRequest,
@@ -22,26 +23,26 @@ const registerSchema = z.object({
 export function createPushRouter(): Router {
   const router = Router();
 
-  router.post('/register', requireAuth, async (req: AuthenticatedRequest, res, next) => {
-    try {
+  router.post(
+    '/register',
+    requireAuth,
+    asyncHandler(async (req: AuthenticatedRequest, res) => {
       const userId = requireUserId(req);
       const body = parseOrThrow(registerSchema, req.body);
       await registerPushToken(userId, body.token, body.platform);
       res.status(204).send();
-    } catch (err) {
-      next(err);
-    }
-  });
+    }),
+  );
 
-  router.delete('/token', requireAuth, async (req: AuthenticatedRequest, res, next) => {
-    try {
+  router.delete(
+    '/token',
+    requireAuth,
+    asyncHandler(async (req: AuthenticatedRequest, res) => {
       const userId = requireUserId(req);
       await clearPushTokensForUser(userId);
       res.status(204).send();
-    } catch (err) {
-      next(err);
-    }
-  });
+    }),
+  );
 
   return router;
 }

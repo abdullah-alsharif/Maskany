@@ -11,12 +11,15 @@ type ButtonProps = ComponentProps<'button'> & {
 
 const variantClasses: Record<ButtonVariant, string> = {
   primary:
-    'bg-terracotta-500 text-white hover:bg-terracotta-600 active:bg-terracotta-700 shadow-sm',
+    'bg-terracotta-500 text-white hover:bg-terracotta-600 active:bg-terracotta-700 active:shadow-[inset_0_2px_4px_rgba(0,0,0,0.08)] shadow-sm',
   secondary:
-    'bg-white text-stone-800 border border-stone-300 hover:bg-stone-50 active:bg-stone-100',
-  ghost: 'text-stone-600 hover:bg-stone-100 active:bg-stone-200',
-  whatsapp: 'bg-[#25d366] text-white hover:bg-[#20bd5a] active:bg-[#128c7e] shadow-sm',
-  danger: 'bg-red-600 text-white hover:bg-red-700 active:bg-red-800',
+    'bg-white text-stone-800 border border-stone-300 hover:bg-stone-50 active:bg-stone-100 active:shadow-[inset_0_2px_4px_rgba(0,0,0,0.06)]',
+  ghost:
+    'text-stone-600 hover:bg-stone-100 active:bg-stone-200 active:shadow-[inset_0_2px_4px_rgba(0,0,0,0.04)]',
+  whatsapp:
+    'bg-[#25d366] text-white hover:bg-[#20bd5a] active:bg-[#128c7e] active:shadow-[inset_0_2px_4px_rgba(0,0,0,0.08)] shadow-sm',
+  danger:
+    'bg-red-600 text-white hover:bg-red-700 active:bg-red-800 active:shadow-[inset_0_2px_4px_rgba(0,0,0,0.08)]',
 };
 
 const sizeClasses: Record<ButtonSize, string> = {

@@ -428,9 +428,7 @@ describe('PropertyDetailPage — share fallback', () => {
     renderDetail({ property: makeProperty() });
     fireEvent.click(screen.getByRole('button', { name: /share/i }));
     await waitFor(() => expect(writeTextMock).toHaveBeenCalledTimes(1));
-    expect(writeTextMock).toHaveBeenCalledWith(
-      'http://localhost/properties/prop-abc',
-    );
+    expect(writeTextMock).toHaveBeenCalledWith('http://localhost/properties/prop-abc');
   });
 
   it('handles navigator.share rejection gracefully', async () => {

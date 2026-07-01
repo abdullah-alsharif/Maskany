@@ -21,7 +21,8 @@ export function WhatsAppIconButton({
   propertyTitle,
   propertyId,
 }: WhatsAppIconButtonProps) {
-  const link = generateWhatsAppLink(whatsappNumber, propertyTitle, propertyId);
+  const propertyUrl = `${window.location.origin}/properties/${propertyId}`;
+  const link = generateWhatsAppLink(whatsappNumber, propertyTitle, propertyUrl);
   if (!link) return null;
 
   return (
@@ -55,7 +56,8 @@ type WhatsAppFabProps = {
 };
 
 export function WhatsAppFab({ whatsappNumber, propertyTitle, propertyId }: WhatsAppFabProps) {
-  const link = generateWhatsAppLink(whatsappNumber, propertyTitle, propertyId);
+  const propertyUrl = `${window.location.origin}/properties/${propertyId}`;
+  const link = generateWhatsAppLink(whatsappNumber, propertyTitle, propertyUrl);
   if (!link) return null;
 
   return (

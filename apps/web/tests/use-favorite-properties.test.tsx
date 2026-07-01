@@ -49,9 +49,7 @@ function makeProperty(id: string): Property {
 }
 
 function makeAdapter(
-  handler: (
-    config: AxiosRequestConfig,
-  ) => { data: unknown; status: number; statusText: string },
+  handler: (config: AxiosRequestConfig) => { data: unknown; status: number; statusText: string },
 ): AxiosAdapter {
   return (async (config: AxiosRequestConfig) => {
     const result = handler(config);
@@ -88,9 +86,9 @@ describe('useFavoriteProperties', () => {
     expect(result.current.isLoading).toBe(false);
   });
 
-  it('fetches and returns a single property by ID', async () => {
+  it('fetches and returns a single property via the bulk endpoint', async () => {
     apiClient.defaults.adapter = makeAdapter(() => ({
-      data: makeProperty('p1'),
+      data: [makeProperty('p1')],
       status: 200,
       statusText: 'OK',
     }));
@@ -101,27 +99,28 @@ describe('useFavoriteProperties', () => {
     expect(result.current.isLoading).toBe(false);
   });
 
-  it('fetches multiple properties in parallel', async () => {
+  it('fetches multiple properties in a single bulk request', async () => {
     let callCount = 0;
-    apiClient.defaults.adapter = makeAdapter((config) => {
+    apiClient.defaults.adapter = makeAdapter(() => {
       callCount++;
-      const id = config.url?.split('/').pop();
-      return { data: makeProperty(id ?? 'unknown'), status: 200, statusText: 'OK' };
+      return {
+        data: [makeProperty('p1'), makeProperty('p2'), makeProperty('p3')],
+        status: 200,
+        statusText: 'OK',
+      };
     });
     const { wrapper } = createWrapper();
     const { result } = renderHook(() => useFavoriteProperties(['p1', 'p2', 'p3']), { wrapper });
     await waitFor(() => expect(result.current.properties).toHaveLength(3));
-    expect(callCount).toBe(3);
+    expect(callCount).toBe(1);
   });
 
-  it('excludes failed queries (404) and returns the successful ones', async () => {
-    apiClient.defaults.adapter = makeAdapter((config) => {
-      const id = config.url?.split('/').pop();
-      if (id === 'p2') {
-        return { data: null, status: 404, statusText: 'Not Found' };
-      }
-      return { data: makeProperty(id ?? 'unknown'), status: 200, statusText: 'OK' };
-    });
+  it('omits IDs not returned by the bulk endpoint', async () => {
+    apiClient.defaults.adapter = makeAdapter(() => ({
+      data: [makeProperty('p1'), makeProperty('p3')],
+      status: 200,
+      statusText: 'OK',
+    }));
     const { wrapper } = createWrapper();
     const { result } = renderHook(() => useFavoriteProperties(['p1', 'p2', 'p3']), { wrapper });
     await waitFor(() => expect(result.current.properties).toHaveLength(2));
@@ -132,13 +131,13 @@ describe('useFavoriteProperties', () => {
     let fetchCount = 0;
     apiClient.defaults.adapter = makeAdapter(() => {
       fetchCount++;
-      return { data: makeProperty('p1'), status: 200, statusText: 'OK' };
+      return { data: [makeProperty('p1')], status: 200, statusText: 'OK' };
     });
 
     const queryClient = new QueryClient({
       defaultOptions: { queries: { retry: false, staleTime: Infinity } },
     });
-    queryClient.setQueryData(['property', 'p1'], makeProperty('p1'));
+    queryClient.setQueryData(['favorite-properties', ['p1']], [makeProperty('p1')]);
     const wrapper = ({ children }: { children: ReactNode }) => (
       <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
     );

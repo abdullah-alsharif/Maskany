@@ -67,7 +67,7 @@ export function BottomNav() {
                 <span className="absolute -top-1 w-1.5 h-1.5 rounded-full bg-terracotta-500 animate-scale-in" />
               )}
               <span
-                className={`relative transition-transform duration-300 ${isActive ? 'scale-105' : 'scale-100'}`}
+                className={`relative transition-all duration-500 ease-[var(--ease-spring)] ${isActive ? 'scale-110' : 'scale-100'}`}
               >
                 {icon}
                 {badge !== undefined && badge > 0 && (

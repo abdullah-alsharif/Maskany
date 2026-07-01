@@ -22,13 +22,14 @@ import { useTranslation } from 'react-i18next';
 import { BedDouble, Bath, Ruler, MapPin, Star, UserCircle2 } from 'lucide-react';
 import { Header } from '../components/layout/header';
 import { Badge } from '../components/ui/badge';
+import { formatMemberSince, formatPrice } from '../utils/format';
 import { SkeletonDetailPage } from '../components/ui/skeleton';
 import { EmptyState } from '../components/ui/empty-state';
-import { ImageGallery } from '../components/image-gallery';
+import { ImageGallery } from '../components/property/image-gallery';
 import { AmenityChips } from '../components/amenity-chips';
 import { ReviewSection } from '../components/review-section';
 import { SeoHead } from '../components/seo-head';
-import { FavoriteButton } from '../components/favorite-button';
+import { FavoriteButton } from '../components/property/favorite-button';
 import { WhatsAppFab } from '../components/property/whatsapp-button';
 import { useProperty } from '../hooks/use-property';
 import { useFavorites } from '../hooks/use-favorites';
@@ -46,18 +47,6 @@ function isNotFoundError(error: unknown): boolean {
   return status === 404;
 }
 
-function formatMemberSince(iso: string): string {
-  const date = new Date(iso);
-  return date.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
-}
-
-function formatPrice(amount: number): string {
-  return new Intl.NumberFormat('en-US', {
-    style: 'decimal',
-    maximumFractionDigits: 0,
-  }).format(amount);
-}
-
 function PropertyBody({ property }: { property: Property }) {
   const { t, i18n } = useTranslation();
   const [expanded, setExpanded] = useState(false);
@@ -67,13 +56,24 @@ function PropertyBody({ property }: { property: Property }) {
   const typeConfig = propertyTypeConfig[property.propertyType] ?? propertyTypeConfig.OTHER;
   const userLocale = i18n.language.startsWith('ar') ? 'ar' : 'en';
   const useTranslationContent = userLocale !== property.locale && property.translation;
-  const displayTitle = useTranslationContent && property.translation ? property.translation.title : property.title;
-  const displaySummary = useTranslationContent && property.translation ? property.translation.summary : property.summary;
-  const displayDescriptionRaw = useTranslationContent && property.translation ? property.translation.description : property.description;
-  const displayCity = useTranslationContent && property.translation ? property.translation.city : property.city;
-  const displayArea = useTranslationContent && property.translation ? property.translation.area : property.area;
-  const displayCountry = useTranslationContent && property.translation ? property.translation.country : property.country;
-  const displayAmenities = useTranslationContent && property.translation ? property.translation.amenities : property.amenities;
+  const displayTitle =
+    useTranslationContent && property.translation ? property.translation.title : property.title;
+  const displaySummary =
+    useTranslationContent && property.translation ? property.translation.summary : property.summary;
+  const displayDescriptionRaw =
+    useTranslationContent && property.translation
+      ? property.translation.description
+      : property.description;
+  const displayCity =
+    useTranslationContent && property.translation ? property.translation.city : property.city;
+  const displayArea =
+    useTranslationContent && property.translation ? property.translation.area : property.area;
+  const _displayCountry =
+    useTranslationContent && property.translation ? property.translation.country : property.country;
+  const displayAmenities =
+    useTranslationContent && property.translation
+      ? property.translation.amenities
+      : property.amenities;
   const isLong = (displayDescriptionRaw ?? '').length > DESCRIPTION_CLAMP;
   const displayDescription =
     isLong && !expanded
@@ -129,13 +129,11 @@ function PropertyBody({ property }: { property: Property }) {
       <article className="page-content -mt-14">
         <ImageGallery images={property.images ?? []} alt={property.title} />
 
-        <div className="px-4 py-5 space-y-6">
+        <div className="px-4 py-5 space-y-7">
           {/* Title + type badge + location + rating */}
           <section className="space-y-3">
             <div className="flex items-start justify-between gap-3">
-              <h1 className="font-display text-3xl text-stone-950 leading-tight">
-                {displayTitle}
-              </h1>
+              <h1 className="font-display text-3xl text-stone-950 leading-tight">{displayTitle}</h1>
               <Badge variant={typeConfig.color.includes('terracotta') ? 'terracotta' : 'olive'}>
                 {typeConfig.label}
               </Badge>

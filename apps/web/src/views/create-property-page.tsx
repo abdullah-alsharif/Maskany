@@ -13,7 +13,11 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { Header } from '../components/layout/header';
 import { PropertyForm, type PropertyFormSubmitPayload } from '../components/property-form';
 import { SeoHead } from '../components/seo-head';
-import { createProperty, uploadPropertyImages, savePropertyTranslation } from '../services/property-service';
+import {
+  createProperty,
+  uploadPropertyImages,
+  savePropertyTranslation,
+} from '../services/property-service';
 
 export function CreatePropertyPage() {
   const router = useRouter();
@@ -37,7 +41,11 @@ export function CreatePropertyPage() {
       router.push(`/properties/${property.id}`);
     },
     onError: (err: unknown) => {
-      const data = (err as { response?: { data?: { details?: { path: string; message: string }[]; message?: string } } })?.response?.data;
+      const data = (
+        err as {
+          response?: { data?: { details?: { path: string; message: string }[]; message?: string } };
+        }
+      )?.response?.data;
       if (data?.details?.length) {
         setError(data.details.map((d) => `${d.path}: ${d.message}`).join('; '));
       } else if (data?.message) {

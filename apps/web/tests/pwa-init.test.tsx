@@ -34,9 +34,7 @@ describe('PwaInit (T-061)', () => {
   it('unregisters service workers when Capacitor native platform', async () => {
     const originalNavigator = globalThis.navigator;
     const unregisterMock = vi.fn().mockResolvedValue(undefined);
-    const getRegMock = vi.fn().mockResolvedValue([
-      { unregister: unregisterMock },
-    ]);
+    const getRegMock = vi.fn().mockResolvedValue([{ unregister: unregisterMock }]);
 
     Object.defineProperty(window, 'Capacitor', {
       configurable: true,

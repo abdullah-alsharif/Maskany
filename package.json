@@ -33,9 +33,7 @@
     "docker:up:test": "docker compose -f docker-compose.test.yml up -d",
     "docker:down": "docker compose down",
     "docker:down:test": "docker compose -f docker-compose.test.yml down",
-    "docker:down:all": "docker compose down && docker compose -f docker-compose.test.yml down",
-    "ralph": "ralph loop --iterations 8 --verbose",
-    "ralph:monitor": "ralph monitor --watch"
+    "docker:down:all": "docker compose down && docker compose -f docker-compose.test.yml down"
   },
   "packageManager": "pnpm@10.15.1",
   "engines": {
@@ -43,7 +41,6 @@
   },
   "devDependencies": {
     "@eslint/js": "^9.17.0",
-    "@smplcty/ralph": "^0.8.4",
     "@smplcty/schema-flow": "^0.3.7",
     "@types/node": "^22.10.2",
     "dotenv-cli": "^11.0.0",

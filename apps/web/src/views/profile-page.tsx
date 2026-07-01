@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Calendar, ChevronRight, Heart, Home, LogOut, Share2, User } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
+import { formatMemberSince } from '../utils/format';
 import { Badge } from '../components/ui/badge';
 import { Button } from '../components/ui/button';
 import { LanguageSwitcher } from '../components/language-switcher';
@@ -20,12 +21,6 @@ function getInitials(name: string): string {
     .slice(0, 2)
     .join('')
     .toUpperCase();
-}
-
-function formatMemberSince(dateStr: string): string {
-  const date = new Date(dateStr);
-  if (isNaN(date.getTime())) return dateStr;
-  return date.toLocaleDateString(undefined, { month: 'short', year: 'numeric' });
 }
 
 function LogoutDialog({

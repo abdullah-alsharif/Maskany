@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { render, screen, within } from '@testing-library/react';
-import { PropertyCard } from '../src/components/property-card';
+import { PropertyCard } from '../src/components/property/property-card';
 import type { Property } from '../src/types/property';
 
 const sampleProperty: Property = {

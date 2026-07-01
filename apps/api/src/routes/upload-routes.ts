@@ -17,6 +17,7 @@ import path from 'node:path';
 import { Router } from 'express';
 import multer from 'multer';
 import { z } from 'zod';
+import { asyncHandler } from '../lib/async-handler.js';
 import { parseOrThrow } from '../lib/validation.js';
 import {
   type AuthenticatedRequest,
@@ -92,46 +93,38 @@ export function createUploadRouter(): Router {
       { name: 'images', maxCount: MAX_IMAGES },
       { name: 'videos', maxCount: MAX_VIDEOS },
     ]),
-    async (req: AuthenticatedRequest, res, next) => {
-      try {
-        const userId = requireUserId(req);
-        const params = parseOrThrow(propertyIdParamSchema, req.params);
-        const images = fieldFiles(req.files, 'images');
-        const videos = fieldFiles(req.files, 'videos');
-        const media = await uploadMedia(userId, params.id, { images, videos });
-        res.status(201).json({ media });
-      } catch (err) {
-        next(err);
-      }
-    },
+    asyncHandler(async (req: AuthenticatedRequest, res) => {
+      const userId = requireUserId(req);
+      const params = parseOrThrow(propertyIdParamSchema, req.params);
+      const images = fieldFiles(req.files, 'images');
+      const videos = fieldFiles(req.files, 'videos');
+      const media = await uploadMedia(userId, params.id, { images, videos });
+      res.status(201).json({ media });
+    }),
   );
 
   router.delete(
     '/:id/media/:mediaId',
     requireAuth,
-    async (req: AuthenticatedRequest, res, next) => {
-      try {
-        const userId = requireUserId(req);
-        const params = parseOrThrow(mediaIdParamSchema, req.params);
-        await deleteMedia(userId, params.id, params.mediaId);
-        res.status(204).send();
-      } catch (err) {
-        next(err);
-      }
-    },
+    asyncHandler(async (req: AuthenticatedRequest, res) => {
+      const userId = requireUserId(req);
+      const params = parseOrThrow(mediaIdParamSchema, req.params);
+      await deleteMedia(userId, params.id, params.mediaId);
+      res.status(204).send();
+    }),
   );
 
-  router.put('/:id/media/reorder', requireAuth, async (req: AuthenticatedRequest, res, next) => {
-    try {
+  router.put(
+    '/:id/media/reorder',
+    requireAuth,
+    asyncHandler(async (req: AuthenticatedRequest, res) => {
       const userId = requireUserId(req);
       const params = parseOrThrow(propertyIdParamSchema, req.params);
       const body = parseOrThrow(reorderBodySchema, req.body);
       await reorderMedia(userId, params.id, body.mediaIds);
       res.status(200).json({ ok: true });
-    } catch (err) {
-      next(err);
-    }
-  });
+    }),
+  );
 
   return router;
 }

@@ -272,8 +272,17 @@ describe('PropertyForm', () => {
 
   it('shows edit hint on step 4 when mode is edit', () => {
     render(
-      <PropertyForm mode="edit" onSubmit={() => undefined}
-        initialValues={{ title: 'Villa', price: '1000', city: 'Riyadh', whatsappNumber: '+966500000000' } as Record<string, never>}
+      <PropertyForm
+        mode="edit"
+        onSubmit={() => undefined}
+        initialValues={
+          {
+            title: 'Villa',
+            price: '1000',
+            city: 'Riyadh',
+            whatsappNumber: '+966500000000',
+          } as Record<string, never>
+        }
       />,
     );
     fireEvent.click(screen.getByRole('button', { name: /next/i }));
@@ -292,15 +301,15 @@ describe('PropertyForm', () => {
     fireEvent.change(screen.getByLabelText(/city/i), { target: { value: 'Riyadh' } });
     fireEvent.click(screen.getByRole('button', { name: /next/i }));
     fireEvent.click(screen.getByRole('button', { name: /next/i }));
-    fireEvent.change(screen.getByLabelText(/whatsapp number/i), { target: { value: '+966 (500) 000-000' } });
+    fireEvent.change(screen.getByLabelText(/whatsapp number/i), {
+      target: { value: '+966 (500) 000-000' },
+    });
     fireEvent.click(screen.getByRole('button', { name: /next/i }));
     fireEvent.click(screen.getByRole('button', { name: /publish/i }));
     expect(onSubmit).toHaveBeenCalledWith(
       expect.objectContaining({ whatsappNumber: '+966500000000' }),
     );
   });
-
-
 
   describe('translation in create mode', () => {
     function renderAndGoToReview(onSubmit = vi.fn()) {
@@ -312,7 +321,9 @@ describe('PropertyForm', () => {
       fireEvent.change(screen.getByLabelText(/city/i), { target: { value: 'Riyadh' } });
       fireEvent.click(screen.getByRole('button', { name: /next/i }));
       fireEvent.click(screen.getByRole('button', { name: /next/i }));
-      fireEvent.change(screen.getByLabelText(/whatsapp number/i), { target: { value: '+966500000000' } });
+      fireEvent.change(screen.getByLabelText(/whatsapp number/i), {
+        target: { value: '+966500000000' },
+      });
       fireEvent.click(screen.getByRole('button', { name: /next/i }));
     }
 
@@ -353,9 +364,7 @@ describe('PropertyForm', () => {
       const onSubmit = vi.fn();
       renderAndGoToReview(onSubmit);
       fireEvent.click(screen.getByRole('button', { name: /publish/i }));
-      expect(onSubmit).toHaveBeenCalledWith(
-        expect.objectContaining({ translation: null }),
-      );
+      expect(onSubmit).toHaveBeenCalledWith(expect.objectContaining({ translation: null }));
     });
   });
 });

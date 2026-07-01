@@ -17,3 +17,7 @@ test-results/
 playwright-report/
 .env.production
 /temp/
+
+.opencode/
+.specify
+specs/

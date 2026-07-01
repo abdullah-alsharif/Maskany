@@ -8,9 +8,9 @@
 
 ## Dev setup
 
-| Service | Port | User | DB |
-|---|---|---|---|
-| Dev Postgres | 5432 | maskany | maskany |
+| Service       | Port | User         | DB           |
+| ------------- | ---- | ------------ | ------------ |
+| Dev Postgres  | 5432 | maskany      | maskany      |
 | Test Postgres | 5433 | maskany_test | maskany_test |
 
 ```bash

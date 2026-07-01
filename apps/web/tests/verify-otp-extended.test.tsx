@@ -173,7 +173,9 @@ describe('VerifyOtpPage — edge cases (T-051)', () => {
   it('shows expired message and disables OTP inputs after countdown expires', () => {
     vi.useFakeTimers();
     renderPage({ identifier: '+966500000000', channel: 'sms' });
-    act(() => { vi.advanceTimersByTime(301_000); });
+    act(() => {
+      vi.advanceTimersByTime(301_000);
+    });
     expect(screen.getByText(/code has expired/i)).toBeInTheDocument();
     const inputs = screen.getAllByLabelText(/digit \d/i) as HTMLInputElement[];
     inputs.forEach((input) => expect(input.disabled).toBe(true));

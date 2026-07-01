@@ -17,6 +17,7 @@
  * concerns only (zod validation + forwarding errors to the global handler).
  */
 import { Router } from 'express';
+import { asyncHandler } from '../lib/async-handler.js';
 import { parseOrThrow } from '../lib/validation.js';
 import {
   type AuthenticatedRequest,
@@ -44,69 +45,59 @@ export function createReviewRouter(): Router {
   // `/summary` must be registered before the generic `/:reviewId` handlers so
   // Express routes the literal path to the summary endpoint instead of
   // treating "summary" as a review id.
-  router.get('/:id/reviews/summary', async (req, res, next) => {
-    try {
+  router.get(
+    '/:id/reviews/summary',
+    asyncHandler(async (req, res) => {
       const params = parseOrThrow(propertyIdParamSchema, req.params);
       const summary = await getReviewSummary(params.id);
       res.status(200).json(summary);
-    } catch (err) {
-      next(err);
-    }
-  });
+    }),
+  );
 
-  router.get('/:id/reviews', async (req, res, next) => {
-    try {
+  router.get(
+    '/:id/reviews',
+    asyncHandler(async (req, res) => {
       const params = parseOrThrow(propertyIdParamSchema, req.params);
       const query = parseOrThrow(listReviewsQuerySchema, req.query);
       const page = query.page ?? 1;
       const result = await listReviews(params.id, page);
       res.status(200).json(result);
-    } catch (err) {
-      next(err);
-    }
-  });
+    }),
+  );
 
-  router.post('/:id/reviews', requireAuth, async (req: AuthenticatedRequest, res, next) => {
-    try {
+  router.post(
+    '/:id/reviews',
+    requireAuth,
+    asyncHandler(async (req: AuthenticatedRequest, res) => {
       const userId = requireUserId(req);
       const params = parseOrThrow(propertyIdParamSchema, req.params);
       const body = parseOrThrow(createReviewSchema, req.body);
       const review = await createReview(userId, params.id, body);
       res.status(201).json(review);
-    } catch (err) {
-      next(err);
-    }
-  });
+    }),
+  );
 
   router.put(
     '/:id/reviews/:reviewId',
     requireAuth,
-    async (req: AuthenticatedRequest, res, next) => {
-      try {
-        const userId = requireUserId(req);
-        const params = parseOrThrow(reviewRouteParamsSchema, req.params);
-        const body = parseOrThrow(updateReviewSchema, req.body);
-        const review = await updateReview(userId, params.id, params.reviewId, body);
-        res.status(200).json(review);
-      } catch (err) {
-        next(err);
-      }
-    },
+    asyncHandler(async (req: AuthenticatedRequest, res) => {
+      const userId = requireUserId(req);
+      const params = parseOrThrow(reviewRouteParamsSchema, req.params);
+      const body = parseOrThrow(updateReviewSchema, req.body);
+      const review = await updateReview(userId, params.id, params.reviewId, body);
+      res.status(200).json(review);
+    }),
   );
 
   router.delete(
     '/:id/reviews/:reviewId',
     requireAuth,
-    async (req: AuthenticatedRequest, res, next) => {
-      try {
-        const userId = requireUserId(req);
-        const params = parseOrThrow(reviewRouteParamsSchema, req.params);
-        await deleteReview(userId, params.id, params.reviewId);
-        res.status(204).send();
-      } catch (err) {
-        next(err);
-      }
-    },
+    asyncHandler(async (req: AuthenticatedRequest, res) => {
+      const userId = requireUserId(req);
+      const params = parseOrThrow(reviewRouteParamsSchema, req.params);
+      await deleteReview(userId, params.id, params.reviewId);
+      res.status(204).send();
+    }),
   );
 
   return router;

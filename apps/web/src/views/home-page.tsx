@@ -3,12 +3,12 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Globe } from 'lucide-react';
-import { CategoryBar } from '../components/category-bar';
-import { QuickSort } from '../components/quick-sort';
-import { PropertyCard } from '../components/property-card';
-import { SearchBar } from '../components/search-bar';
+import { CategoryBar } from '../components/property/category-bar';
+import { QuickSort } from '../components/property/quick-sort';
+import { PropertyCard } from '../components/property/property-card';
+import { SearchBar } from '../components/property/search-bar';
 import { SeoHead } from '../components/seo-head';
-import { SkeletonCard } from '../components/skeleton-card';
+import { SkeletonCard } from '../components/ui/skeleton';
 import { FilterSheet } from '../components/filter-sheet';
 import { NoResults } from '../components/ui/empty-state';
 import { useFilters } from '../hooks/use-filters';
@@ -65,7 +65,11 @@ function usePullToRefresh(onRefresh: () => void): {
   return { pullDelta, containerRef };
 }
 
-export function HomePage() {
+interface HomePageProps {
+  mode?: 'home' | 'search';
+}
+
+export function HomePage({ mode = 'home' }: HomePageProps) {
   const { t, i18n } = useTranslation();
   const [category, setCategory] = useState<CategoryFilter>('ALL');
   const [filterOpen, setFilterOpen] = useState(false);
@@ -74,13 +78,20 @@ export function HomePage() {
     useProperties(category, queryParams);
 
   const sentinelRef = useRef<HTMLDivElement | null>(null);
+  const searchInputRef = useRef<HTMLInputElement>(null);
 
   const handleRefresh = useCallback(() => {
     void refetch();
   }, [refetch]);
-  const { pullDelta, containerRef } = usePullToRefresh(handleRefresh);
+  const { pullDelta, containerRef } = usePullToRefresh(mode === 'home' ? handleRefresh : () => {});
 
   useEffect(() => {
+    if (mode !== 'search') return;
+    searchInputRef.current?.focus();
+  }, [mode]);
+
+  useEffect(() => {
+    if (mode !== 'home') return;
     const node = sentinelRef.current;
     if (!node || !hasNextPage) return undefined;
     const observer = new IntersectionObserver(
@@ -93,43 +104,57 @@ export function HomePage() {
     );
     observer.observe(node);
     return () => observer.disconnect();
-  }, [hasNextPage, isFetchingNextPage, fetchNextPage]);
+  }, [mode, hasNextPage, isFetchingNextPage, fetchNextPage]);
 
   const properties = data?.pages.flatMap((page) => page.properties) ?? [];
   const showSkeletons = isPending;
   const showEmpty = !isPending && properties.length === 0;
 
+  const isSearch = mode === 'search';
+
   return (
-    <section ref={containerRef} className="page-content">
+    <section ref={isSearch ? undefined : containerRef} className="page-content">
       <SeoHead
-        title="Maskany - Find Your Perfect Property"
-        description="Curated homes, rooms, and getaways near you."
+        title={isSearch ? 'Search | Maskany' : 'Maskany - Find Your Perfect Property'}
+        description={
+          isSearch
+            ? 'Search properties by location, type, and price.'
+            : 'Curated homes, rooms, and getaways near you.'
+        }
       />
-      <h1 className="sr-only">{t('nav.home')}</h1>
+      <h1 className="sr-only">{isSearch ? t('nav.search') : t('nav.home')}</h1>
 
       <header className="px-4 pt-6 pb-2 flex items-start justify-between gap-3">
         <div>
-          <p className="font-display text-3xl text-stone-950">{t('home.heading')}</p>
-          <p className="mt-1 text-sm text-stone-600">{t('home.subheading')}</p>
+          <p className="font-display text-3xl text-stone-950">
+            {isSearch ? t('search.heading') : t('home.heading')}
+          </p>
+          <p className="mt-1 text-sm text-stone-600">
+            {isSearch ? t('search.subheading') : t('home.subheading')}
+          </p>
         </div>
-        <button
-          type="button"
-          onClick={() => i18n.changeLanguage(i18n.language.startsWith('ar') ? 'en' : 'ar')}
-          aria-label={
-            i18n.language.startsWith('ar') ? t('language.switchToEn') : t('language.switchToAr')
-          }
-          className="shrink-0 flex items-center justify-center w-11 h-11 rounded-xl bg-white border border-stone-300 text-stone-600 hover:bg-stone-50 hover:border-stone-400 active:bg-stone-100 active:scale-[0.96] transition-all duration-150"
-        >
-          <Globe size={18} strokeWidth={2} />
-        </button>
+        {!isSearch && (
+          <button
+            type="button"
+            onClick={() => i18n.changeLanguage(i18n.language.startsWith('ar') ? 'en' : 'ar')}
+            aria-label={
+              i18n.language.startsWith('ar') ? t('language.switchToEn') : t('language.switchToAr')
+            }
+            className="shrink-0 flex items-center justify-center w-11 h-11 rounded-xl bg-white border border-stone-300 text-stone-600 hover:bg-stone-50 hover:border-stone-400 active:bg-stone-100 active:scale-[0.96] transition-all duration-150"
+          >
+            <Globe size={18} strokeWidth={2} />
+          </button>
+        )}
       </header>
 
       <div className="px-4 pt-2">
         <SearchBar
+          ref={isSearch ? searchInputRef : undefined}
           value={filters.query ?? ''}
           onChange={setQuery}
           onFilterClick={() => setFilterOpen(true)}
           activeFilterCount={activeFilterCount}
+          placeholder={isSearch ? t('search.placeholder') : undefined}
         />
       </div>
 
@@ -141,7 +166,7 @@ export function HomePage() {
         <QuickSort currentSort={filters.sort} filters={filters} onApply={apply} />
       </div>
 
-      {pullDelta > 0 && (
+      {!isSearch && pullDelta > 0 && (
         <div
           aria-hidden="true"
           data-testid="pull-indicator"
@@ -171,17 +196,25 @@ export function HomePage() {
             data-testid="property-grid"
             className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 px-4 py-4"
           >
-            {properties.map((property) => (
-              <PropertyCard key={property.id} property={property} />
+            {properties.map((property, idx) => (
+              <div
+                key={property.id}
+                className="animate-fade-in"
+                style={{ animationDelay: `${idx * 0.05}s` }}
+              >
+                <PropertyCard property={property} />
+              </div>
             ))}
           </div>
-          <div
-            ref={sentinelRef}
-            aria-hidden="true"
-            data-testid="infinite-sentinel"
-            className="h-8"
-          />
-          {isFetchingNextPage && (
+          {!isSearch && (
+            <div
+              ref={sentinelRef}
+              aria-hidden="true"
+              data-testid="infinite-sentinel"
+              className="h-8"
+            />
+          )}
+          {!isSearch && isFetchingNextPage && (
             <div
               data-testid="next-page-skeletons"
               className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 px-4 pb-6"

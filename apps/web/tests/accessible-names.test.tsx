@@ -11,7 +11,6 @@ import { beforeEach, afterEach, describe, expect, it } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { HomePage } from '../src/views/home-page';
-import { SearchPage } from '../src/views/search-page';
 import { FavoritesPage } from '../src/views/favorites-page';
 import { ProfilePage } from '../src/views/profile-page';
 import { PropertyDetailPage } from '../src/views/property-detail-page';
@@ -55,8 +54,9 @@ describe('Accessible names on buttons (T-025, PRD §8.5)', () => {
     assertAllButtonsHaveNames();
   });
 
-  it('SearchPage, FavoritesPage, ProfilePage: all buttons (if any) have accessible names', () => {
-    for (const Page of [SearchPage, FavoritesPage, ProfilePage] as const) {
+  it('SearchPage (via HomePage mode=search), FavoritesPage, ProfilePage: all buttons (if any) have accessible names', () => {
+    const SearchModeHomePage = () => <HomePage mode="search" />;
+    for (const Page of [SearchModeHomePage, FavoritesPage, ProfilePage] as const) {
       const client = makeClient();
       const { unmount } = render(
         <QueryClientProvider client={client}>

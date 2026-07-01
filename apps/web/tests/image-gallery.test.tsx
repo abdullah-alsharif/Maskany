@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
-import { ImageGallery } from '../src/components/image-gallery';
+import { ImageGallery } from '../src/components/property/image-gallery';
 import type { PropertyMedia } from '../src/types/property';
 
 const makeImage = (id: string, i: number): PropertyMedia => ({

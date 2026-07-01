@@ -21,7 +21,9 @@
  * consistent error envelope to the client.
  */
 import twilio from 'twilio';
+import { maskPhone } from '../lib/mask.js';
 import { HttpError } from '../lib/http-error.js';
+import { logger } from '../lib/logger.js';
 
 /**
  * E.164-style phone number pattern: `+` followed by a non-zero country code
@@ -52,25 +54,6 @@ export function isValidPhoneNumber(phone: string): boolean {
 }
 
 /**
- * Return a log-safe representation of `phone` that reveals only the first
- * four characters (the `+` plus the leading country-code digits) and the last
- * four digits. All middle digits are replaced with a fixed `***` marker so a
- * leaked log line cannot be used to reconstruct the full number.
- *
- * @example
- *   maskPhoneNumber('+966500001234') → '+966***1234'
- */
-export function maskPhoneNumber(phone: string): string {
-  const prefixLength = 4;
-  const suffixLength = 4;
-  if (phone.length <= prefixLength + suffixLength) {
-    // Too short to produce a useful mask — redact entirely.
-    return '***';
-  }
-  return `${phone.slice(0, prefixLength)}***${phone.slice(-suffixLength)}`;
-}
-
-/**
  * Deliver `message` to `to`. Validates the phone number first in every
  * environment — an invalid number never reaches the transport, logged or
  * otherwise.
@@ -84,7 +67,7 @@ export async function sendSms(to: string, message: string): Promise<void> {
   }
 
   if (process.env.NODE_ENV !== 'production') {
-    console.log(`[SMS] OTP for ${maskPhoneNumber(to)}: ${message}`);
+    logger.info(`[SMS] OTP for ${maskPhone(to)}: ${message}`);
     return;
   }
 
@@ -130,5 +113,5 @@ function isTwilioTransientError(err: unknown): boolean {
 function logSmsFailure(to: string, err: unknown): void {
   const e = err as { status?: number; code?: string | number } | undefined;
   const errorCode = e?.code ?? e?.status ?? 'UNKNOWN';
-  console.error('[SMS] delivery failed', { to: maskPhoneNumber(to), errorCode });
+  logger.error('[SMS] delivery failed', { to: maskPhone(to), errorCode });
 }

@@ -64,9 +64,7 @@ function createWrapper() {
 }
 
 function makeAdapter(
-  handler: (
-    config: AxiosRequestConfig,
-  ) => { data: unknown; status: number; statusText: string },
+  handler: (config: AxiosRequestConfig) => { data: unknown; status: number; statusText: string },
 ): AxiosAdapter {
   return (async (config: AxiosRequestConfig) => {
     const result = handler(config);

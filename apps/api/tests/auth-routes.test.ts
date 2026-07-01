@@ -618,10 +618,17 @@ describe('auth routes', () => {
       // Email OTP for email login
       await db
         .insertInto('users')
-        .values({ full_name: 'AC02 Email', phone: '+966500009902', email: 'ac02-login@example.com', user_type: 'BROWSER' })
+        .values({
+          full_name: 'AC02 Email',
+          phone: '+966500009902',
+          email: 'ac02-login@example.com',
+          user_type: 'BROWSER',
+        })
         .execute();
 
-      const login = await request(app).post('/api/auth/login').send({ identifier: 'ac02-login@example.com' });
+      const login = await request(app)
+        .post('/api/auth/login')
+        .send({ identifier: 'ac02-login@example.com' });
       expect(login.status).toBe(200);
       expect(login.body.type).toBe('email');
 
@@ -671,7 +678,9 @@ describe('auth routes', () => {
         userType: 'BROWSER',
       });
       const code = await latestOtp('+966500009904');
-      const verify = await request(app).post('/api/auth/verify').send({ identifier: '+966500009904', code });
+      const verify = await request(app)
+        .post('/api/auth/verify')
+        .send({ identifier: '+966500009904', code });
       const rt1 = getRefreshToken(verify);
 
       // Use refresh token → get new pair
@@ -693,9 +702,7 @@ describe('auth routes', () => {
         .values({ full_name: 'Phone Only', phone: PHONE, user_type: 'BROWSER' })
         .execute();
 
-      const res = await request(app)
-        .post('/api/auth/login')
-        .send({ identifier: EMAIL });
+      const res = await request(app).post('/api/auth/login').send({ identifier: EMAIL });
 
       expect(res.status).toBe(404);
       expect(res.body.error.code).toBe('USER_NOT_FOUND');
@@ -721,11 +728,13 @@ describe('auth routes', () => {
     });
 
     it('returns 400 for fullName exceeding 120 characters', async () => {
-      const res = await request(app).post('/api/auth/register').send({
-        fullName: 'A'.repeat(121),
-        phone: PHONE,
-        userType: 'BROWSER',
-      });
+      const res = await request(app)
+        .post('/api/auth/register')
+        .send({
+          fullName: 'A'.repeat(121),
+          phone: PHONE,
+          userType: 'BROWSER',
+        });
 
       expect(res.status).toBe(400);
       expect(res.body.error.code).toBe('VALIDATION_ERROR');

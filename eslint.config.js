@@ -12,7 +12,6 @@ export default tseslint.config(
       '**/build/**',
       '**/node_modules/**',
       '**/coverage/**',
-      '**/.ralph-logs/**',
       '**/.next/**',
       '**/playwright-report/**',
       '**/test-results/**',

@@ -1,15 +1,14 @@
 /**
- * SearchPage unit tests (T-031, PRD §4.1).
+ * SearchPage unit tests (T-031, PRD §4.1) — renders <HomePage mode="search" />.
  *
- * Verifies the stubbed search page was replaced with a functional
- * implementation: an auto-focused SearchBar, CategoryBar, property
- * grid (reusing `useProperties`), empty state, and bottom-sheet filter
- * integration. Filters come from `useFilters` so the URL stays in sync.
+ * Verifies the auto-focused SearchBar, CategoryBar, property grid (reusing
+ * `useProperties`), empty state, and bottom-sheet filter integration.
+ * Filters come from `useFilters` so the URL stays in sync.
  */
 import { afterEach, beforeEach, describe, it, expect } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { SearchPage } from '../src/views/search-page';
+import { HomePage } from '../src/views/home-page';
 import { setCurrentPath, resetRouter } from './mocks/next-navigation';
 import type { Property, PropertyType } from '../src/types/property';
 
@@ -74,12 +73,12 @@ const renderPage = (seeds: Seed[] = [{ category: 'ALL', properties: [] }]) => {
   }
   return render(
     <QueryClientProvider client={queryClient}>
-      <SearchPage />
+      <HomePage mode="search" />
     </QueryClientProvider>,
   );
 };
 
-describe('SearchPage', () => {
+describe('SearchPage (via HomePage mode=search)', () => {
   it('renders the search input with the filter toggle', () => {
     renderPage();
     expect(screen.getByLabelText(/search properties/i)).toBeInTheDocument();

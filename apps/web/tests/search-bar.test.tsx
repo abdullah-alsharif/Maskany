@@ -6,7 +6,7 @@
  */
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, act, fireEvent } from '@testing-library/react';
-import { SearchBar } from '../src/components/search-bar';
+import { SearchBar } from '../src/components/property/search-bar';
 
 describe('SearchBar', () => {
   beforeEach(() => {

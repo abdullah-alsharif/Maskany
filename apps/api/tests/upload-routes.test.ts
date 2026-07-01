@@ -844,7 +844,9 @@ describe('media upload routes', () => {
       const replacement = refill.body.media[0]!;
 
       // Reorder all 10 in reverse order.
-      const remainingIds = allMedia.filter((m: { id: string }) => m.id !== fifthId).map((m: { id: string }) => m.id);
+      const remainingIds = allMedia
+        .filter((m: { id: string }) => m.id !== fifthId)
+        .map((m: { id: string }) => m.id);
       const reversed = [replacement.id, ...remainingIds.reverse()];
       const reorderRes = await request(app)
         .put(`/api/properties/${propertyId}/media/reorder`)

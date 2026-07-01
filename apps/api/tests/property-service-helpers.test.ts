@@ -1,11 +1,31 @@
 import { describe, expect, it } from 'vitest';
 
 const TEST_COLUMNS = [
-  'id', 'title', 'summary', 'description', 'property_type',
-  'city', 'area', 'country', 'lat', 'lng', 'price', 'currency',
-  'price_unit', 'rooms', 'bathrooms', 'area_sqm', 'amenities',
-  'locale', 'whatsapp_number', 'owner_id', 'status',
-  'average_rating', 'review_count', 'created_at', 'updated_at',
+  'id',
+  'title',
+  'summary',
+  'description',
+  'property_type',
+  'city',
+  'area',
+  'country',
+  'lat',
+  'lng',
+  'price',
+  'currency',
+  'price_unit',
+  'rooms',
+  'bathrooms',
+  'area_sqm',
+  'amenities',
+  'locale',
+  'whatsapp_number',
+  'owner_id',
+  'status',
+  'average_rating',
+  'review_count',
+  'created_at',
+  'updated_at',
 ] as const;
 
 describe('buildInsertValues', () => {
@@ -143,8 +163,8 @@ describe('toSummary', () => {
       city: 'Riyadh',
       area: 'Olaya',
       country: 'SA',
-      lat: '24.7',
-      lng: '46.6',
+      lat: 24.7,
+      lng: 46.6,
       price: '100000',
       currency: 'SAR',
       price_unit: 'per_month',
@@ -152,17 +172,21 @@ describe('toSummary', () => {
       bathrooms: 2,
       area_sqm: '80',
       amenities: ['wifi'],
-      locale: 'en',
+      locale: 'en' as const,
       whatsapp_number: '+966500000000',
       owner_id: 'owner-1',
-      status: 'ACTIVE',
+      status: 'ACTIVE' as const,
       average_rating: '4.5',
       review_count: 10,
       created_at: now,
       updated_at: now,
     } as const;
 
-    const result = toSummary(row, { url: 'https://cdn.example.com/img.webp', thumbnailUrl: null, altText: null });
+    const result = toSummary(row as unknown as Parameters<typeof toSummary>[0], {
+      url: 'https://cdn.example.com/img.webp',
+      thumbnailUrl: null,
+      altText: null,
+    });
     expect(result).toMatchObject({
       id: 'prop-1',
       title: 'Test Property',
@@ -179,15 +203,33 @@ describe('toSummary', () => {
     const { toSummary } = await import('../src/services/property-service.js');
     const now = new Date();
     const row = {
-      id: 'prop-2', title: 'No Cover', summary: null, description: null,
-      property_type: 'VILLA', city: 'Jeddah', area: null, country: 'SA',
-      lat: null, lng: null, price: '500000', currency: 'SAR',
-      price_unit: 'total', rooms: 5, bathrooms: 4, area_sqm: null,
-      amenities: [], locale: 'en', whatsapp_number: '+966500000001',
-      owner_id: 'owner-2', status: 'ACTIVE', average_rating: '0',
-      review_count: 0, created_at: now, updated_at: now,
+      id: 'prop-2',
+      title: 'No Cover',
+      summary: null,
+      description: null,
+      property_type: 'VILLA',
+      city: 'Jeddah',
+      area: null,
+      country: 'SA',
+      lat: null,
+      lng: null,
+      price: '500000',
+      currency: 'SAR',
+      price_unit: 'total',
+      rooms: 5,
+      bathrooms: 4,
+      area_sqm: null,
+      amenities: [],
+      locale: 'en' as const,
+      whatsapp_number: '+966500000001',
+      owner_id: 'owner-2',
+      status: 'ACTIVE' as const,
+      average_rating: '0',
+      review_count: 0,
+      created_at: now,
+      updated_at: now,
     } as const;
-    const result = toSummary(row, null);
+    const result = toSummary(row as unknown as Parameters<typeof toSummary>[0], null);
     expect(result.coverImage).toBeNull();
   });
 });

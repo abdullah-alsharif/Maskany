@@ -146,9 +146,7 @@ function main() {
   for (const code of allAcCodes) {
     const criteria = CRITERIA_MAP[code] ?? 'Unknown criteria';
     const fileEntries = byCode.get(code);
-    const testFile = fileEntries
-      ? fileEntries.map((e) => `${e.file}:${e.line}`).join('<br>')
-      : '—';
+    const testFile = fileEntries ? fileEntries.map((e) => `${e.file}:${e.line}`).join('<br>') : '—';
     const status = fileEntries ? '✅ IMPLEMENTED' : '❌ NOT FOUND';
     report += `| ${code} | ${criteria} | ${status} | ${testFile} |\n`;
   }
