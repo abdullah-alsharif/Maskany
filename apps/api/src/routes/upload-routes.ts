@@ -8,8 +8,8 @@
  *   - PUT    /:id/media/reorder    — rewrite sort_order for this property.
  *
  * Multer stores incoming parts on disk in a temporary directory; the
- * `media-service` module handles processing (sharp/ffmpeg), moving files
- * into the property-specific uploads folder, and writing the DB rows.
+ * `media-service` module handles processing (sharp for images), moving
+ * files into the property-specific uploads folder, and writing the DB rows.
  */
 import { mkdir } from 'node:fs/promises';
 import os from 'node:os';

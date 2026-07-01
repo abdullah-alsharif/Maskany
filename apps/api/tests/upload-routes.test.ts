@@ -10,16 +10,13 @@
  *   - PUT /api/properties/:id/media/reorder — updates sort_order.
  *   - GET /uploads/... — static serving of the processed media.
  *
- * Fixtures are generated at runtime via `sharp` (image buffer) and `ffmpeg`
- * (short MP4) so the suite stays hermetic — no binary blobs checked in.
+ * Fixtures are generated at runtime via `sharp` (image buffer) so the suite
+ * stays hermetic — no binary blobs checked in.
  */
 import { randomUUID } from 'node:crypto';
 import { access, mkdtemp, readFile, rm } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
-import ffmpegInstaller from '@ffmpeg-installer/ffmpeg';
-import ffprobeInstaller from '@ffprobe-installer/ffprobe';
-import ffmpeg from 'fluent-ffmpeg';
 import sharp from 'sharp';
 import request from 'supertest';
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
@@ -34,6 +31,10 @@ async function fileExists(filePath: string): Promise<boolean> {
   } catch {
     return false;
   }
+}
+
+function generateVideoBuffer(): Buffer {
+  return Buffer.from('fake-video-content');
 }
 
 async function createUser(
@@ -80,45 +81,21 @@ function generateImageBuffer(
     .toBuffer();
 }
 
-function generateTestVideo(outputPath: string, durationSeconds = 3): Promise<void> {
-  return new Promise((resolve, reject) => {
-    ffmpeg()
-      .input(`testsrc=duration=${durationSeconds}:size=320x240:rate=15`)
-      .inputFormat('lavfi')
-      .outputOptions(['-pix_fmt yuv420p', '-movflags +faststart'])
-      .save(outputPath)
-      .on('end', () => resolve())
-      .on('error', (err) => reject(err instanceof Error ? err : new Error(String(err))));
-  });
-}
-
 describe('media upload routes', () => {
   let app: ReturnType<typeof createApp>;
   let uploadsRoot: string;
-  let fixturesDir: string;
-  let testVideoPath: string;
   let originalUploadsDir: string | undefined;
 
   beforeAll(async () => {
     // Isolated uploads root for the suite — wiped in afterAll.
     uploadsRoot = await mkdtemp(path.join(os.tmpdir(), 'maskany-uploads-'));
-    fixturesDir = await mkdtemp(path.join(os.tmpdir(), 'maskany-fixtures-'));
     originalUploadsDir = process.env.UPLOADS_DIR;
     process.env.UPLOADS_DIR = uploadsRoot;
-
-    // Wire ffmpeg/ffprobe binaries for the fixture generator. The service
-    // under test wires them on its own at import time.
-    ffmpeg.setFfmpegPath(ffmpegInstaller.path);
-    ffmpeg.setFfprobePath(ffprobeInstaller.path);
-
-    testVideoPath = path.join(fixturesDir, 'sample.mp4');
-    await generateTestVideo(testVideoPath, 3);
   });
 
   afterAll(async () => {
     await destroy();
     await rm(uploadsRoot, { recursive: true, force: true });
-    await rm(fixturesDir, { recursive: true, force: true });
     if (originalUploadsDir === undefined) {
       delete process.env.UPLOADS_DIR;
     } else {
@@ -235,11 +212,11 @@ describe('media upload routes', () => {
       expect(media.width).toBe(1920);
     });
 
-    it('uploads a video, stores it as-is, and extracts a poster-frame thumbnail', async () => {
+    it('uploads a video and stores it as-is without poster extraction', async () => {
       const owner = await createUser('Owner V', '+966500010005', 'OWNER');
       const propertyId = await insertProperty(owner.id);
       const token = issueAccessToken(owner.id);
-      const videoBuffer = await readFile(testVideoPath);
+      const videoBuffer = generateVideoBuffer();
 
       const response = await request(app)
         .post(`/api/properties/${propertyId}/media`)
@@ -252,24 +229,18 @@ describe('media upload routes', () => {
       expect(media.mediaType).toBe('VIDEO');
       expect(media.mimeType).toBe('video/mp4');
       expect(media.url).toMatch(/\.mp4$/);
-      expect(media.thumbnailUrl).toMatch(/\.webp$/);
-      expect(Number(media.duration)).toBeGreaterThan(0);
+      expect(media.thumbnailUrl).toBeNull();
+      expect(media.duration).toBeNull();
 
       const videoDisk = path.join(uploadsRoot, media.url.replace(/^\/uploads\//, ''));
-      const thumbDisk = path.join(uploadsRoot, media.thumbnailUrl.replace(/^\/uploads\//, ''));
       expect(await fileExists(videoDisk)).toBe(true);
-      expect(await fileExists(thumbDisk)).toBe(true);
-
-      // Thumbnail should be a valid WebP.
-      const thumbMeta = await sharp(await readFile(thumbDisk)).metadata();
-      expect(thumbMeta.format).toBe('webp');
     });
 
-    it('persists duration and mime_type on the video DB row', async () => {
+    it('persists mime_type and null duration on the video DB row', async () => {
       const owner = await createUser('Owner D', '+966500010006', 'OWNER');
       const propertyId = await insertProperty(owner.id);
       const token = issueAccessToken(owner.id);
-      const videoBuffer = await readFile(testVideoPath);
+      const videoBuffer = generateVideoBuffer();
 
       await request(app)
         .post(`/api/properties/${propertyId}/media`)
@@ -283,8 +254,7 @@ describe('media upload routes', () => {
         .executeTakeFirstOrThrow();
       expect(row.media_type).toBe('VIDEO');
       expect(row.mime_type).toBe('video/mp4');
-      expect(row.duration).not.toBeNull();
-      expect(Number(row.duration)).toBeGreaterThan(0);
+      expect(row.duration).toBeNull();
     });
 
     it('accepts mixed images and videos in a single request', async () => {
@@ -292,7 +262,7 @@ describe('media upload routes', () => {
       const propertyId = await insertProperty(owner.id);
       const token = issueAccessToken(owner.id);
       const image = await generateImageBuffer(800, 600);
-      const videoBuffer = await readFile(testVideoPath);
+      const videoBuffer = generateVideoBuffer();
 
       const response = await request(app)
         .post(`/api/properties/${propertyId}/media`)
@@ -364,11 +334,13 @@ describe('media upload routes', () => {
           .execute();
       }
 
-      const videoBuffer = await readFile(testVideoPath);
       const response = await request(app)
         .post(`/api/properties/${propertyId}/media`)
         .set('Authorization', `Bearer ${token}`)
-        .attach('videos', videoBuffer, { filename: 'over.mp4', contentType: 'video/mp4' });
+        .attach('videos', generateVideoBuffer(), {
+          filename: 'over.mp4',
+          contentType: 'video/mp4',
+        });
 
       expect(response.status).toBe(400);
       expect(response.body.error.code).toBe('TOO_MANY_VIDEOS');
@@ -499,7 +471,7 @@ describe('media upload routes', () => {
       expect(response.body.error.code).toBe('INTERNAL_ERROR');
     });
 
-    it('returns an error when a video file has corrupted headers', async () => {
+    it('accepts any file with a valid video mime type (no probing)', async () => {
       const owner = await createUser('Owner CE2', '+966500010051', 'OWNER');
       const propertyId = await insertProperty(owner.id);
       const token = issueAccessToken(owner.id);
@@ -512,8 +484,7 @@ describe('media upload routes', () => {
           contentType: 'video/mp4',
         });
 
-      expect(response.status).toBe(500);
-      expect(response.body.error.code).toBe('INTERNAL_ERROR');
+      expect(response.status).toBe(201);
     });
   });
 

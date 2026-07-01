@@ -112,9 +112,6 @@ describe.skipIf(!s3Enabled)('S3StorageProvider (MinIO)', () => {
 // ─── Media upload routes with S3 (full HTTP integration) ───────────────────
 
 import { randomUUID } from 'node:crypto';
-import ffmpegInstaller from '@ffmpeg-installer/ffmpeg';
-import ffprobeInstaller from '@ffprobe-installer/ffprobe';
-import ffmpeg from 'fluent-ffmpeg';
 import sharp from 'sharp';
 import request from 'supertest';
 import { createApp } from '../src/app.js';
@@ -123,8 +120,6 @@ import { issueAccessToken } from '../src/services/auth-service.js';
 
 describe.skipIf(!s3Enabled)('upload-routes with S3StorageProvider (MinIO)', () => {
   let app: ReturnType<typeof createApp>;
-  let fixturesDir: string;
-  let testVideoPath: string;
   let originalStorageProvider: string | undefined;
 
   async function createUser(fullName: string, phone: string): Promise<{ id: string }> {
@@ -159,25 +154,10 @@ describe.skipIf(!s3Enabled)('upload-routes with S3StorageProvider (MinIO)', () =
     originalStorageProvider = process.env.STORAGE_PROVIDER;
     process.env.STORAGE_PROVIDER = 's3';
     _resetStorageForTesting();
-
-    fixturesDir = await mkdtemp(path.join(os.tmpdir(), 'maskany-s3-fixtures-'));
-    ffmpeg.setFfmpegPath(ffmpegInstaller.path);
-    ffmpeg.setFfprobePath(ffprobeInstaller.path);
-    testVideoPath = path.join(fixturesDir, 'sample.mp4');
-    await new Promise<void>((resolve, reject) => {
-      ffmpeg()
-        .input('testsrc=duration=2:size=320x240:rate=15')
-        .inputFormat('lavfi')
-        .outputOptions(['-pix_fmt yuv420p', '-movflags +faststart'])
-        .save(testVideoPath)
-        .on('end', () => resolve())
-        .on('error', (err) => reject(err));
-    });
   });
 
   afterAll(async () => {
     await destroy();
-    await rm(fixturesDir, { recursive: true, force: true });
     if (originalStorageProvider === undefined) {
       delete process.env.STORAGE_PROVIDER;
     } else {

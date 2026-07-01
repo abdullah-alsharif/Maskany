@@ -4,30 +4,18 @@
  * Handles the photo + video upload pipeline for property listings:
  *   - Images are processed with `sharp` — resized to max 1920px, converted
  *     to WebP at quality 80, and paired with a 400px WebP thumbnail.
- *   - Videos are stored as-is (no transcoding) and receive a 1-second
- *     poster-frame thumbnail extracted via `fluent-ffmpeg`/`ffprobe`.
+ *   - Videos are stored as-is (no transcoding, no poster-frame extraction).
  *
  * Storage is delegated to the `StorageProvider` abstraction so the same
  * pipeline works with local disk (dev) or S3-compatible cloud storage (prod).
  * All mutating entry points enforce that the caller owns the target property.
  */
 import { randomUUID } from 'node:crypto';
-import { mkdtemp, readFile, rename, rm, stat, unlink } from 'node:fs/promises';
-import os from 'node:os';
-import path from 'node:path';
-import ffmpegInstaller from '@ffmpeg-installer/ffmpeg';
-import ffprobeInstaller from '@ffprobe-installer/ffprobe';
-import ffmpeg from 'fluent-ffmpeg';
+import { readFile, unlink } from 'node:fs/promises';
 import sharp from 'sharp';
 import { db } from '../lib/db.js';
 import { ErrorCode, HttpError } from '../lib/http-error.js';
 import { getStorage } from './storage-service.js';
-
-// Wire the fluent-ffmpeg binaries once at module import. Using the
-// @ffmpeg-installer/@ffprobe-installer packages keeps the pipeline
-// portable across developer machines and CI without a system install.
-ffmpeg.setFfmpegPath(ffmpegInstaller.path);
-ffmpeg.setFfprobePath(ffprobeInstaller.path);
 
 /** Maximum number of images per property (PRD §3.3). */
 export const MAX_IMAGES = 10;
@@ -53,12 +41,9 @@ const VIDEO_EXTENSIONS: Record<VideoMimeType, string> = {
 
 const IMAGE_EXTENSION = '.webp';
 const THUMBNAIL_SUFFIX = '-thumb';
-const POSTER_SUFFIX = '-poster';
 const IMAGE_MAX_WIDTH = 1920;
 const THUMBNAIL_WIDTH = 400;
 const WEBP_QUALITY = 80;
-const POSTER_TIMESTAMP = '1';
-
 export interface UploadedFile {
   originalname: string;
   mimetype: string;
@@ -220,96 +205,25 @@ async function processImage(
   return toDto(inserted);
 }
 
-interface VideoMetadata {
-  duration: number;
-  width: number;
-  height: number;
-}
-
-function probeVideo(filePath: string): Promise<VideoMetadata> {
-  return new Promise((resolve, reject) => {
-    ffmpeg.ffprobe(filePath, (err, data) => {
-      if (err) {
-        reject(err instanceof Error ? err : new Error(String(err)));
-        return;
-      }
-      const videoStream = data.streams.find((stream) => stream.codec_type === 'video');
-      if (!videoStream) {
-        reject(new Error('No video stream detected in uploaded file.'));
-        return;
-      }
-      resolve({
-        duration: Number(data.format.duration ?? 0),
-        width: videoStream.width ?? 0,
-        height: videoStream.height ?? 0,
-      });
-    });
-  });
-}
-
-function extractPosterPng(
-  inputPath: string,
-  outputDir: string,
-  outputFilename: string,
-): Promise<void> {
-  return new Promise((resolve, reject) => {
-    ffmpeg(inputPath)
-      .on('end', () => resolve())
-      .on('error', (err) => reject(err instanceof Error ? err : new Error(String(err))))
-      .screenshots({
-        timestamps: [POSTER_TIMESTAMP],
-        filename: outputFilename,
-        folder: outputDir,
-        size: `${THUMBNAIL_WIDTH}x?`,
-      });
-  });
-}
-
-async function extractPosterWebpToBuffer(inputPath: string, tmpDir: string): Promise<Buffer> {
-  // Extract a PNG poster via ffmpeg, then convert to WebP with sharp.
-  // Two-step path is reliable across ffmpeg builds that lack libwebp.
-  const pngFilename = `${randomUUID()}.png`;
-  const pngPath = path.join(tmpDir, pngFilename);
-  await extractPosterPng(inputPath, tmpDir, pngFilename);
-  const webpBuffer = await sharp(await readFile(pngPath))
-    .resize({ width: THUMBNAIL_WIDTH })
-    .webp({ quality: WEBP_QUALITY })
-    .toBuffer();
-  await removeTempFile(pngPath);
-  return webpBuffer;
-}
-
 async function processVideo(
   propertyId: string,
   file: UploadedFile,
   sortOrder: number,
 ): Promise<MediaDto> {
-  const tmpDir = await mkdtemp(path.join(os.tmpdir(), 'maskany-video-'));
   const mimeType = file.mimetype as VideoMimeType;
   const extension = VIDEO_EXTENSIONS[mimeType];
   const id = randomUUID();
   const videoFilename = `${id}${extension}`;
-  const posterFilename = `${id}${POSTER_SUFFIX}${IMAGE_EXTENSION}`;
-  const videoTmpPath = path.join(tmpDir, videoFilename);
+  const videoBuffer = await readFile(file.path);
+  const videoFileSize = videoBuffer.length;
 
   const storage = getStorage();
+  const videoKey = `properties/${propertyId}/${videoFilename}`;
   const uploadedKeys: string[] = [];
 
   try {
-    await rename(file.path, videoTmpPath);
-
-    const metadata = await probeVideo(videoTmpPath);
-    const posterBuffer = await extractPosterWebpToBuffer(videoTmpPath, tmpDir);
-    const videoBuffer = await readFile(videoTmpPath);
-    const videoFileSize = (await stat(videoTmpPath)).size;
-
-    const videoKey = `properties/${propertyId}/${videoFilename}`;
-    const posterKey = `properties/${propertyId}/${posterFilename}`;
-
     await storage.upload(videoKey, videoBuffer, mimeType);
     uploadedKeys.push(videoKey);
-    await storage.upload(posterKey, posterBuffer, 'image/webp');
-    uploadedKeys.push(posterKey);
 
     const inserted = (await db
       .insertInto('property_media')
@@ -317,13 +231,13 @@ async function processVideo(
         property_id: propertyId,
         media_type: 'VIDEO',
         url: storage.getUrl(videoKey),
-        thumbnail_url: storage.getUrl(posterKey),
+        thumbnail_url: null,
         alt_text: null,
         mime_type: mimeType,
         file_size: videoFileSize,
-        width: metadata.width || null,
-        height: metadata.height || null,
-        duration: metadata.duration.toFixed(2),
+        width: null,
+        height: null,
+        duration: null,
         sort_order: sortOrder,
       })
       .returningAll()
@@ -334,7 +248,7 @@ async function processVideo(
     await Promise.all(uploadedKeys.map((k) => storage.delete(k).catch(() => {})));
     throw err;
   } finally {
-    await rm(tmpDir, { recursive: true, force: true });
+    await removeTempFile(file.path);
   }
 }
 
@@ -420,7 +334,7 @@ export async function uploadMedia(
 
 /**
  * Delete a single media asset: removes the DB row and the storage objects
- * (main file + thumbnail). Enforces property ownership.
+ * (main file + thumbnail if present). Enforces property ownership.
  */
 export async function deleteMedia(
   userId: string,
