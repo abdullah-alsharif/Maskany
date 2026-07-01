@@ -13,7 +13,6 @@ import { apiClient } from '../src/services/api';
 import {
   fetchCurrentUser,
   logoutSession,
-  recoverWithBackupCode,
   refreshAccessToken,
   registerUser,
   requestLoginOtp,
@@ -227,30 +226,5 @@ describe('authService.fetchCurrentUser', () => {
     expect(captured[0].method?.toLowerCase()).toBe('get');
     expect(captured[0].url).toBe('/auth/me');
     expect(result.id).toBe('user-1');
-  });
-});
-
-describe('authService.recoverWithBackupCode', () => {
-  it('POSTs identifier+code to /auth/recover and returns the session', async () => {
-    const { captured } = installAdapter(() => ({
-      data: {
-        accessToken: 'recovery-access',
-        user: {
-          id: 'user-1',
-          fullName: 'Recovered User',
-          phone: '+966500000000',
-          email: null,
-          userType: 'BROWSER',
-          createdAt: '2025-01-01T00:00:00.000Z',
-          updatedAt: '2025-01-01T00:00:00.000Z',
-        },
-      },
-    }));
-
-    const result = await recoverWithBackupCode('+966500000000', 'backup-123');
-
-    expect(captured[0].url).toBe('/auth/recover');
-    expect(captured[0].data).toEqual({ identifier: '+966500000000', code: 'backup-123' });
-    expect(result.accessToken).toBe('recovery-access');
   });
 });

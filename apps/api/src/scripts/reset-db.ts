@@ -5,7 +5,6 @@ import { logger } from '../lib/logger.js';
 async function reset(): Promise<void> {
   logger.info('dropping all schema objects…');
 
-  await sql`DROP TABLE IF EXISTS recovery_codes CASCADE`.execute(db);
   await sql`DROP TABLE IF EXISTS push_tokens CASCADE`.execute(db);
   await sql`DROP TABLE IF EXISTS refresh_tokens CASCADE`.execute(db);
   await sql`DROP TABLE IF EXISTS reviews CASCADE`.execute(db);

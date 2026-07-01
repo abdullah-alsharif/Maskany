@@ -128,14 +128,6 @@ export interface PropertyTranslationsTable {
   updated_at: Timestamp;
 }
 
-export interface RecoveryCodesTable {
-  id: Generated<string>;
-  user_id: string;
-  code_hash: string;
-  used_at: Date | string | null;
-  created_at: Generated<Date>;
-}
-
 export interface Database {
   users: UsersTable;
   properties: PropertiesTable;
@@ -144,6 +136,5 @@ export interface Database {
   otp_codes: OtpCodesTable;
   refresh_tokens: RefreshTokensTable;
   push_tokens: PushTokensTable;
-  recovery_codes: RecoveryCodesTable;
   property_translations: PropertyTranslationsTable;
 }

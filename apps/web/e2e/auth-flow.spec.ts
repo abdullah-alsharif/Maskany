@@ -65,15 +65,6 @@ test.describe.serial('Auth flow', () => {
       await page.getByLabel(`Digit ${i + 1}`).type(code![i]!);
     }
 
-    // Dismiss the recovery-codes prompt if the API shows one.
-    const recoveryButton = page.getByRole('button', { name: "I've saved these codes" });
-    try {
-      await recoveryButton.waitFor({ timeout: 5_000 });
-      await recoveryButton.click();
-    } catch {
-      // No recovery prompt — proceed.
-    }
-
     // After verification the app navigates to "/" — confirm we're signed in
     // by visiting the profile page and finding the seeded user's name.
     await expect(page).toHaveURL(/\/$/, { timeout: 15_000 });

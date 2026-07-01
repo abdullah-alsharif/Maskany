@@ -83,15 +83,7 @@
     "errorCode": "That code didn't match. Please try again.",
     "expired": "Your code has expired. Tap resend to get a new one.",
     "errorResend": "We could not resend the code. Please try again.",
-    "useRecoveryCode": "Use a recovery code",
-    "recoveryHeading": "Save your backup codes",
-    "recoveryDesc": "These one-time recovery codes let you sign in if you lose access to your phone. Store them somewhere safe — each code can only be used once.",
-    "recoverySaved": "I've saved these codes",
-    "recoveryUseHeading": "Enter recovery code",
-    "recoveryUseDesc": "Enter one of your backup recovery codes to sign in.",
-    "recoverySubmit": "Sign in with recovery code",
-    "recoveryError": "That code didn't work. Please try again.",
-    "backToOtp": "Back to verification code"
+    "errorCode": "That code didn't match. Please try again."
   },
   "myProperties": {
     "heading": "My properties",

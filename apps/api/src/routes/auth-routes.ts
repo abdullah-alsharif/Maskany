@@ -14,7 +14,6 @@
  * `HttpError(400, 'VALIDATION_ERROR')` with a `details` array. All other
  * failure modes reuse the project's standard error envelope.
  */
-import { createHash, randomBytes } from 'node:crypto';
 import { type Request, type Response, Router } from 'express';
 import { z } from 'zod';
 import { asyncHandler } from '../lib/async-handler.js';
@@ -224,18 +223,6 @@ export function createAuthRouter(): Router {
         throw new HttpError(401, ErrorCode.UNAUTHORIZED, 'User no longer exists.');
       }
 
-      // Generate recovery codes on first OTP verification
-      const existing = await db
-        .selectFrom('recovery_codes')
-        .where('user_id', '=', user.id)
-        .select('id')
-        .executeTakeFirst();
-
-      let recoveryCodes: string[] | undefined;
-      if (!existing) {
-        recoveryCodes = await createRecoveryCodes(user.id);
-      }
-
       const accessToken = issueAccessToken(user.id);
       const refreshToken = await createRefreshToken(user.id);
       setRefreshTokenCookie(res, refreshToken);
@@ -243,7 +230,6 @@ export function createAuthRouter(): Router {
       res.status(200).json({
         accessToken,
         user: toUserDto(user),
-        ...(recoveryCodes ? { recoveryCodes } : {}),
       });
     }),
   );
@@ -277,63 +263,6 @@ export function createAuthRouter(): Router {
       }
       clearRefreshTokenCookie(res);
       res.status(200).json({ message: 'Logged out.' });
-    }),
-  );
-
-  async function createRecoveryCodes(userId: string): Promise<string[]> {
-    const codes: { plaintext: string; code_hash: string }[] = [];
-    for (let i = 0; i < 8; i++) {
-      const plaintext = randomBytes(5).toString('hex');
-      const code_hash = createHash('sha256').update(plaintext).digest('hex');
-      codes.push({ plaintext, code_hash });
-    }
-
-    await db
-      .insertInto('recovery_codes')
-      .values(codes.map((c) => ({ user_id: userId, code_hash: c.code_hash, used_at: null })))
-      .execute();
-
-    return codes.map((c) => c.plaintext);
-  }
-
-  const recoverSchema = z.object({
-    identifier: z.string().trim().min(1),
-    code: z.string().regex(/^[0-9a-f]{10}$/, 'Recovery code must be 10 characters.'),
-  });
-
-  router.post(
-    '/recover',
-    asyncHandler(async (req, res) => {
-      const body = parseOrThrow(recoverSchema, req.body);
-
-      const user = await findUserByIdentifier(body.identifier);
-      if (!user) {
-        throw new HttpError(404, ErrorCode.USER_NOT_FOUND, 'No account matches that identifier.');
-      }
-
-      const codeHash = createHash('sha256').update(body.code).digest('hex');
-
-      const consumed = await db
-        .updateTable('recovery_codes')
-        .set({ used_at: new Date() })
-        .where('user_id', '=', user.id)
-        .where('code_hash', '=', codeHash)
-        .where('used_at', 'is', null)
-        .returning('id')
-        .executeTakeFirst();
-
-      if (!consumed) {
-        throw new HttpError(401, ErrorCode.UNAUTHORIZED, 'Invalid or already used recovery code.');
-      }
-
-      const accessToken = issueAccessToken(user.id);
-      const refreshToken = await createRefreshToken(user.id);
-      setRefreshTokenCookie(res, refreshToken);
-
-      res.status(200).json({
-        accessToken,
-        user: toUserDto(user),
-      });
     }),
   );
 

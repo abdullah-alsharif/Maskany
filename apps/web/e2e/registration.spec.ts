@@ -61,15 +61,6 @@ test.describe.serial('Registration', () => {
       await page.getByLabel(`Digit ${i + 1}`).type(code![i]!);
     }
 
-    // Dismiss the recovery-codes prompt if the API shows one.
-    const recoveryButton = page.getByRole('button', { name: "I've saved these codes" });
-    try {
-      await recoveryButton.waitFor({ timeout: 5_000 });
-      await recoveryButton.click();
-    } catch {
-      // No recovery prompt — proceed.
-    }
-
     // After verification we land on the home page.
     await expect(page).toHaveURL(/\/$/, { timeout: 15_000 });
 

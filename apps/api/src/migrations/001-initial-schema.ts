@@ -257,29 +257,9 @@ export async function up(db: Kysely<unknown>): Promise<void> {
     db,
   );
   await sql`CREATE UNIQUE INDEX idx_push_tokens_token ON push_tokens (token)`.execute(db);
-  await sql`CREATE INDEX idx_push_tokens_user ON push_tokens (user_id)`.execute(db);
-
-  await db.schema
-    .createTable('recovery_codes')
-    .addColumn('id', 'uuid', (cb) => cb.notNull().defaultTo(sql`gen_random_uuid()`))
-    .addColumn('user_id', 'uuid', (cb) => cb.notNull())
-    .addColumn('code_hash', 'text', (cb) => cb.notNull())
-    .addColumn('used_at', 'timestamptz')
-    .addColumn('created_at', 'timestamptz', (cb) => cb.notNull().defaultTo(sql`now()`))
-    .addPrimaryKeyConstraint('pk_recovery_codes', ['id'])
-    .addForeignKeyConstraint('fk_recovery_codes_user', ['user_id'], 'users', ['id'], (cb) =>
-      cb.onDelete('cascade'),
-    )
-    .execute();
-
-  await sql`CREATE UNIQUE INDEX idx_recovery_codes_code_hash ON recovery_codes (code_hash)`.execute(
-    db,
-  );
-  await sql`CREATE INDEX idx_recovery_codes_user ON recovery_codes (user_id)`.execute(db);
 }
 
 export async function down(db: Kysely<unknown>): Promise<void> {
-  await db.schema.dropTable('recovery_codes').execute();
   await db.schema.dropTable('push_tokens').execute();
   await db.schema.dropTable('refresh_tokens').execute();
   await db.schema.dropTable('reviews').execute();

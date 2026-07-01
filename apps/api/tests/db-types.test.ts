@@ -13,7 +13,6 @@ import {
   type PropertyMediaTable,
   type PropertyTranslationsTable,
   type PushTokensTable,
-  type RecoveryCodesTable,
   type RefreshTokensTable,
   type ReviewsTable,
   type UsersTable,
@@ -31,7 +30,6 @@ describe('db-types interfaces', () => {
       otp_codes: null as unknown as OtpCodesTable,
       refresh_tokens: null as unknown as RefreshTokensTable,
       push_tokens: null as unknown as PushTokensTable,
-      recovery_codes: null as unknown as RecoveryCodesTable,
       property_translations: null as unknown as PropertyTranslationsTable,
     } satisfies Database;
 
@@ -42,7 +40,6 @@ describe('db-types interfaces', () => {
         'property_media',
         'property_translations',
         'push_tokens',
-        'recovery_codes',
         'refresh_tokens',
         'reviews',
         'users',
