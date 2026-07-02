@@ -87,7 +87,7 @@ export function formatOtpEmailHtml(code: string): string {
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>${OTP_EMAIL_SUBJECT}</title>
   </head>
-  <body style="margin:0;padding:0;background-color:#fdfcfa;font-family:'Outfit',Arial,sans-serif;color:#1c1917;">
+  <body style="margin:0;padding:0;background-color:#fdfcfa;font-family:'Plus Jakarta Sans',Arial,sans-serif;color:#1c1917;">
     <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#fdfcfa;">
       <tr>
         <td align="center" style="padding:32px 16px;">
@@ -95,7 +95,7 @@ export function formatOtpEmailHtml(code: string): string {
             <tr>
               <td align="center" style="padding-bottom:24px;">
                 <!-- App logo placeholder: replace src once a hosted asset exists -->
-                <div role="img" aria-label="Maskany logo" style="font-family:'DM Serif Display',Georgia,serif;font-size:28px;color:#e2683d;letter-spacing:0.02em;">
+                <div role="img" aria-label="Maskany logo" style="font-family:'Plus Jakarta Sans',system-ui,sans-serif;font-size:28px;color:#e2683d;letter-spacing:0.02em;font-weight:700;">
                   Maskany
                 </div>
               </td>
@@ -107,7 +107,7 @@ export function formatOtpEmailHtml(code: string): string {
             </tr>
             <tr>
               <td align="center" style="padding:24px 0;">
-                <div style="font-family:'DM Serif Display',Georgia,serif;font-size:40px;letter-spacing:0.3em;color:#1c1917;font-weight:600;">
+                <div style="font-family:'Plus Jakarta Sans',system-ui,sans-serif;font-size:40px;letter-spacing:0.3em;color:#1c1917;font-weight:700;">
                   ${code}
                 </div>
               </td>

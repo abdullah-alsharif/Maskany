@@ -6,40 +6,85 @@ colors:
   neutral-bg: '#fdfcfa'
   neutral-text: '#2b2621'
   accent: '#84904d'
+  whatsapp-green: '#25d366'
+  sand-bg: '#faf8f3'
+  stone-border: '#e8e4dd'
+  amber-star: '#f5b731'
 typography:
   display:
-    fontFamily: 'DM Serif Display, Georgia, serif'
-    fontSize: '36px'
+    fontFamily: 'Plus Jakarta Sans, system-ui, sans-serif'
+    fontSize: 'clamp(1.75rem, 5.5vw, 2.25rem)'
     fontWeight: 400
     lineHeight: 1.17
     letterSpacing: 'normal'
+  headline:
+    fontFamily: 'Plus Jakarta Sans, system-ui, sans-serif'
+    fontSize: 'clamp(1.375rem, 4vw, 1.625rem)'
+    fontWeight: 700
+    lineHeight: 1.23
+    letterSpacing: '-0.011em'
+  title:
+    fontFamily: 'Plus Jakarta Sans, system-ui, sans-serif'
+    fontSize: 'clamp(1rem, 3vw, 1.125rem)'
+    fontWeight: 600
+    lineHeight: 1.44
+    letterSpacing: '-0.011em'
   body:
     fontFamily: 'Plus Jakarta Sans, system-ui, sans-serif'
-    fontSize: '15px'
+    fontSize: '0.9375rem'
     fontWeight: 400
     lineHeight: 1.47
     letterSpacing: '-0.011em'
+  label:
+    fontFamily: 'Plus Jakarta Sans, system-ui, sans-serif'
+    fontSize: '0.75rem'
+    fontWeight: 500
+    lineHeight: 1.33
+    letterSpacing: '0.05em'
 rounded:
-  sm: '6px'
-  md: '8px'
-  lg: '12px'
-  xl: '16px'
-  2xl: '20px'
+  sm: '0.375rem'
+  md: '0.5rem'
+  lg: '0.75rem'
+  xl: '1rem'
+  2xl: '1.25rem'
+  full: '9999px'
 spacing:
-  sm: '8px'
-  md: '16px'
-  lg: '24px'
+  xs: '0.25rem'
+  sm: '0.5rem'
+  md: '1rem'
+  lg: '1.5rem'
+  xl: '2rem'
+  2xl: '3rem'
 components:
   button-primary:
     backgroundColor: '{colors.primary}'
     textColor: '#ffffff'
     rounded: '{rounded.xl}'
     padding: '11px 20px'
+    fontFamily: '{typography.label.fontFamily}'
+    fontWeight: 600
+    fontSize: '0.9375rem'
   button-secondary:
     backgroundColor: '#ffffff'
     textColor: '{colors.neutral-text}'
     rounded: '{rounded.xl}'
     padding: '11px 20px'
+    border: '1px solid {colors.stone-border}'
+  button-whatsapp:
+    backgroundColor: '{colors.whatsapp-green}'
+    textColor: '#ffffff'
+    rounded: '{rounded.xl}'
+    padding: '11px 20px'
+  card-default:
+    backgroundColor: '#ffffff'
+    rounded: "{rounded['2xl']}"
+    padding: '14px'
+  input-default:
+    backgroundColor: '#ffffff'
+    rounded: '{rounded.lg}'
+    padding: '11px 14px'
+    border: '1px solid {colors.stone-border}'
+    textColor: '{colors.neutral-text}'
 ---
 
 # Design System: Maskany
@@ -48,137 +93,133 @@ components:
 
 **Creative North Star: "Sunlit Mediterranean Sanctuary"**
 
-Maskany's aesthetic is built around "Sunlit Stone" — a warm Mediterranean luxury meets clean digital interfaces. The design rejects sterile, cold, blue-heavy layouts and generic SaaS cards in favor of terracotta warmth, limestone neutrals, and deep olive accents. It is designed specifically for mobile-first property seekers who want a highly visual, zero-friction discovery process ending in immediate WhatsApp contact.
+Maskany's aesthetic is built around sun-baked Mediterranean warmth — terracotta tiles, limestone walls, and olive groves translated into a mobile-first digital interface. The design rejects cold, sterile, blue-heavy layouts and generic SaaS cards in favor of a palette that feels like a coastal villa at golden hour: warm sand backgrounds, terracotta accents, and deep olive secondary tones.
+
+Every decision serves the frictionless path from discovery to WhatsApp contact. The UI is a frame for photography, not the attraction itself.
 
 **Key Characteristics:**
 
-- Warm, light-drenched limestone background instead of cold white.
-- Clear structural borders and high contrast typography (serif headings, sans body).
-- Bottom-docked mobile control layouts and large tap targets.
+- Warm, light-drenched limestone background (#fdfcfa) instead of cold white.
+- Single modern sans-serif family (Plus Jakarta Sans) across all roles for a clean, cohesive look.
+- Flat-by-default surfaces with elevation reserved for interactive states.
+- Generous touch targets (44px minimum), bottom-docked navigation, and swipe-friendly interactions throughout.
+- The grain-overlay texture adds a subtle tactile material feel to the canvas.
 
 ## 2. Colors
 
-The color palette captures sun-baked terracotta, warm stone, and olive grove greens.
+The palette captures three natural materials: terracotta (fired clay), stone (limestone), and olive (Mediterranean groves), grounded by warm sand tones.
 
 ### Primary
 
-- **Terracotta Warmth** (#e2683d): Used for primary call-to-actions, active navigation states, and high-importance highlights. Represents the heat and character of raw clay tiles.
-
-### Neutral
-
-- **Sunlit Sand** (#fdfcfa): The core canvas background, giving a warm, premium feel.
-- **Limestone Dark** (#2b2621): The primary text color, avoiding harsh pure black.
-- **Warm Stone Border** (#e8e4dd): Used for dividers, list item separator lines, and container borders.
+- **Terracotta Warmth** (#e2683d): Used for primary action buttons, active navigation states, and high-importance highlights. Scarce by design — no more than 10% of any surface.
 
 ### Accent
 
-- **Olive Deep** (#84904d): Accent depth used for secondary tags, checkmarks, and distinct property configurations (e.g. amenities/status).
-- **WhatsApp Green** (#25d366): Dedicated contact action color, isolated for high visibility.
+- **Olive Deep** (#84904d): Secondary accent for tags, checkmarks, amenities, and status indicators. Provides a muted green counterpoint to the warm terracotta.
 
-**The Ten Percent Accent Rule.** Terracotta (#e2683d) and WhatsApp green (#25d366) must represent less than 10% of any given surface. Their scarcity ensures they stand out.
+### Neutral
+
+- **Sunlit Sand** (#fdfcfa): The core canvas background. Warm without being yellow.
+- **Limestone Dark** (#2b2621): Primary text color. Avoids harsh pure black.
+- **Warm Stone** (#e8e4dd): Borders, dividers, and container outlines.
+- **Sand Wash** (#faf8f3): Secondary surface background for chips and subtle containers.
+- **Limestone Mid** (#72675a): Secondary text and muted content.
+
+### Functional
+
+- **WhatsApp Green** (#25d366): Exclusively reserved for contact actions. High-visibility, used sparingly.
+- **Amber Star** (#f5b731): Ratings and review stars.
+- **Error** (#d93025), **Success** (#0d7c3f), **Info** (#1a73e8): Semantic states.
+
+**The Ten Percent Accent Rule.** Terracotta (#e2683d) and WhatsApp green (#25d366) must represent less than 10% of any given surface. Their scarcity ensures they signal something meaningful.
 
 ## 3. Typography
 
-**Display Font:** DM Serif Display (with Georgia, serif fallback)
-**Body Font:** Plus Jakarta Sans (with system-ui, sans-serif fallback)
+**Font:** Plus Jakarta Sans (with system-ui, sans-serif fallback) — single family across all roles.
 
-**Character:** A high-contrast pairing where editorial, serif headlines suggest home luxury and style, while geometric sans body copy provides high-readability search details.
+**Character:** A warm, modern sans-serif that balances approachability with professionalism. Plus Jakarta Sans has a soft humanist feel that suits the welcoming luxury brand, while its clean geometric skeleton keeps the interface looking sharp and contemporary on mobile. One family eliminates visual competition between heading and body roles.
 
 ### Hierarchy
 
-- **Display** (400, 36px, 1.17): Used for large page titles and hero typography.
-- **Headline** (700, 26px, 1.23): Used for view header sections.
-- **Title** (600, 18px, 1.44): Used for subheadings and card titles.
-- **Body** (400, 15px, 1.47): Used for property descriptions and long copy (max 65-75ch).
-- **Label** (500, 12px, 0.05em, uppercase): Used for sub-info, category names, and button labels.
+- **Display** (Plus Jakarta Sans, 400, clamp(1.75rem–2.25rem), 1.17): Large page titles and hero typography on property detail and marketing sections. Letter-spacing -0.02em.
+- **Headline** (Plus Jakarta Sans, 700, clamp(1.375rem–1.625rem), 1.23): Section headers and view titles.
+- **Title** (Plus Jakarta Sans, 600, clamp(1rem–1.125rem), 1.44): Card titles and subheadings.
+- **Body** (Plus Jakarta Sans, 400, 0.9375rem, 1.47): Property descriptions, metadata, long copy. Max line length 75ch.
+- **Label** (Plus Jakarta Sans, 500, 0.75rem, 0.05em tracking, uppercase): Badges, category chips, button labels, metadata tags.
+
+### Type Scale
+
+All body text uses `letter-spacing: -0.011em` by default for optical refinement at small sizes.
 
 ## 4. Elevation
 
-The elevation system relies primarily on flat surfaces, clean lines, and subtle shadows for interactable components only. We avoid multi-layered depth.
+Maskany uses a flat-by-default elevation model. Surfaces sit on the same plane; depth is communicated through thin stone borders (#e8e4dd), background tint changes, and subtle shadows reserved exclusively for interactive or temporary states.
 
 ### Shadow Vocabulary
 
-- **Interactive Card Glow** (`box-shadow: 0 1px 3px rgba(43, 38, 33, 0.06), 0 1px 2px rgba(43, 38, 33, 0.04)`): Ambient low shadow for property cards at rest.
-- **Hover Lift** (`box-shadow: 0 8px 25px rgba(43, 38, 33, 0.1), 0 2px 6px rgba(43, 38, 33, 0.06)`): Applied when a user hovers or focuses an interactable card.
-- **Bottom Navigation Sheet** (`box-shadow: 0 -4px 32px rgba(43, 38, 33, 0.12)`): Separates fixed navigation layouts from underlying scrolling property feeds.
+- **Card Rest** (`box-shadow: 0 1px 3px rgba(43, 38, 33, 0.06), 0 1px 2px rgba(43, 38, 33, 0.04)`): Barely perceptible ambient lift for property cards at rest.
+- **Card Hover** (`box-shadow: 0 8px 25px rgba(43, 38, 33, 0.1), 0 2px 6px rgba(43, 38, 33, 0.06)`): Applied on card interaction.
+- **Sheet** (`box-shadow: 0 -4px 32px rgba(43, 38, 33, 0.12)`): Separates bottom sheets and modals from the underlying page.
+- **FAB** (`box-shadow: 0 4px 16px rgba(37, 211, 102, 0.3), 0 2px 6px rgba(37, 211, 102, 0.15)`): WhatsApp FAB glow.
 
-**The Flat-By-Default Rule.** Layouts are flat and use bordered dividers at rest. Elevation is used exclusively to denote temporary overlay state (modals, sheets) or user focus.
+**The Flat-By-Default Rule.** Layouts are flat and use bordered dividers at rest. Elevation is used exclusively to denote temporary overlay states (modals, sheets) or user focus (hover, active).
 
 ## 5. Components
 
 ### Buttons
 
-- **Shape:** Softly rounded corners (16px radius, `var(--radius-xl)`).
-- **Primary:** Terracotta background with bold white text. Min-height (44px).
-- **Secondary:** Solid white background with a thin stone border and dark text.
-- **WhatsApp:** Explicitly colored (#25d366) with white text and an SVG icon.
+- **Shape:** Softly rounded corners (16px radius, var(--radius-xl)).
+- **Primary:** Terracotta (#e2683d) background, white text, semibold. Min-height 44px. Hover darkens to terracotta-600; active presses to terracotta-700 with a subtle inset shadow.
+- **Secondary:** White background, 1px stone border, stone-800 text. Hover adds stone-50 tint.
+- **Ghost:** No background, stone-600 text. Hover adds stone-100 tint.
+- **WhatsApp:** WhatsApp green (#25d366) background, white text, green-tinted shadow/FAB glow.
+- **Danger:** Red-600 background, white text.
+- **Sizes:** sm (h-9, 12px radius), md (h-11, 16px radius), lg (h-13, 16px radius).
+- **Behavior:** Active scale press (0.96), disabled at 50% opacity, focus-visible ring in terracotta-500.
 
-### Chips
+### Chips / Badges
 
-- **Style:** Compact pill-shaped badges (9999px radius) with subtle backgrounds (e.g., olive-100/terracotta-100) and matching text.
+- **Style:** Compact pill shapes (9999px radius) with tinted background matching the content type (terracotta-100 for apartments/villas, olive-100 for rooms/chalets, stone-200 for other).
+- **Text:** 12px uppercase label, 500 weight, matching darker shade of the background hue.
 
-### Cards / Containers
+### Cards
 
-- **Corner Style:** Large rounded corners (16px/20px radius).
-- **Background:** Crisp white (#ffffff) to stand out against the sunlit sand background.
-- **Padding:** Generous internal padding (14px/16px) for spacious visual layouts.
+- **Corner Style:** Large rounded corners (20px radius, var(--radius-2xl)).
+- **Background:** Crisp white (#ffffff) against the sand-50 page background.
+- **Shadow Strategy:** Ambient rest shadow (card), hover lift on interaction.
+- **Internal Padding:** 14px (tight) to 16px (standard) for mobile-optimized density.
 
 ### Inputs / Fields
 
-- **Style:** Clean border-stone-300 text fields with 12px radius.
-- **Focus:** Highlighted with a terracotta outline (`var(--color-terracotta-400)`).
+- **Style:** Clean 1px stone-300 border, white background, 12px radius.
+- **Focus:** Terracotta-400 ring replaces the border on focus.
+- **Padding:** 11px vertical, 14px horizontal.
+- **Error:** Red-600 border with error text below.
 
 ### Navigation
 
-- **Style:** Sticky header and fixed bottom navigation bar with a blur background (`backdrop-blur-lg`) and thin top border.
+- **Bottom Nav:** Fixed to viewport bottom with backdrop blur, thin stone-200 top border, 4 tabs (Home, Search, Favorites, Profile). Active tab uses terracotta-500 icon/text.
+- **Header:** Sticky top header with optional back button, title, and action slot. Blur background, bottom border.
 
 ## 6. Do's and Don'ts
 
 ### Do:
 
-- **Do** align all active touch indicators with Terracotta-600 or WhatsApp-Green.
-- **Do** ensure all body copy does not exceed a maximum width of 75ch for legibility.
-- **Do** maintain a minimum touch target size of 44x44px for every interactable element.
+- **Do** align all active touch indicators with Terracotta-500 or WhatsApp green.
+- **Do** ensure all body copy does not exceed 75ch for legibility.
+- **Do** maintain a minimum touch target size of 44×44px for every interactable element.
+- **Do** use `prefers-reduced-motion` to gate all animations; show content immediately when reduced motion is preferred.
+- **Do** use the grain overlay texture for tactile warmth on the page canvas.
+- **Do** use the `active:scale-[0.96]` press effect on all interactive cards and buttons for physical feedback.
 
 ### Don't:
 
-- **Don't** use pure `#000` or `#fff` for neutral text/backgrounds. Use tinted limestone and sand.
+- **Don't** use pure `#000` or `#fff` for neutral text or backgrounds. Use tinted limestone and sand.
 - **Don't** use gradient text under any circumstances.
 - **Don't** use border-left or border-right colored stripes on callouts or alert banners.
 - **Don't** use glassmorphism decoratively.
-- **Don't** create identical static card grids without micro-animations on interaction.
-
-## 7. Component Reference
-
-| Component                                | Import path                           | Usage                                                |
-| ---------------------------------------- | ------------------------------------- | ---------------------------------------------------- |
-| `Button`                                 | `components/ui/button`                | primary, secondary, ghost, whatsapp, danger variants |
-| `Badge`                                  | `components/ui/badge`                 | Property type badges, status                         |
-| `Skeleton`, `SkeletonCard`               | `components/ui/skeleton`              | Loading states                                       |
-| `BottomSheet`                            | `components/ui/bottom-sheet`          | Filter panel, mobile modals                          |
-| `EmptyState`, `NoResults`, `NoFavorites` | `components/ui/empty-state`           | Empty/zero states                                    |
-| `BottomNav`                              | `components/layout/bottom-nav`        | Fixed bottom navigation                              |
-| `Header`                                 | `components/layout/header`            | Top header with back/share                           |
-| `PropertyCard`                           | `components/property/property-card`   | Listing grid cards                                   |
-| `CategoryBar`                            | `components/property/category-bar`    | Category chip selector                               |
-| `SearchBar`                              | `components/property/search-bar`      | Search input                                         |
-| `ImageGallery`                           | `components/property/image-gallery`   | Swipeable gallery                                    |
-| `FavoriteButton`                         | `components/property/favorite-button` | Heart toggle                                         |
-| `WhatsAppFab`, `WhatsAppIconButton`      | `components/property/whatsapp-button` | WhatsApp contact                                     |
-| `StarRating`, `RatingDistribution`       | `components/review/star-rating`       | Rating display/input                                 |
-| `ReviewCard`                             | `components/review/review-card`       | Individual review                                    |
-| `OtpInput`, `OtpCountdown`               | `components/auth/otp-input`           | 6-digit OTP entry                                    |
-
-### Key types
-
-| Types    | Import path      |
-| -------- | ---------------- |
-| Property | `types/property` |
-| Review   | `types/review`   |
-| User     | `types/user`     |
-
-### Design tokens
-
-| Export                                                                           | Import path            |
-| -------------------------------------------------------------------------------- | ---------------------- |
-| `colors`, `typography`, `propertyTypeConfig`, `amenityConfig`, `priceUnitLabels` | `styles/design-tokens` |
+- **Don't** create identical static card grids without staggered entry animations on interaction.
+- **Don't** use bounce or elastic easing curves — stick to ease-out-expo and ease-spring for all motion.
+- **Don't** animate CSS layout properties (width, height, top, left) — use transform and opacity only.
+- **Don't** use generic SaaS blue or purple accents; the palette is warm terracotta, stone, olive.
+- **Don't** stack nested cards; cards must be direct children of a flat page surface.

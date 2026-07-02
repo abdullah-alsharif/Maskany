@@ -70,8 +70,8 @@ export const colors = {
 
 export const typography = {
   fontFamily: {
-    display: "'DM Serif Display', Georgia, serif",
-    sans: "'Outfit', system-ui, sans-serif",
+    display: "'Plus Jakarta Sans', system-ui, sans-serif",
+    sans: "'Plus Jakarta Sans', system-ui, sans-serif",
   },
   /** Mobile-first type scale (px) */
   scale: {
@@ -83,7 +83,7 @@ export const typography = {
     xl: { size: 22, lineHeight: 28, weight: 700 },
     '2xl': { size: 26, lineHeight: 32, weight: 700 },
     '3xl': { size: 32, lineHeight: 38, weight: 700 },
-    display: { size: 36, lineHeight: 42, weight: 400 }, // DM Serif Display
+    display: { size: 36, lineHeight: 42, weight: 400 }, // Plus Jakarta Sans
   },
 } as const;
 
