@@ -5,6 +5,7 @@
  * OTP codes are read back from the `otp_codes` table directly so no SMS/email
  * transport calls are necessary — the dev/test implementations only log.
  */
+import http from 'node:http';
 import request from 'supertest';
 import { afterAll, beforeEach, describe, expect, it } from 'vitest';
 import jwt from 'jsonwebtoken';
@@ -535,63 +536,83 @@ describe('auth routes', () => {
 
   describe('rate limiting', () => {
     it('[AC-39] blocks the 21st rapid registration request (20/15min window)', async () => {
-      for (let i = 0; i < 20; i++) {
-        const res = await request(app)
+      const server = http.createServer(app).listen(0);
+      try {
+        for (let i = 0; i < 20; i++) {
+          const res = await request(server)
+            .post('/api/auth/register')
+            .send({
+              fullName: `Rate User ${i}`,
+              phone: `+9665000091${i.toString().padStart(2, '0')}`,
+              userType: 'BROWSER',
+            });
+          expect(res.status).toBe(201);
+        }
+
+        const blocked = await request(server)
           .post('/api/auth/register')
-          .send({
-            fullName: `Rate User ${i}`,
-            phone: `+9665000091${i.toString().padStart(2, '0')}`,
-            userType: 'BROWSER',
-          });
-        expect(res.status).toBe(201);
+          .send({ fullName: 'Blocked', phone: '+966500009200', userType: 'BROWSER' });
+
+        expect(blocked.status).toBe(429);
+        expect(blocked.body.error.code).toBe('RATE_LIMITED');
+      } finally {
+        server.close();
       }
-
-      const blocked = await request(app)
-        .post('/api/auth/register')
-        .send({ fullName: 'Blocked', phone: '+966500009200', userType: 'BROWSER' });
-
-      expect(blocked.status).toBe(429);
-      expect(blocked.body.error.code).toBe('RATE_LIMITED');
     });
 
     it('rate limit resets with a fresh app instance', async () => {
-      for (let i = 0; i < 20; i++) {
-        const res = await request(app)
+      const server = http.createServer(app).listen(0);
+      try {
+        for (let i = 0; i < 20; i++) {
+          const res = await request(server)
+            .post('/api/auth/register')
+            .send({
+              fullName: `Exhaust User ${i}`,
+              phone: `+9665000093${i.toString().padStart(2, '0')}`,
+              userType: 'BROWSER',
+            });
+          expect(res.status).toBe(201);
+        }
+
+        const blocked = await request(server)
           .post('/api/auth/register')
-          .send({
-            fullName: `Exhaust User ${i}`,
-            phone: `+9665000093${i.toString().padStart(2, '0')}`,
-            userType: 'BROWSER',
-          });
-        expect(res.status).toBe(201);
+          .send({ fullName: 'Exhausted', phone: '+966500009400', userType: 'BROWSER' });
+        expect(blocked.status).toBe(429);
+
+        const freshApp = createApp();
+        const freshServer = http.createServer(freshApp).listen(0);
+        try {
+          const fresh = await request(freshServer)
+            .post('/api/auth/register')
+            .send({ fullName: 'Fresh Start', phone: '+966500009401', userType: 'BROWSER' });
+          expect(fresh.status).toBe(201);
+        } finally {
+          freshServer.close();
+        }
+      } finally {
+        server.close();
       }
-
-      const blocked = await request(app)
-        .post('/api/auth/register')
-        .send({ fullName: 'Exhausted', phone: '+966500009400', userType: 'BROWSER' });
-      expect(blocked.status).toBe(429);
-
-      const freshApp = createApp();
-      const fresh = await request(freshApp)
-        .post('/api/auth/register')
-        .send({ fullName: 'Fresh Start', phone: '+966500009401', userType: 'BROWSER' });
-      expect(fresh.status).toBe(201);
     });
 
     it('blocks the 21st rapid login request', async () => {
-      for (let i = 0; i < 20; i++) {
-        const res = await request(app)
+      const server = http.createServer(app).listen(0);
+      try {
+        for (let i = 0; i < 20; i++) {
+          const res = await request(server)
+            .post('/api/auth/login')
+            .send({ identifier: `+9665000095${i.toString().padStart(2, '0')}` });
+          expect(res.status).toBe(404);
+        }
+
+        const blocked = await request(server)
           .post('/api/auth/login')
-          .send({ identifier: `+9665000095${i.toString().padStart(2, '0')}` });
-        expect(res.status).toBe(404);
+          .send({ identifier: '+966500009599' });
+
+        expect(blocked.status).toBe(429);
+        expect(blocked.body.error.code).toBe('RATE_LIMITED');
+      } finally {
+        server.close();
       }
-
-      const blocked = await request(app)
-        .post('/api/auth/login')
-        .send({ identifier: '+966500009599' });
-
-      expect(blocked.status).toBe(429);
-      expect(blocked.body.error.code).toBe('RATE_LIMITED');
     });
   });
 

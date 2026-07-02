@@ -5,7 +5,8 @@
  * Also verifies that push notification is attempted after review creation
  * (using a spy on sendPushToUser since FCM credentials are not present in CI).
  */
-import { afterAll, beforeEach, describe, expect, it, vi } from 'vitest';
+import http from 'node:http';
+import { afterAll, afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import request from 'supertest';
 import { createApp } from '../src/app.js';
 import { db, destroy } from '../src/lib/db.js';
@@ -54,6 +55,7 @@ async function insertProperty(ownerId: string): Promise<string> {
 
 describe('push routes', () => {
   let app: ReturnType<typeof createApp>;
+  let server: http.Server;
 
   afterAll(async () => {
     await destroy();
@@ -68,6 +70,11 @@ describe('push routes', () => {
     await db.deleteFrom('otp_codes').execute();
     await db.deleteFrom('users').execute();
     app = createApp();
+    server = http.createServer(app).listen(0);
+  });
+
+  afterEach(async () => {
+    await new Promise<void>((resolve) => server.close(() => resolve()));
   });
 
   describe('POST /api/push/register', () => {
@@ -75,7 +82,7 @@ describe('push routes', () => {
       const user = await createUser('Alice', '+966500000010');
       const token = issueAccessToken(user.id);
 
-      const response = await request(app)
+      const response = await request(server)
         .post('/api/push/register')
         .set('Authorization', `Bearer ${token}`)
         .send({ token: 'fcm-token-abc123', platform: 'ios' });
@@ -96,12 +103,12 @@ describe('push routes', () => {
       const user = await createUser('Bob', '+966500000011');
       const token = issueAccessToken(user.id);
 
-      await request(app)
+      await request(server)
         .post('/api/push/register')
         .set('Authorization', `Bearer ${token}`)
         .send({ token: 'same-token', platform: 'android' });
 
-      const response = await request(app)
+      const response = await request(server)
         .post('/api/push/register')
         .set('Authorization', `Bearer ${token}`)
         .send({ token: 'same-token', platform: 'android' });
@@ -119,19 +126,19 @@ describe('push routes', () => {
       const user = await createUser('MultiToken', '+966500000020');
       const token = issueAccessToken(user.id);
 
-      await request(app)
+      await request(server)
         .post('/api/push/register')
         .set('Authorization', `Bearer ${token}`)
         .send({ token: 'fcm-token-1', platform: 'ios' })
         .expect(204);
 
-      await request(app)
+      await request(server)
         .post('/api/push/register')
         .set('Authorization', `Bearer ${token}`)
         .send({ token: 'fcm-token-2', platform: 'android' })
         .expect(204);
 
-      await request(app)
+      await request(server)
         .post('/api/push/register')
         .set('Authorization', `Bearer ${token}`)
         .send({ token: 'fcm-token-3', platform: 'web' })
@@ -148,7 +155,7 @@ describe('push routes', () => {
     });
 
     it('returns 401 when unauthenticated', async () => {
-      const response = await request(app)
+      const response = await request(server)
         .post('/api/push/register')
         .send({ token: 'x', platform: 'ios' });
       expect(response.status).toBe(401);
@@ -158,7 +165,7 @@ describe('push routes', () => {
       const user = await createUser('Carol', '+966500000012');
       const token = issueAccessToken(user.id);
 
-      const response = await request(app)
+      const response = await request(server)
         .post('/api/push/register')
         .set('Authorization', `Bearer ${token}`)
         .send({ platform: 'ios' });
@@ -169,7 +176,7 @@ describe('push routes', () => {
       const user = await createUser('Dave', '+966500000013');
       const token = issueAccessToken(user.id);
 
-      const response = await request(app)
+      const response = await request(server)
         .post('/api/push/register')
         .set('Authorization', `Bearer ${token}`)
         .send({ token: 'tok', platform: 'windows-phone' });
@@ -191,7 +198,7 @@ describe('push routes', () => {
         .values({ user_id: user.id, token: 'tok2', platform: 'android' })
         .execute();
 
-      const response = await request(app)
+      const response = await request(server)
         .delete('/api/push/token')
         .set('Authorization', `Bearer ${token}`);
 
@@ -205,7 +212,7 @@ describe('push routes', () => {
     });
 
     it('returns 401 when clearing tokens without authentication', async () => {
-      const response = await request(app).delete('/api/push/token');
+      const response = await request(server).delete('/api/push/token');
       expect(response.status).toBe(401);
       expect(response.body.error.code).toBe('UNAUTHORIZED');
     });
@@ -222,7 +229,7 @@ describe('push routes', () => {
       const propertyId = await insertProperty(owner.id);
       const reviewerToken = issueAccessToken(reviewer.id);
 
-      const response = await request(app)
+      const response = await request(server)
         .post(`/api/properties/${propertyId}/reviews`)
         .set('Authorization', `Bearer ${reviewerToken}`)
         .send({ rating: 4 });

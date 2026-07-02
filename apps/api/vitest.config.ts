@@ -13,6 +13,9 @@ export default defineConfig({
     environment: 'node',
     globals: false,
     include: ['tests/**/*.test.ts'],
+    // Retry flaky tests once; supertest can produce transient "Parse Error"
+    // HTTP client failures under rapid sequential requests (T-042).
+    retry: 1,
     // Integration tests share a single PostgreSQL test database, so running
     // multiple test files in parallel would cause truncate/insert races.
     // A single fork keeps files sequential while still isolating the suite
