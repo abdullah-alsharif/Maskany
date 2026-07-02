@@ -58,17 +58,6 @@ const withPWA = withPWAInit({
           expiration: { maxEntries: 50, maxAgeSeconds: 24 * 60 * 60 },
         },
       },
-      {
-        urlPattern: /\/api\/reviews$/i,
-        handler: 'NetworkOnly',
-        method: 'POST',
-        options: {
-          backgroundSync: {
-            name: 'review-queue',
-            options: { maxRetentionTime: 24 * 60 },
-          },
-        },
-      },
     ],
   },
 });
