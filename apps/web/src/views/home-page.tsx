@@ -10,7 +10,7 @@ import { SearchBar } from '../components/property/search-bar';
 import { SeoHead } from '../components/seo-head';
 import { SkeletonCard } from '../components/ui/skeleton';
 import { FilterSheet } from '../components/filter-sheet';
-import { NoResults } from '../components/ui/empty-state';
+import { EmptyState, NoResults } from '../components/ui/empty-state';
 import { useFilters } from '../hooks/use-filters';
 import { useProperties, type CategoryFilter } from '../hooks/use-properties';
 
@@ -74,7 +74,7 @@ export function HomePage({ mode = 'home' }: HomePageProps) {
   const [category, setCategory] = useState<CategoryFilter>('ALL');
   const [filterOpen, setFilterOpen] = useState(false);
   const { filters, apply, clearAll, setQuery, activeFilterCount, queryParams } = useFilters();
-  const { data, isPending, hasNextPage, fetchNextPage, isFetchingNextPage, refetch } =
+  const { data, isPending, isError, hasNextPage, fetchNextPage, isFetchingNextPage, refetch } =
     useProperties(category, queryParams);
 
   const sentinelRef = useRef<HTMLDivElement | null>(null);
@@ -113,7 +113,7 @@ export function HomePage({ mode = 'home' }: HomePageProps) {
   const isSearch = mode === 'search';
 
   return (
-    <section ref={isSearch ? undefined : containerRef} className="page-content">
+    <section ref={isSearch ? undefined : containerRef} className="page-content grain-overlay">
       <SeoHead
         title={isSearch ? 'Search | Maskany' : 'Maskany - Find Your Perfect Property'}
         description={
@@ -122,13 +122,12 @@ export function HomePage({ mode = 'home' }: HomePageProps) {
             : 'Curated homes, rooms, and getaways near you.'
         }
       />
-      <h1 className="sr-only">{isSearch ? t('nav.search') : t('nav.home')}</h1>
 
       <header className="px-4 pt-6 pb-2 flex items-start justify-between gap-3">
         <div>
-          <p className="font-display text-3xl text-stone-950">
+          <h1 className="font-display text-3xl text-stone-950">
             {isSearch ? t('search.heading') : t('home.heading')}
-          </p>
+          </h1>
           <p className="mt-1 text-sm text-stone-600">
             {isSearch ? t('search.subheading') : t('home.subheading')}
           </p>
@@ -140,7 +139,7 @@ export function HomePage({ mode = 'home' }: HomePageProps) {
             aria-label={
               i18n.language.startsWith('ar') ? t('language.switchToEn') : t('language.switchToAr')
             }
-            className="shrink-0 flex items-center justify-center w-11 h-11 rounded-xl bg-white border border-stone-300 text-stone-600 hover:bg-stone-50 hover:border-stone-400 active:bg-stone-100 active:scale-[0.96] transition-all duration-150"
+            className="shrink-0 flex items-center justify-center w-11 h-11 rounded-xl bg-white border border-stone-300 text-stone-600 hover:bg-stone-50 hover:border-stone-400 active:bg-stone-100 active:scale-[0.96] transition-colors duration-150"
           >
             <Globe size={18} strokeWidth={2} />
           </button>
@@ -188,6 +187,14 @@ export function HomePage({ mode = 'home' }: HomePageProps) {
             <SkeletonCard key={index} />
           ))}
         </div>
+      ) : isError ? (
+        <EmptyState
+          icon={<Globe size={28} strokeWidth={1.5} />}
+          title={t('empty.error')}
+          description={t('empty.errorDesc')}
+          actionLabel={t('empty.retry')}
+          onAction={() => refetch()}
+        />
       ) : showEmpty ? (
         <NoResults />
       ) : (
@@ -200,7 +207,7 @@ export function HomePage({ mode = 'home' }: HomePageProps) {
               <div
                 key={property.id}
                 className="animate-fade-in"
-                style={{ animationDelay: `${idx * 0.05}s` }}
+                style={{ animationDelay: `${Math.min(idx, 8) * 0.05}s` }}
               >
                 <PropertyCard property={property} />
               </div>

@@ -59,7 +59,7 @@ export function BottomNav() {
               className={`
                 relative flex flex-col items-center justify-center
                 w-16 h-12 rounded-xl
-                transition-all duration-300 ease-out
+                transition-colors duration-300 ease-out
                 ${isActive ? 'text-terracotta-600' : 'text-stone-400 hover:text-stone-600'}
               `}
             >
@@ -67,7 +67,7 @@ export function BottomNav() {
                 <span className="absolute -top-1 w-1.5 h-1.5 rounded-full bg-terracotta-500 animate-scale-in" />
               )}
               <span
-                className={`relative transition-all duration-500 ease-[var(--ease-spring)] ${isActive ? 'scale-110' : 'scale-100'}`}
+                className={`relative transition-transform duration-500 ease-[var(--ease-spring)] ${isActive ? 'scale-110' : 'scale-100'}`}
               >
                 {icon}
                 {badge !== undefined && badge > 0 && (
@@ -87,7 +87,7 @@ export function BottomNav() {
               </span>
               <span
                 suppressHydrationWarning
-                className={`text-[10px] mt-0.5 tracking-tight transition-all duration-300 ${isActive ? 'font-semibold' : 'font-medium'}`}
+                className={`text-[10px] mt-0.5 tracking-tight transition-colors duration-300 ${isActive ? 'font-semibold' : 'font-medium'}`}
               >
                 {label}
               </span>

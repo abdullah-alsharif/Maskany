@@ -30,7 +30,7 @@ export function RatingDistribution({ distribution, total }: RatingDistributionPr
             >
               <div
                 data-testid="distribution-fill"
-                className="h-full bg-amber-400 rounded-full transition-all duration-700 ease-[var(--ease-out-expo)]"
+                className="h-full bg-amber-400 rounded-full transition-[width] duration-700 ease-[var(--ease-out-expo)]"
                 style={{ width: `${percentage}%` }}
               />
             </div>

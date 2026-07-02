@@ -75,7 +75,7 @@ export function SearchBar({
             text-[15px] text-stone-800
             placeholder:text-stone-400
             focus:outline-none focus:border-terracotta-400 focus:ring-2 focus:ring-terracotta-100
-            transition-all duration-200
+            transition-shadow duration-200
           "
           aria-label="Search properties"
         />
@@ -112,7 +112,7 @@ export function SearchBar({
             hover:border-stone-400 hover:bg-stone-50
             active:bg-stone-100 active:scale-[0.96]
             focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-terracotta-100 focus-visible:border-terracotta-400
-            transition-all duration-200
+            transition-colors transition-shadow transition-transform duration-200
             shrink-0
           "
           aria-label={`Filters${activeFilterCount > 0 ? ` (${activeFilterCount} active)` : ''}`}

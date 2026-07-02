@@ -31,7 +31,7 @@ export function FavoriteButton({
         flex items-center justify-center rounded-full
         bg-white/90 backdrop-blur-sm
         shadow-sm hover:shadow-md
-        transition-all duration-200
+        transition-colors transition-shadow duration-200
         active:scale-90
         focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-terracotta-400
         ${isFavorite ? 'text-red-500' : 'text-stone-600 hover:text-red-400'}

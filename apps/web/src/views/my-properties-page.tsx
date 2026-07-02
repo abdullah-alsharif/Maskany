@@ -102,7 +102,7 @@ function PropertyRow({
 
   return (
     <article
-      className={`rounded-2xl bg-white shadow-[var(--shadow-card)] hover:shadow-[var(--shadow-card-hover)] transition-all duration-300 hover:-translate-y-0.5 overflow-hidden animate-slide-up ${staggerClass}`}
+      className={`rounded-2xl bg-white shadow-[var(--shadow-card)] hover:shadow-[var(--shadow-card-hover)] transition-shadow transition-transform duration-300 hover:-translate-y-0.5 overflow-hidden animate-slide-up ${staggerClass}`}
     >
       <div className="flex flex-col sm:flex-row">
         {/* Cover image */}
@@ -261,7 +261,7 @@ export function MyPropertiesPage() {
         <Link
           href="/properties/create"
           aria-label={t('myProperties.newListing')}
-          className="inline-flex items-center justify-center gap-2 h-11 px-5 rounded-xl bg-terracotta-500 text-white text-sm font-semibold shadow-sm hover:bg-terracotta-600 active:bg-terracotta-700 transition-all duration-150 active:scale-[0.96] shrink-0"
+          className="inline-flex items-center justify-center gap-2 h-11 px-5 rounded-xl bg-terracotta-500 text-white text-sm font-semibold shadow-sm hover:bg-terracotta-600 active:bg-terracotta-700 transition-colors transition-shadow transition-transform duration-150 active:scale-[0.96] shrink-0"
         >
           <Plus size={18} aria-hidden="true" />
           {t('myProperties.newListing')}

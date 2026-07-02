@@ -101,7 +101,7 @@ export function FilterPanel({ value, onApply, onClear, filterCounts }: FilterPan
 
   const inputClass =
     'w-full h-11 px-3 rounded-xl bg-white border border-stone-200 text-[15px] text-stone-800 ' +
-    'focus:outline-none focus:border-terracotta-300 focus:ring-2 focus:ring-terracotta-100 transition-all duration-200';
+    'focus:outline-none focus:border-terracotta-300 focus:ring-2 focus:ring-terracotta-100 transition-shadow duration-200';
 
   return (
     <div className="flex flex-col gap-6">

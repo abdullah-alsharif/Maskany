@@ -36,7 +36,7 @@ export function WhatsAppIconButton({
         w-11 h-11 rounded-full
         bg-[#25d366] text-white
         shadow-sm hover:shadow-md
-        transition-all duration-200
+        transition-colors transition-shadow duration-200
         active:scale-90
         hover:bg-[#20bd5a]
         focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-[#25d366]
@@ -73,7 +73,7 @@ export function WhatsAppFab({ whatsappNumber, propertyTitle, propertyId }: Whats
         bg-[#25d366] text-white
         shadow-[var(--shadow-fab)]
         hover:bg-[#20bd5a] active:bg-[#128c7e]
-        transition-all duration-200
+        transition-colors transition-shadow transition-transform duration-200
         active:scale-95 hover:-translate-y-0.5
         focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-[#25d366]
         font-semibold text-[15px]

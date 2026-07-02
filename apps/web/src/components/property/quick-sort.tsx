@@ -71,7 +71,7 @@ export function QuickSort({ currentSort, filters, onApply }: QuickSortProps) {
               px-4 h-11
               rounded-[11px] whitespace-nowrap
               text-[13px] font-medium
-              transition-all duration-200 ease-out
+              transition-colors transition-shadow transition-transform duration-200 ease-out
               active:scale-[0.97]
               focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-terracotta-500/50 focus-visible:ring-offset-1
               shrink-0

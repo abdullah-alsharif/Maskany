@@ -177,7 +177,10 @@
     "browseProperties": "Browse properties",
     "noListings": "No listings yet",
     "noListingsDesc": "Create your first property listing and start connecting with potential tenants.",
-    "createListing": "Create listing"
+    "createListing": "Create listing",
+    "error": "Something went wrong",
+    "errorDesc": "We couldn't load properties right now. Check your connection and try again.",
+    "retry": "Try again"
   },
   "offline": {
     "banner": "You're offline",

@@ -136,7 +136,7 @@ export function ImageGallery({ images, alt }: ImageGalleryProps) {
             shadow-md hover:bg-white
             active:scale-95
             focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-stone-800
-            transition-all duration-150
+            transition-colors transition-shadow duration-150
           "
           aria-label="Previous image"
         >
@@ -157,7 +157,7 @@ export function ImageGallery({ images, alt }: ImageGalleryProps) {
             shadow-md hover:bg-white
             active:scale-95
             focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-stone-800
-            transition-all duration-150
+            transition-colors transition-shadow duration-150
           "
           aria-label="Next image"
         >
@@ -178,7 +178,7 @@ export function ImageGallery({ images, alt }: ImageGalleryProps) {
               goTo(i);
             }}
             className={`
-            rounded-full transition-all duration-200
+            rounded-full transition-[width] transition-colors duration-200
             focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-black/20
             ${
               i === currentIndex
@@ -285,7 +285,7 @@ export function ImageGallery({ images, alt }: ImageGalleryProps) {
     <div className="hidden md:flex md:px-4 mt-2">
       <button
         onClick={() => openFullscreen(0)}
-        className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-white border border-stone-200 text-stone-700 text-sm font-medium hover:border-stone-300 hover:bg-stone-50 active:scale-[0.97] transition-all duration-150 shadow-sm"
+        className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-white border border-stone-200 text-stone-700 text-sm font-medium hover:border-stone-300 hover:bg-stone-50 active:scale-[0.97] transition-colors transition-shadow transition-transform duration-150 shadow-sm"
       >
         <Grid3X3 size={16} strokeWidth={1.8} />
         Show all {images.length} photos
@@ -316,7 +316,7 @@ export function ImageGallery({ images, alt }: ImageGalleryProps) {
             hover:bg-white/20
             active:scale-95
             focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white
-            transition-all duration-150
+            transition-colors transition-transform duration-150
           "
           aria-label="Close fullscreen"
         >

@@ -102,7 +102,7 @@ export function OtpInput({ length = 6, onComplete, disabled = false, error }: Ot
               w-12 h-14 sm:w-14 sm:h-16
               text-center text-xl sm:text-2xl font-bold
               rounded-xl border-2
-              transition-all duration-200
+              transition-shadow transition-colors duration-200
               focus:outline-none
               disabled:opacity-50 disabled:cursor-not-allowed
               ${
@@ -178,7 +178,7 @@ export function OtpCountdown({ seconds, onExpired, onResend }: CountdownProps) {
             setCanResend(false);
             setRemaining(seconds);
           }}
-          className="inline-flex items-center justify-center min-h-[44px] px-4 text-sm font-semibold text-terracotta-600 hover:text-terracotta-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-terracotta-100 rounded-lg transition-all"
+          className="inline-flex items-center justify-center min-h-[44px] px-4 text-sm font-semibold text-terracotta-600 hover:text-terracotta-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-terracotta-100 rounded-lg transition-colors"
         >
           Resend code
         </button>

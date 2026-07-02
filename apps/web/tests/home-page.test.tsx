@@ -143,7 +143,9 @@ describe('HomePage', () => {
 
   it('exposes the Home level-1 heading for navigation tests', () => {
     renderPage();
-    expect(screen.getByRole('heading', { level: 1, name: /home/i })).toBeInTheDocument();
+    expect(
+      screen.getByRole('heading', { level: 1, name: /discover properties/i }),
+    ).toBeInTheDocument();
   });
 
   it('shows pull-to-refresh indicator when the user pulls down', () => {

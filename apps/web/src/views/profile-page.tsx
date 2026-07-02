@@ -162,7 +162,7 @@ export function ProfilePage() {
           </p>
           <Link
             href="/login"
-            className="mt-6 inline-flex items-center justify-center min-w-[44px] min-h-[44px] h-13 px-8 rounded-xl bg-terracotta-500 text-white font-semibold shadow-sm hover:bg-terracotta-600 active:bg-terracotta-700 transition-all duration-150 active:scale-[0.96] focus-visible:ring-2 focus-visible:ring-terracotta-100"
+            className="mt-6 inline-flex items-center justify-center min-w-[44px] min-h-[44px] h-13 px-8 rounded-xl bg-terracotta-500 text-white font-semibold shadow-sm hover:bg-terracotta-600 active:bg-terracotta-700 transition-colors transition-shadow transition-transform duration-150 active:scale-[0.96] focus-visible:ring-2 focus-visible:ring-terracotta-100"
           >
             {t('profile.signIn')}
           </Link>
@@ -215,7 +215,7 @@ export function ProfilePage() {
         {isOwner && (
           <Link
             href="/my-properties"
-            className="flex flex-col items-center gap-1.5 rounded-2xl bg-white border border-stone-200 p-4 animate-slide-up animate-stagger-3 transition-all duration-150 hover:shadow-[var(--shadow-card-hover)] active:scale-[0.97]"
+            className="flex flex-col items-center gap-1.5 rounded-2xl bg-white border border-stone-200 p-4 animate-slide-up animate-stagger-3 transition-shadow transition-transform duration-150 hover:shadow-[var(--shadow-card-hover)] active:scale-[0.97]"
           >
             <div className="w-10 h-10 rounded-xl bg-olive-50 text-olive-600 flex items-center justify-center">
               <Home size={20} strokeWidth={1.5} />

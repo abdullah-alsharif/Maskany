@@ -71,7 +71,7 @@ export function CategoryBar({ selected, onSelect }: CategoryBarProps) {
               px-3.5 h-11
               rounded-full whitespace-nowrap
               text-[13px] font-semibold
-              transition-all duration-150
+              transition-colors transition-shadow transition-transform duration-150
               active:scale-[0.96]
               focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-terracotta-100 focus-visible:border-terracotta-400
               shrink-0

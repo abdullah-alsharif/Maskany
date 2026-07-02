@@ -23,7 +23,7 @@ export function LanguageSwitcher({ className = '' }: { className?: string }) {
         text-sm font-semibold text-stone-700
         hover:bg-stone-50 active:bg-stone-100
         focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-terracotta-100 focus-visible:border-terracotta-400
-        transition-all duration-150 active:scale-[0.96]
+        transition-colors transition-shadow transition-transform duration-150 active:scale-[0.96]
         ${className}
       `}
     >

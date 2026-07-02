@@ -43,7 +43,7 @@ export function PropertyCard({ property }: PropertyCardProps) {
         hover:border-terracotta-200
         shadow-[var(--shadow-card)]
         hover:shadow-[var(--shadow-card-hover)]
-        transition-all duration-300 ease-out
+        transition-shadow transition-colors transition-transform duration-300 ease-out
         hover:-translate-y-1
         focus-within:border-terracotta-200 focus-within:shadow-[var(--shadow-card-hover)]
       "
@@ -109,7 +109,7 @@ export function PropertyCard({ property }: PropertyCardProps) {
         "
       >
         {/* Title */}
-        <h3 className="text-[15px] font-semibold text-stone-900 leading-snug line-clamp-1 group-hover:text-terracotta-600 transition-colors duration-200">
+        <h3 className="text-base font-semibold text-stone-900 leading-snug line-clamp-1 group-hover:text-terracotta-600 transition-colors duration-200">
           {property.title}
         </h3>
 
