@@ -17,6 +17,8 @@ test-results/
 playwright-report/
 .env.production
 /temp/
+apps/web/public/sw.js
+apps/web/public/workbox-*.js
 
 .opencode/
 .specify

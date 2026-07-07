@@ -1,7 +1,10 @@
 import type { NextConfig } from 'next';
 import withPWAInit from '@ducanh2912/next-pwa';
 
-const API_BACKEND_URL = process.env.API_BASE_URL ?? 'http://localhost:3001';
+const API_BACKEND_URL = process.env.API_BASE_URL;
+if (!API_BACKEND_URL) {
+  throw new Error('API_BASE_URL environment variable is required — set it in .env or pass as a build arg.');
+}
 
 const nextConfig: NextConfig = {
   output: 'standalone',
