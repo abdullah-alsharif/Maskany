@@ -27,12 +27,28 @@ export function CreatePropertyPage() {
   const mutation = useMutation({
     mutationFn: async (payload: PropertyFormSubmitPayload) => {
       const property = await createProperty(payload);
-      if (payload.images.length > 0) {
-        await uploadPropertyImages(property.id, payload.images);
+      try {
+        if (payload.images.length > 0) {
+          await uploadPropertyImages(property.id, payload.images);
+        }
+      } catch {
+        // Image upload failure — property is created, continue
       }
-      if (payload.translation) {
-        const targetLocale = property.locale === 'en' ? 'ar' : 'en';
-        await savePropertyTranslation(property.id, targetLocale, payload.translation);
+      try {
+        if (payload.translation) {
+          const targetLocale = property.locale === 'en' ? 'ar' : 'en';
+          const t = payload.translation;
+          await savePropertyTranslation(property.id, targetLocale, {
+            title: t.title.trim(),
+            summary: t.summary.trim() || null,
+            description: t.description.trim() || null,
+            city: t.city.trim(),
+            area: t.area.trim() || null,
+            country: t.country.trim() || 'SA',
+          });
+        }
+      } catch {
+        // Translation save failure — property is created, continue
       }
       return property;
     },
@@ -40,19 +56,8 @@ export function CreatePropertyPage() {
       await queryClient.invalidateQueries({ queryKey: ['my-properties'] });
       router.push(`/properties/${property.id}`);
     },
-    onError: (err: unknown) => {
-      const data = (
-        err as {
-          response?: { data?: { details?: { path: string; message: string }[]; message?: string } };
-        }
-      )?.response?.data;
-      if (data?.details?.length) {
-        setError(data.details.map((d) => `${d.path}: ${d.message}`).join('; '));
-      } else if (data?.message) {
-        setError(data.message);
-      } else {
-        setError('We could not save this listing. Please try again.');
-      }
+    onError: () => {
+      setError('We could not save this listing. Please try again.');
     },
   });
 

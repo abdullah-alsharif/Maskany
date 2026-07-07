@@ -79,6 +79,18 @@ type ReviewSeed = {
   comment: string;
 };
 
+type TranslationSeed = {
+  property_key: string;
+  locale: 'ar';
+  title: string;
+  summary: string;
+  description: string;
+  city: string;
+  area: string;
+  country: string;
+  amenities: string[];
+};
+
 const USERS: UserSeed[] = [
   {
     key: 'owner-layla',
@@ -455,11 +467,24 @@ const PROPERTIES: PropertySeed[] = [
 ];
 
 /**
- * Deterministic "random" seed based on property index so the same property
- * always gets the same picsum photo across re-seeds.
+ * Deterministic picsum seed keyword per property type so images are
+ * thematically related (apartments → interior urban, villas → large
+ * residences, chalets → coastal, etc.) while remaining deterministic
+ * across re-seeds.
  */
-function picsumId(propertyIndex: number, photoIndex: number): number {
-  return ((propertyIndex * 37 + photoIndex * 71 + 42) % 200) + 10;
+function typeSeed(propertyType: string, index: number): string {
+  const prefix: Record<string, string> = {
+    APARTMENT: 'modern-apartment',
+    STUDIO: 'cozy-studio',
+    VILLA: 'luxury-villa',
+    HOUSE: 'family-house',
+    ROOM: 'private-room',
+    CHALET: 'beach-chalet',
+    PENTHOUSE: 'penthouse',
+    DUPLEX: 'duplex',
+    OTHER: 'property',
+  };
+  return `${prefix[propertyType] ?? 'property'}-${index}`;
 }
 
 const MEDIA: MediaSeed[] = PROPERTIES.flatMap((property, propertyIndex) => {
@@ -468,12 +493,12 @@ const MEDIA: MediaSeed[] = PROPERTIES.flatMap((property, propertyIndex) => {
 
   const entries: MediaSeed[] = [];
   for (let i = 0; i < mediaCount; i += 1) {
-    const id = picsumId(propertyIndex, i);
+    const seed = `${typeSeed(property.property_type, propertyIndex)}-${i + 1}`;
     entries.push({
       property_key: property.key,
       media_type: 'IMAGE',
-      url: `https://picsum.photos/id/${id}/800/600`,
-      thumbnail_url: `https://picsum.photos/id/${id}/400/300`,
+      url: `https://picsum.photos/seed/${seed}/800/600`,
+      thumbnail_url: `https://picsum.photos/seed/${seed}/400/300`,
       alt_text: `${property.title} — photo ${i + 1}`,
       mime_type: 'image/jpeg',
       duration: null,
@@ -481,11 +506,12 @@ const MEDIA: MediaSeed[] = PROPERTIES.flatMap((property, propertyIndex) => {
     });
   }
   if (includeVideo) {
+    const videoSeed = typeSeed(property.property_type, propertyIndex);
     entries.push({
       property_key: property.key,
       media_type: 'VIDEO',
       url: `https://www.w3schools.com/html/mov_bbb.mp4`,
-      thumbnail_url: `https://picsum.photos/id/${picsumId(propertyIndex, 99)}/400/300`,
+      thumbnail_url: `https://picsum.photos/seed/${videoSeed}-video/400/300`,
       alt_text: `${property.title} — video tour`,
       mime_type: 'video/mp4',
       duration: '45.50',
@@ -645,11 +671,191 @@ const REVIEWS: ReviewSeed[] = [
 /**
  * Exported seed counts used by the CLI entry to report what was written.
  */
+const TRANSLATIONS: TranslationSeed[] = [
+  {
+    property_key: 'riyadh-apartment-1',
+    locale: 'ar',
+    title: 'شقة حديثة غرفتين في العليا',
+    summary: 'شقة مشرقة على بعد خطوات من مركز المملكة.',
+    description: 'غرفة معيشة واسعة، مفروشة بالكامل، على مسافة قريبة من المترو.',
+    city: 'الرياض',
+    area: 'العليا',
+    country: 'SA',
+    amenities: ['واي فاي', 'مواقف سيارات', 'تكييف', 'مفروش'],
+  },
+  {
+    property_key: 'riyadh-studio-1',
+    locale: 'ar',
+    title: 'استوديو مريح قرب الحي الدبلوماسي',
+    summary: 'مثالي للمهنيين الشباب.',
+    description: 'استوديو حديث مع جميع الأجهزة وشرفة هادئة.',
+    city: 'الرياض',
+    area: 'حطين',
+    country: 'SA',
+    amenities: ['واي فاي', 'تكييف', 'مفروش', 'مطبخ'],
+  },
+  {
+    property_key: 'riyadh-villa-1',
+    locale: 'ar',
+    title: 'فيلا فاخرة 5 غرف نوم مع مسبح خاص',
+    summary: 'فيلا أنيقة في مجتمع مسوّر.',
+    description: 'مسبح خاص، حديقة منسقة، وموقف سيارات مخصص لثلاث سيارات.',
+    city: 'الرياض',
+    area: 'النخيل',
+    country: 'SA',
+    amenities: ['واي فاي', 'مواقف سيارات', 'مسبح', 'صالة رياضية', 'تكييف', 'أمن'],
+  },
+  {
+    property_key: 'riyadh-room-1',
+    locale: 'ar',
+    title: 'غرفة خاصة في شقة مشتركة',
+    summary: 'غرفة بأسعار معقولة قرب جامعة الملك سعود.',
+    description: 'مطبخ وغرفة معيشة مشتركة مع مستأجرين هادئين.',
+    city: 'الرياض',
+    area: 'الملز',
+    country: 'SA',
+    amenities: ['واي فاي', 'تكييف', 'مفروش'],
+  },
+  {
+    property_key: 'riyadh-house-1',
+    locale: 'ar',
+    title: 'منزل عائلي مع فناء',
+    summary: 'منزل عائلي تقليدي.',
+    description: 'أربع غرف نوم، مجلس، وفناء خاص مع نخيل.',
+    city: 'الرياض',
+    area: 'الشفا',
+    country: 'SA',
+    amenities: ['مواقف سيارات', 'تكييف', 'مطبخ', 'أمن'],
+  },
+  {
+    property_key: 'jeddah-chalet-1',
+    locale: 'ar',
+    title: 'شاليه على البحر في أبحر',
+    summary: 'هروب نهاية الأسبوع على البحر الأحمر.',
+    description: 'وصول مباشر للشاطئ، تراس واسع، وشواية خارجية.',
+    city: 'جدة',
+    area: 'أبحر',
+    country: 'SA',
+    amenities: ['واي فاي', 'مسبح', 'تكييف', 'مفروش', 'مطبخ'],
+  },
+  {
+    property_key: 'jeddah-apartment-1',
+    locale: 'ar',
+    title: 'شقة 3 غرف نوم مع إطلالة على الكورنيش',
+    summary: 'إطلالات غروب على الكورنيش.',
+    description: 'شقة في دور علوي مع إطلالات بحرية بانورامية وتشطيبات عصرية.',
+    city: 'جدة',
+    area: 'الحمراء',
+    country: 'SA',
+    amenities: ['واي فاي', 'مواقف سيارات', 'صالة رياضية', 'تكييف', 'مفروش', 'مصعد'],
+  },
+  {
+    property_key: 'jeddah-villa-1',
+    locale: 'ar',
+    title: 'فيلا عصرية مع سطح تراس',
+    summary: 'فيلا مصممة في الزهراء.',
+    description: 'أربعة أجنحة، غرفة سينما منزلية، وسطح تراس مع إطلالات المدينة.',
+    city: 'جدة',
+    area: 'الزهراء',
+    country: 'SA',
+    amenities: ['واي فاي', 'مواقف سيارات', 'مسبح', 'صالة رياضية', 'تكييف', 'أمن'],
+  },
+  {
+    property_key: 'jeddah-studio-1',
+    locale: 'ar',
+    title: 'استوديو بسيط قرب رد سي مول',
+    summary: 'صغير وأنيق.',
+    description: 'سرير جدار، محطة عمل مدمجة، ومطبخ صغير.',
+    city: 'جدة',
+    area: 'الروضة',
+    country: 'SA',
+    amenities: ['واي فاي', 'تكييف', 'مفروش', 'مطبخ', 'مصعد'],
+  },
+  {
+    property_key: 'jeddah-room-1',
+    locale: 'ar',
+    title: 'غرفة ضيوف في حي هادئ',
+    summary: 'مدخل وحمام خاص.',
+    description: 'مدخل منفصل يضمن الخصوصية؛ إفطار متاح عند الطلب.',
+    city: 'جدة',
+    area: 'السلامة',
+    country: 'SA',
+    amenities: ['واي فاي', 'تكييف', 'مفروش', 'شرفة'],
+  },
+  {
+    property_key: 'dubai-apartment-1',
+    locale: 'ar',
+    title: 'شقة غرفة نوم واحدة في وسط دبي مع إطلالة برج',
+    summary: 'إطلالات أفق من كل نافذة.',
+    description: 'شقة مفروشة بالكامل في وسط دبي مع خدمة كونسيرج.',
+    city: 'دبي',
+    area: 'داون تاون',
+    country: 'AE',
+    amenities: ['واي فاي', 'مواقف سيارات', 'مسبح', 'صالة رياضية', 'تكييف', 'مفروش', 'مصعد', 'أمن'],
+  },
+  {
+    property_key: 'dubai-villa-1',
+    locale: 'ar',
+    title: 'فيلا على الشاطئ في نخلة جميرا',
+    summary: 'وصول مباشر للشاطئ على النخلة.',
+    description: 'ستة أجنحة، واجهة شاطئية خاصة، مطبخ رئيسي، وسينما منزلية.',
+    city: 'دبي',
+    area: 'نخلة جميرا',
+    country: 'AE',
+    amenities: ['واي فاي', 'مواقف سيارات', 'مسبح', 'صالة رياضية', 'تكييف', 'مفروش', 'أمن'],
+  },
+  {
+    property_key: 'dubai-studio-1',
+    locale: 'ar',
+    title: 'استوديو في جي إل تي مع إطلالة بحيرة',
+    summary: 'استوديو فعال في أبراج بحيرات جميرا.',
+    description: 'استوديو في دور علوي مع إطلالات بحيرة، مطبخ متكامل، شرفة.',
+    city: 'دبي',
+    area: 'جي إل تي',
+    country: 'AE',
+    amenities: ['واي فاي', 'مسبح', 'صالة رياضية', 'تكييف', 'مفروش', 'شرفة', 'مصعد'],
+  },
+  {
+    property_key: 'amman-chalet-1',
+    locale: 'ar',
+    title: 'شاليه البحر الميت مع شاطئ خاص',
+    summary: 'منتجع صحي في البحر الميت.',
+    description: 'منصة شاطئ خاصة، مسبح لانهائي، ووصول مباشر إلى الينابيع الحرارية.',
+    city: 'عمان',
+    area: 'البحر الميت',
+    country: 'JO',
+    amenities: ['واي فاي', 'مسبح', 'تكييف', 'مفروش', 'مطبخ'],
+  },
+  {
+    property_key: 'amman-house-1',
+    locale: 'ar',
+    title: 'منزل حجري في عبدون',
+    summary: 'هندسة معمارية أردنية كلاسيكية.',
+    description: 'ثلاث غرف نوم، طعام رسمي، وحديقة مدرجة مع إطلالات المدينة.',
+    city: 'عمان',
+    area: 'عبدون',
+    country: 'JO',
+    amenities: ['واي فاي', 'مواقف سيارات', 'تكييف', 'مفروش', 'مطبخ', 'أمن'],
+  },
+  {
+    property_key: 'cairo-apartment-1',
+    locale: 'ar',
+    title: 'شقة غرفتين نيلية في الزمالك',
+    summary: 'شقة زمالك كلاسيكية مع إطلالات النيل.',
+    description: 'شقة مجددة في مبنى تاريخي يطل على النيل.',
+    city: 'القاهرة',
+    area: 'الزمالك',
+    country: 'EG',
+    amenities: ['واي فاي', 'تكييف', 'مفروش', 'مصعد', 'شرفة'],
+  },
+];
+
 export const SEED_COUNTS = {
   users: USERS.length,
   properties: PROPERTIES.length,
   media: MEDIA.length,
   reviews: REVIEWS.length,
+  translations: TRANSLATIONS.length,
 } as const;
 
 /**
@@ -673,6 +879,7 @@ export async function seed(client: Trx): Promise<void> {
     const userIdByKey = await insertUsers(trx);
     const propertyIdByKey = await insertProperties(trx, userIdByKey);
     await insertMedia(trx, propertyIdByKey);
+    await insertTranslations(trx, propertyIdByKey);
     await insertReviews(trx, propertyIdByKey, userIdByKey);
     await updatePropertyAggregates(trx);
   });
@@ -743,6 +950,25 @@ async function insertMedia(trx: Trx, propertyIdByKey: Map<string, string>): Prom
         mime_type: m.mime_type,
         duration: m.duration,
         sort_order: m.sort_order,
+      })),
+    )
+    .execute();
+}
+
+async function insertTranslations(trx: Trx, propertyIdByKey: Map<string, string>): Promise<void> {
+  await trx
+    .insertInto('property_translations')
+    .values(
+      TRANSLATIONS.map((t) => ({
+        property_id: getOrThrow(propertyIdByKey, t.property_key),
+        locale: t.locale,
+        title: t.title,
+        summary: t.summary,
+        description: t.description,
+        city: t.city,
+        area: t.area,
+        country: t.country,
+        amenities: t.amenities,
       })),
     )
     .execute();

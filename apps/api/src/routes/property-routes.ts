@@ -7,7 +7,7 @@
  *   - GET    /:id         — public, full detail with images, owner, review summary.
  *   - POST   /            — auth + OWNER user type, creates a property.
  *   - PUT    /:id         — auth + owner match, updates a property.
- *   - DELETE /:id         — auth + owner match, soft-deletes (status=INACTIVE).
+ *   - DELETE /:id         — auth + owner match, hard-deletes the property and cascades to related rows.
  *
  * The business rules live in `property-service.ts`; this module only
  * handles transport concerns: parsing the body/query with zod and
@@ -177,11 +177,11 @@ export function createPropertyRouter(): Router {
       }
       const translationSchema = z.object({
         title: z.string().trim().min(1).max(120),
-        summary: z.string().trim().max(300).optional(),
-        description: z.string().optional(),
+        summary: z.string().trim().max(300).optional().nullable(),
+        description: z.string().optional().nullable(),
         city: z.string().trim().min(1),
-        area: z.string().trim().optional(),
-        country: z.string().trim().min(2).optional(),
+        area: z.string().trim().optional().nullable(),
+        country: z.string().trim().min(2).optional().nullable(),
         amenities: z.array(z.string().trim().min(1)).optional(),
       });
       const body = parseOrThrow(translationSchema, req.body);

@@ -73,6 +73,7 @@ export interface PropertySummary {
   createdAt: string;
   updatedAt: string;
   coverImage: { url: string; thumbnailUrl: string | null; altText: string | null } | null;
+  translation: { title: string; city: string; area: string | null; country: string } | null;
 }
 
 export interface PropertyImage {
@@ -121,7 +122,11 @@ type PropertyRow = Selectable<PropertiesTable>;
 
 export type CoverImage = { url: string; thumbnailUrl: string | null; altText: string | null };
 
-export function toSummary(row: PropertyRow, cover: CoverImage | null): PropertySummary {
+export function toSummary(
+  row: PropertyRow,
+  cover: CoverImage | null,
+  translation?: { title: string; city: string; area: string | null; country: string } | null,
+): PropertySummary {
   return {
     id: row.id,
     title: row.title,
@@ -146,6 +151,7 @@ export function toSummary(row: PropertyRow, cover: CoverImage | null): PropertyS
     createdAt: row.created_at.toISOString(),
     updatedAt: row.updated_at.toISOString(),
     coverImage: cover,
+    translation: translation ?? null,
   };
 }
 
@@ -164,6 +170,25 @@ async function fetchCoverImages(propertyIds: string[]): Promise<Map<string, Cove
     rows.map((r) => [
       r.property_id,
       { url: r.url, thumbnailUrl: r.thumbnail_url, altText: r.alt_text },
+    ]),
+  );
+}
+
+async function fetchTranslationMap(
+  propertyIds: string[],
+  targetLocale: 'en' | 'ar',
+): Promise<Map<string, { title: string; city: string; area: string | null; country: string }>> {
+  if (propertyIds.length === 0 || !targetLocale) return new Map();
+  const rows = await db
+    .selectFrom('property_translations')
+    .select(['property_id', 'title', 'city', 'area', 'country'])
+    .where('property_id', 'in', propertyIds)
+    .where('locale', '=', targetLocale)
+    .execute();
+  return new Map(
+    rows.map((r) => [
+      r.property_id,
+      { title: r.title, city: r.city, area: r.area, country: r.country },
     ]),
   );
 }
@@ -374,10 +399,33 @@ export async function listActiveProperties(
     }
   }
 
-  const covers = await fetchCoverImages(page.map((r) => r.id));
+  const propertyIds = page.map((r) => r.id);
+  const covers = await fetchCoverImages(propertyIds);
+
+  // Fetch translations for the opposite locale of each property, so the
+  // listing can display localised titles and cities on bilingual cards.
+  const enProps = page.filter((r) => r.locale === 'en');
+  const arProps = page.filter((r) => r.locale === 'ar');
+  const [enTranslations, arTranslations] = await Promise.all([
+    enProps.length > 0
+      ? fetchTranslationMap(
+          enProps.map((r) => r.id),
+          'ar',
+        )
+      : Promise.resolve(new Map()),
+    arProps.length > 0
+      ? fetchTranslationMap(
+          arProps.map((r) => r.id),
+          'en',
+        )
+      : Promise.resolve(new Map()),
+  ]);
+  const allTranslations = new Map([...enTranslations, ...arTranslations]);
 
   return {
-    properties: page.map((row) => toSummary(row, covers.get(row.id) ?? null)),
+    properties: page.map((row) =>
+      toSummary(row, covers.get(row.id) ?? null, allTranslations.get(row.id)),
+    ),
     nextCursor,
     total: Number(totalRow.count),
   };
@@ -504,11 +552,10 @@ export async function deleteProperty(userId: string, propertyId: string): Promis
     );
   }
 
-  await db
-    .updateTable('properties')
-    .set({ status: 'INACTIVE' })
-    .where('id', '=', propertyId)
-    .execute();
+  await db.deleteFrom('property_translations').where('property_id', '=', propertyId).execute();
+  await db.deleteFrom('property_media').where('property_id', '=', propertyId).execute();
+  await db.deleteFrom('reviews').where('property_id', '=', propertyId).execute();
+  await db.deleteFrom('properties').where('id', '=', propertyId).execute();
 }
 
 /**
@@ -546,7 +593,7 @@ export async function upsertPropertyTranslation(
     description?: string | null;
     city: string;
     area?: string | null;
-    country?: string;
+    country?: string | null;
     amenities?: string[];
   },
 ): Promise<void> {
@@ -630,5 +677,24 @@ export async function listMyProperties(userId: string): Promise<PropertySummary[
     .orderBy('created_at', 'desc')
     .orderBy('id', 'desc')
     .execute()) as unknown as PropertyRow[];
-  return rows.map((row) => toSummary(row, null));
+
+  const enProps = rows.filter((r) => r.locale === 'en');
+  const arProps = rows.filter((r) => r.locale === 'ar');
+  const [enTranslations, arTranslations] = await Promise.all([
+    enProps.length > 0
+      ? fetchTranslationMap(
+          enProps.map((r) => r.id),
+          'ar',
+        )
+      : Promise.resolve(new Map()),
+    arProps.length > 0
+      ? fetchTranslationMap(
+          arProps.map((r) => r.id),
+          'en',
+        )
+      : Promise.resolve(new Map()),
+  ]);
+  const allTranslations = new Map([...enTranslations, ...arTranslations]);
+
+  return rows.map((row) => toSummary(row, null, allTranslations.get(row.id)));
 }

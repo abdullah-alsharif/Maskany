@@ -222,6 +222,8 @@ export function MyPropertiesPage() {
   const router = useRouter();
   const { t } = useTranslation();
   const [pendingDelete, setPendingDelete] = useState<Property | null>(null);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
+  const [pendingStatusId, setPendingStatusId] = useState<string | null>(null);
 
   const { data, isPending } = useMyProperties();
   const deleteMutation = useDeleteProperty();
@@ -231,14 +233,26 @@ export function MyPropertiesPage() {
 
   const handleConfirmDelete = () => {
     if (!pendingDelete) return;
+    setDeleteError(null);
     deleteMutation.mutate(pendingDelete.id, {
       onSuccess: () => setPendingDelete(null),
+      onError: () => {
+        setDeleteError(
+          t('myProperties.deleteError') || 'Could not delete property. Please try again.',
+        );
+      },
     });
   };
 
   const handleToggleStatus = (property: Property) => {
     const newStatus = property.status === 'ACTIVE' ? 'INACTIVE' : 'ACTIVE';
-    statusMutation.mutate({ propertyId: property.id, status: newStatus });
+    setPendingStatusId(property.id);
+    statusMutation.mutate(
+      { propertyId: property.id, status: newStatus },
+      {
+        onSettled: () => setPendingStatusId(null),
+      },
+    );
   };
 
   return (
@@ -284,7 +298,7 @@ export function MyPropertiesPage() {
               index={index}
               onDelete={setPendingDelete}
               onToggleStatus={handleToggleStatus}
-              statusPending={statusMutation.isPending}
+              statusPending={property.id === pendingStatusId}
             />
           ))}
         </div>
@@ -294,9 +308,20 @@ export function MyPropertiesPage() {
         <DeleteDialog
           propertyTitle={pendingDelete.title}
           pending={deleteMutation.isPending}
-          onCancel={() => setPendingDelete(null)}
+          onCancel={() => {
+            setPendingDelete(null);
+            setDeleteError(null);
+          }}
           onConfirm={handleConfirmDelete}
         />
+      )}
+      {deleteError && (
+        <p
+          role="alert"
+          className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 px-5 py-3 rounded-xl bg-red-600 text-white text-sm font-medium shadow-lg"
+        >
+          {deleteError}
+        </p>
       )}
     </section>
   );

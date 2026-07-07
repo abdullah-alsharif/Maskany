@@ -421,7 +421,7 @@ describe('property routes', () => {
   });
 
   describe('DELETE /api/properties/:id', () => {
-    it('soft-deletes the property and returns 204', async () => {
+    it('hard-deletes the property and returns 204', async () => {
       const owner = await createUser('Delete Owner', '+966500010015', 'OWNER');
       const propertyId = await insertProperty(owner.id);
       const token = issueAccessToken(owner.id);
@@ -437,8 +437,7 @@ describe('property routes', () => {
         .where('id', '=', propertyId)
         .select(['id', 'status'])
         .executeTakeFirst();
-      expect(row).toBeDefined();
-      expect(row!.status).toBe('INACTIVE');
+      expect(row).toBeUndefined();
     });
 
     it('deleted (soft) properties are excluded from the public listing', async () => {
@@ -484,8 +483,7 @@ describe('property routes', () => {
       expect(response.status).toBe(404);
       expect(response.body.error.code).toBe('PROPERTY_NOT_FOUND');
     });
-
-    it('[AC-13] DELETE sets status=INACTIVE, excluded from public listing, visible in /my/properties', async () => {
+    it('[AC-13] DELETE removes property from DB, excluded from public listing and from /my/properties', async () => {
       const owner = await createUser('AC13 Owner', '+966500010080', 'OWNER');
       const propertyId = await insertProperty(owner.id, { title: 'AC-13 Test' });
       const token = issueAccessToken(owner.id);
@@ -495,27 +493,25 @@ describe('property routes', () => {
         .set('Authorization', `Bearer ${token}`)
         .expect(204);
 
-      // Status is INACTIVE in the DB
+      // Row is gone from the DB
       const row = await db
         .selectFrom('properties')
         .where('id', '=', propertyId)
         .select('status')
-        .executeTakeFirstOrThrow();
-      expect(row.status).toBe('INACTIVE');
+        .executeTakeFirst();
+      expect(row).toBeUndefined();
 
       // Excluded from public GET /properties
       const publicList = await request(app).get('/api/properties');
       const publicIds = publicList.body.properties.map((p: { id: string }) => p.id);
       expect(publicIds).not.toContain(propertyId);
 
-      // Visible in GET /api/properties/my
+      // Not visible in GET /api/properties/my
       const myList = await request(app)
         .get('/api/properties/my')
         .set('Authorization', `Bearer ${token}`);
       const myIds = myList.body.properties.map((p: { id: string }) => p.id);
-      expect(myIds).toContain(propertyId);
-      const myProp = myList.body.properties.find((p: { id: string }) => p.id === propertyId);
-      expect(myProp.status).toBe('INACTIVE');
+      expect(myIds).not.toContain(propertyId);
     });
   });
 
@@ -1249,7 +1245,7 @@ describe('property routes', () => {
   });
 
   describe('DELETE cascade / side effects', () => {
-    it('soft-delete preserves reviews and property_media (status becomes INACTIVE, row remains)', async () => {
+    it('hard-delete cascades to reviews, property_media, and property_translations', async () => {
       const owner = await createUser('Cascade Owner', '+966500050001', 'OWNER');
       const propertyId = await insertProperty(owner.id, { title: 'Cascade Test' });
       const token = issueAccessToken(owner.id);
@@ -1279,28 +1275,28 @@ describe('property routes', () => {
 
       expect(response.status).toBe(204);
 
-      // Reviews and media are preserved (soft-delete)
+      // Reviews and media are removed (hard-delete cascades)
       const reviews = await db
         .selectFrom('reviews')
         .where('property_id', '=', propertyId)
         .select('id')
         .execute();
-      expect(reviews).toHaveLength(1);
+      expect(reviews).toHaveLength(0);
 
       const media = await db
         .selectFrom('property_media')
         .where('property_id', '=', propertyId)
         .select('id')
         .execute();
-      expect(media).toHaveLength(1);
+      expect(media).toHaveLength(0);
 
-      // Property row still exists but is INACTIVE
+      // Property row is gone
       const property = await db
         .selectFrom('properties')
         .where('id', '=', propertyId)
         .select('status')
-        .executeTakeFirstOrThrow();
-      expect(property.status).toBe('INACTIVE');
+        .executeTakeFirst();
+      expect(property).toBeUndefined();
     });
 
     it('excludes an INACTIVE property from the public listing but includes it in /my', async () => {
