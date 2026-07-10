@@ -21,6 +21,9 @@ export default defineConfig({
     include: ['tests/**/*.test.{ts,tsx}'],
     exclude: [],
     setupFiles: ['./tests/setup.ts'],
+    env: {
+      API_BASE_URL: 'http://localhost:3001',
+    },
     pool: 'forks',
     coverage: {
       provider: 'v8',

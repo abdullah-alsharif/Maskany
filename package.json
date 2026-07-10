@@ -22,7 +22,7 @@
     "test:all": "bash scripts/test.sh && bash scripts/test-e2e.sh",
     "test:only": "pnpm -r --if-present test",
     "test:coverage": "pnpm -r --if-present test:coverage",
-    "check": "pnpm lint && pnpm format:check && pnpm typecheck && pnpm build && pnpm test:only",
+    "check": "pnpm lint && pnpm format:check && pnpm typecheck && pnpm build && pnpm test",
     "db:reset": "pnpm --filter @maskany/api db:reset",
     "db:setup": "pnpm --filter @maskany/api db:setup",
     "db:migrate": "pnpm --filter @maskany/api db:migrate",
