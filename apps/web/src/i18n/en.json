@@ -409,6 +409,23 @@
     "message": "Hey! I came across this listing on Maskany and wanted to ask about:\n\n\"{{title}}\"\n{{url}}\n\nIs it still available?",
     "message_ar": "مرحباً! وجدت هذا الإعلان على مسكني وأريد الاستفسار عنه:\n\n\"{{title}}\"\n{{url}}\n\nهل لا يزال متاحاً؟"
   },
+  "editImage": {
+    "dropOrTap": "Drop photos or tap to choose",
+    "limit": "{{count}} more images can be added",
+    "uploadAria": "Upload images",
+    "newBadge": "New",
+    "existingImage": "Existing image",
+    "moveUp": "Move up {{name}}",
+    "moveDown": "Move down {{name}}",
+    "delete": "Delete image {{name}}",
+    "deleteTitle": "Delete image?",
+    "deleteDesc": "This image will be removed when you save changes.",
+    "cancel": "Cancel",
+    "confirmDelete": "Delete",
+    "exceedsLimit": "exceeds the {{limit}} per-image limit and was skipped.",
+    "maxReached": "You can upload a max of {{max}} images.",
+    "imageCount": "{{current}} of {{max}} images"
+  },
   "property": {
     "bed": "{{count}} bed",
     "bed_other": "{{count}} beds",

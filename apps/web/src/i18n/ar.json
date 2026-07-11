@@ -409,6 +409,23 @@
     "message": "مرحباً! وجدت هذا الإعلان على مسكني وأريد الاستفسار عنه:\n\n\"{{title}}\"\n{{url}}\n\nهل لا يزال متاحاً؟",
     "message_ar": "مرحباً! وجدت هذا الإعلان على مسكني وأريد الاستفسار عنه:\n\n\"{{title}}\"\n{{url}}\n\nهل لا يزال متاحاً؟"
   },
+  "editImage": {
+    "dropOrTap": "اسحب الصور أو اضغط للاختيار",
+    "limit": "يمكن إضافة {{count}} صور أخرى",
+    "uploadAria": "رفع صور",
+    "newBadge": "جديد",
+    "existingImage": "صورة موجودة",
+    "moveUp": "نقل لأعلى {{name}}",
+    "moveDown": "نقل لأسفل {{name}}",
+    "delete": "حذف الصورة {{name}}",
+    "deleteTitle": "حذف الصورة؟",
+    "deleteDesc": "ستتم إزالة هذه الصورة عند حفظ التغييرات.",
+    "cancel": "إلغاء",
+    "confirmDelete": "حذف",
+    "exceedsLimit": "يتجاوز الحد الأقصى {{limit}} لكل صورة وتمت تخطيه.",
+    "maxReached": "يمكنك رفع ما يصل إلى {{max}} صور.",
+    "imageCount": "{{current}} من {{max}} صور"
+  },
   "property": {
     "bed": "{{count}} سرير",
     "bed_other": "{{count}} سريرات",

@@ -18,9 +18,16 @@ import {
 import { SeoHead } from '../components/seo-head';
 import { SkeletonDetailPage } from '../components/ui/skeleton';
 import { useProperty } from '../hooks/use-property';
-import { updateProperty, savePropertyTranslation } from '../services/property-service';
+import {
+  updateProperty,
+  savePropertyTranslation,
+  uploadPropertyImages,
+  deletePropertyMedia,
+  reorderPropertyMedia,
+} from '../services/property-service';
+import { apiClient } from '../services/api';
 import { TranslationEditor, type TranslationData } from '../components/translation-editor';
-import type { Property } from '../types/property';
+import type { Property, PropertyMedia } from '../types/property';
 
 function toFormValues(property: Property): PropertyFormValues {
   return {
@@ -66,7 +73,48 @@ export function EditPropertyPage() {
   const mutation = useMutation({
     mutationFn: async (payload: PropertyFormSubmitPayload) => {
       if (!id) throw new Error('Missing property id.');
-      return updateProperty(id, payload);
+
+      // 1. Update property fields
+      const updated = await updateProperty(id, payload);
+
+      // 2. Handle image deletions
+      if (property?.media && payload.editedExistingImages) {
+        const keptIds = new Set(payload.editedExistingImages.map((img) => img.id));
+        const deletedIds = property.media
+          .filter((img) => !keptIds.has(img.id))
+          .map((img) => img.id);
+        await Promise.all(deletedIds.map((mediaId) => deletePropertyMedia(id, mediaId)));
+      }
+
+      // 3. Upload new images
+      let uploadedMedia: PropertyMedia[] = [];
+      if (payload.images.length > 0) {
+        uploadedMedia = await uploadPropertyImages(id, payload.images);
+      }
+
+      // 4. Reorder all media — backend requires every media asset exactly once.
+      //    Build ordered list: user-ordered images + newly uploaded + videos
+      //    not shown in the edit UI (e.g. existing videos).
+      const orderedImageIds = [
+        ...(payload.editedExistingImages ?? []).map((img) => img.id),
+        ...uploadedMedia.map((m) => m.id),
+      ];
+
+      // Fetch the full current media list to include any videos the UI didn't manage
+      const freshProperty = await apiClient.get<{ media?: PropertyMedia[] }>(`/properties/${id}`);
+      const allCurrentMedia = freshProperty.data.media ?? [];
+      const managedIds = new Set(orderedImageIds);
+      const unmanagedMedia = allCurrentMedia
+        .filter((m) => !managedIds.has(m.id))
+        .sort((a, b) => a.sortOrder - b.sortOrder);
+
+      const finalOrder = [...orderedImageIds, ...unmanagedMedia.map((m) => m.id)];
+
+      if (finalOrder.length > 0) {
+        await reorderPropertyMedia(id, finalOrder);
+      }
+
+      return updated;
     },
     onSuccess: async (updated) => {
       await Promise.all([
@@ -160,6 +208,7 @@ export function EditPropertyPage() {
         <PropertyForm
           mode="edit"
           initialValues={toFormValues(property)}
+          initialImages={property.images ?? []}
           onSubmit={(payload) => {
             setError(null);
             mutation.mutate(payload);

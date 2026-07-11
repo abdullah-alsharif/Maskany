@@ -74,6 +74,7 @@ export interface PropertySummary {
   updatedAt: string;
   coverImage: { url: string; thumbnailUrl: string | null; altText: string | null } | null;
   translation: { title: string; city: string; area: string | null; country: string } | null;
+  media?: PropertyImage[];
 }
 
 export interface PropertyImage {
@@ -126,6 +127,7 @@ export function toSummary(
   row: PropertyRow,
   cover: CoverImage | null,
   translation?: { title: string; city: string; area: string | null; country: string } | null,
+  media?: PropertyImage[],
 ): PropertySummary {
   return {
     id: row.id,
@@ -152,6 +154,7 @@ export function toSummary(
     updatedAt: row.updated_at.toISOString(),
     coverImage: cover,
     translation: translation ?? null,
+    ...(media ? { media } : {}),
   };
 }
 
@@ -172,6 +175,31 @@ async function fetchCoverImages(propertyIds: string[]): Promise<Map<string, Cove
       { url: r.url, thumbnailUrl: r.thumbnail_url, altText: r.alt_text },
     ]),
   );
+}
+
+async function fetchAllMedia(propertyIds: string[]): Promise<Map<string, PropertyImage[]>> {
+  if (propertyIds.length === 0) return new Map();
+  const rows = await db
+    .selectFrom('property_media')
+    .select(['property_id', 'id', 'url', 'thumbnail_url', 'alt_text', 'sort_order', 'media_type'])
+    .where('property_id', 'in', propertyIds)
+    .orderBy('property_id', 'asc')
+    .orderBy('sort_order', 'asc')
+    .execute();
+  const map = new Map<string, PropertyImage[]>();
+  for (const row of rows) {
+    const list = map.get(row.property_id) ?? [];
+    list.push({
+      id: row.id,
+      url: row.url,
+      thumbnailUrl: row.thumbnail_url,
+      altText: row.alt_text,
+      sortOrder: row.sort_order,
+      mediaType: row.media_type as 'IMAGE' | 'VIDEO',
+    });
+    map.set(row.property_id, list);
+  }
+  return map;
 }
 
 async function fetchTranslationMap(
@@ -715,5 +743,13 @@ export async function listMyProperties(userId: string): Promise<PropertySummary[
   ]);
   const allTranslations = new Map([...enTranslations, ...arTranslations]);
 
-  return rows.map((row) => toSummary(row, null, allTranslations.get(row.id)));
+  const propertyIds = rows.map((r) => r.id);
+  const [covers, allMedia] = await Promise.all([
+    fetchCoverImages(propertyIds),
+    fetchAllMedia(propertyIds),
+  ]);
+
+  return rows.map((row) =>
+    toSummary(row, covers.get(row.id) ?? null, allTranslations.get(row.id), allMedia.get(row.id)),
+  );
 }

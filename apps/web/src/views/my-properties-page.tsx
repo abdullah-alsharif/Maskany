@@ -114,9 +114,37 @@ function PropertyRow({
       className={`rounded-2xl bg-white shadow-[var(--shadow-card)] hover:shadow-[var(--shadow-card-hover)] transition-shadow transition-transform duration-300 hover:-translate-y-0.5 overflow-hidden animate-slide-up ${staggerClass}`}
     >
       <div className="flex flex-col sm:flex-row">
-        {/* Cover image */}
+        {/* Cover images strip */}
         <div className="relative w-full sm:w-44 h-36 sm:h-auto shrink-0 bg-stone-100 overflow-hidden sm:rounded-s-2xl">
-          {property.coverImage?.url ? (
+          {property.media && property.media.length > 0 ? (
+            property.media.length === 1 ? (
+              <img
+                src={property.media[0].thumbnailUrl || property.media[0].url}
+                alt={property.media[0].altText ?? displayTitle}
+                className="absolute inset-0 w-full h-full object-cover"
+                loading="lazy"
+              />
+            ) : (
+              <div className="grid grid-cols-2 gap-0.5 h-full">
+                {property.media.slice(0, 4).map((m, i) => (
+                  <img
+                    key={m.id}
+                    src={m.thumbnailUrl || m.url}
+                    alt={m.altText ?? `${displayTitle} ${i + 1}`}
+                    className={`w-full h-full object-cover ${i === 3 && property.media!.length > 4 ? 'relative' : ''}`}
+                    loading="lazy"
+                  />
+                ))}
+                {property.media.length > 4 && (
+                  <div className="absolute inset-0 flex items-center justify-center bg-black/40">
+                    <span className="text-white text-sm font-semibold">
+                      +{property.media.length - 4}
+                    </span>
+                  </div>
+                )}
+              </div>
+            )
+          ) : property.coverImage?.url ? (
             <img
               src={property.coverImage.url}
               alt={property.coverImage.altText ?? displayTitle}

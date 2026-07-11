@@ -270,7 +270,7 @@ describe('PropertyForm', () => {
     expect(screen.getByRole('alert')).toHaveTextContent(/currency/i);
   });
 
-  it('shows edit hint on step 4 when mode is edit', () => {
+  it('shows image upload UI on step 4 when mode is edit', () => {
     render(
       <PropertyForm
         mode="edit"
@@ -288,7 +288,7 @@ describe('PropertyForm', () => {
     fireEvent.click(screen.getByRole('button', { name: /next/i }));
     fireEvent.click(screen.getByRole('button', { name: /next/i }));
     fireEvent.click(screen.getByRole('button', { name: /next/i }));
-    expect(screen.getByText(/images can be managed/i)).toBeInTheDocument();
+    expect(screen.getByText(/drop photos or tap to choose/i)).toBeInTheDocument();
   });
 
   it('normalizes whatsapp number by stripping non-digits after + prefix', () => {

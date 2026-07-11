@@ -111,3 +111,11 @@ export async function uploadPropertyImages(
   );
   return response.data.media;
 }
+
+export async function deletePropertyMedia(propertyId: string, mediaId: string): Promise<void> {
+  await apiClient.delete(`/properties/${propertyId}/media/${mediaId}`);
+}
+
+export async function reorderPropertyMedia(propertyId: string, mediaIds: string[]): Promise<void> {
+  await apiClient.put(`/properties/${propertyId}/media/reorder`, { mediaIds });
+}

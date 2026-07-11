@@ -18,7 +18,9 @@ import { type ReactNode, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Button } from './ui/button';
 import { ImageUploader } from './image-uploader';
+import { EditImageManager } from './edit-image-manager';
 import { TranslationEditor, type TranslationData } from './translation-editor';
+import type { PropertyMedia } from '../types/property';
 
 export type PropertyFormValues = {
   title: string;
@@ -50,11 +52,14 @@ export type PropertyFormTranslation = {
 export type PropertyFormSubmitPayload = PropertyFormValues & {
   images: File[];
   translation?: PropertyFormTranslation | null;
+  /** Existing images after edit (deletions/reordering applied). */
+  editedExistingImages?: PropertyMedia[];
 };
 
 type PropertyFormProps = {
   mode: 'create' | 'edit';
   initialValues?: Partial<PropertyFormValues>;
+  initialImages?: PropertyMedia[];
   onSubmit?: (payload: PropertyFormSubmitPayload) => void;
   submitting?: boolean;
 };
@@ -242,10 +247,17 @@ const inputErrorClass =
 const textareaClass =
   'min-h-[120px] w-full rounded-xl border border-stone-300 bg-white p-3 text-base focus:outline-none focus:border-terracotta-400 focus:ring-2 focus:ring-terracotta-100 transition-shadow duration-200';
 
-export function PropertyForm({ mode, initialValues, onSubmit, submitting }: PropertyFormProps) {
+export function PropertyForm({
+  mode,
+  initialValues,
+  initialImages,
+  onSubmit,
+  submitting,
+}: PropertyFormProps) {
   const { t } = useTranslation();
   const [values, setValues] = useState<PropertyFormValues>(() => defaultValues(initialValues));
   const [images, setImages] = useState<File[]>([]);
+  const [existingImages, setExistingImages] = useState<PropertyMedia[]>(() => initialImages ?? []);
   const [step, setStep] = useState(1);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [transOpen, setTransOpen] = useState(false);
@@ -295,6 +307,7 @@ export function PropertyForm({ mode, initialValues, onSubmit, submitting }: Prop
       ...values,
       whatsappNumber,
       images,
+      editedExistingImages: mode === 'edit' ? existingImages : undefined,
       translation: hasTranslation ? translation : null,
     });
   };
@@ -330,10 +343,12 @@ export function PropertyForm({ mode, initialValues, onSubmit, submitting }: Prop
         value:
           mode === 'create'
             ? t('propertyForm.reviewImagesSelected', { count: images.length })
-            : t('propertyForm.reviewImagesManaged'),
+            : t('propertyForm.reviewImagesSelected', {
+                count: existingImages.length + images.length,
+              }),
       },
     ],
-    [values, images, mode, t],
+    [values, images, existingImages.length, mode, t],
   );
 
   return (
@@ -531,7 +546,12 @@ export function PropertyForm({ mode, initialValues, onSubmit, submitting }: Prop
         <section className="space-y-4 animate-fade-in">
           <StepHeader step={4} labelKey="propertyForm.stepImages" t={t} />
           {mode === 'edit' ? (
-            <p className="text-sm text-stone-600">{t('propertyForm.imagesEditHint')}</p>
+            <EditImageManager
+              existingImages={existingImages}
+              onExistingImagesChange={setExistingImages}
+              newFiles={images}
+              onNewFilesChange={setImages}
+            />
           ) : (
             <ImageUploader files={images} onChange={setImages} />
           )}
