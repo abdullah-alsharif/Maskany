@@ -75,6 +75,7 @@ export default defineConfig({
         SMTP_USER: 'test',
         SMTP_PASS: 'test',
         SMTP_FROM: 'test@maskany.com',
+        AUTH_RATE_LIMIT: '200',
       },
     },
     {

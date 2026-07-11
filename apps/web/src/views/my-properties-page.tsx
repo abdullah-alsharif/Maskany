@@ -81,7 +81,7 @@ function PropertyRow({
   statusPending: boolean;
   index: number;
 }) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
 
   const statusLabelKey: Record<PropertyStatus, string> = {
     ACTIVE: 'myProperties.statusActive',
@@ -100,6 +100,15 @@ function PropertyRow({
 
   const staggerClass = index < 6 ? `animate-stagger-${index + 1}` : '';
 
+  const userLocale = i18n.language.startsWith('ar') ? 'ar' : 'en';
+  const useTranslationContent = userLocale !== property.locale && property.translation;
+  const displayTitle =
+    useTranslationContent && property.translation ? property.translation.title : property.title;
+  const displayArea =
+    useTranslationContent && property.translation ? property.translation.area : property.area;
+  const displayCity =
+    useTranslationContent && property.translation ? property.translation.city : property.city;
+
   return (
     <article
       className={`rounded-2xl bg-white shadow-[var(--shadow-card)] hover:shadow-[var(--shadow-card-hover)] transition-shadow transition-transform duration-300 hover:-translate-y-0.5 overflow-hidden animate-slide-up ${staggerClass}`}
@@ -110,7 +119,7 @@ function PropertyRow({
           {property.coverImage?.url ? (
             <img
               src={property.coverImage.url}
-              alt={property.coverImage.altText ?? property.title}
+              alt={property.coverImage.altText ?? displayTitle}
               className="absolute inset-0 w-full h-full object-cover"
               loading="lazy"
             />
@@ -127,11 +136,11 @@ function PropertyRow({
           <div className="flex items-start justify-between gap-3">
             <div className="min-w-0">
               <h3 className="font-semibold text-base text-stone-950 leading-snug truncate">
-                {property.title}
+                {displayTitle}
               </h3>
               <p className="text-sm text-stone-400 mt-1">
-                {property.area ? `${property.area}, ` : ''}
-                {property.city}
+                {displayArea ? `${displayArea}, ` : ''}
+                {displayCity}
               </p>
             </div>
             <Badge variant={STATUS_VARIANTS[property.status]} className="shrink-0 mt-0.5">
@@ -186,7 +195,7 @@ function PropertyRow({
           <div className="flex gap-2 pt-3 mt-1 border-t border-stone-100">
             <Link
               href={`/properties/${property.id}/edit`}
-              aria-label={`${t('myProperties.edit')} ${property.title}`}
+              aria-label={`${t('myProperties.edit')} ${displayTitle}`}
               className="inline-flex items-center justify-center gap-1.5 min-w-[44px] min-h-[44px] px-3.5 rounded-lg border border-stone-200 bg-white text-sm font-semibold text-stone-700 hover:bg-stone-50 active:bg-stone-100 transition-colors active:scale-[0.96]"
             >
               <Pencil size={15} aria-hidden="true" />
@@ -196,7 +205,7 @@ function PropertyRow({
               variant="secondary"
               size="sm"
               loading={statusPending}
-              aria-label={`${t(toggleLabel)} ${property.title}`}
+              aria-label={`${t(toggleLabel)} ${displayTitle}`}
               onClick={() => onToggleStatus(property)}
             >
               <Power size={15} aria-hidden="true" />
@@ -205,7 +214,7 @@ function PropertyRow({
             <Button
               variant="danger"
               size="sm"
-              aria-label={`${t('myProperties.delete')} ${property.title}`}
+              aria-label={`${t('myProperties.delete')} ${displayTitle}`}
               onClick={() => onDelete(property)}
             >
               <Trash2 size={15} aria-hidden="true" />

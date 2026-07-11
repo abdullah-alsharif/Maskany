@@ -65,7 +65,7 @@ test.describe('Filters', () => {
 
     // Open filter panel and apply type=VILLA, minPrice=1000
     await page.getByRole('button', { name: 'Filters' }).click();
-    await page.getByRole('checkbox', { name: 'Villa' }).check();
+    await page.getByRole('button', { name: 'Villa', pressed: false }).click();
     await page.locator('#filter-min-price').fill('1000');
     await page.getByRole('button', { name: 'Apply Filters' }).click();
 
@@ -84,7 +84,7 @@ test.describe('Filters', () => {
 
     // Open filter panel and assert it reflects the loaded params
     await page.getByRole('button', { name: 'Filters' }).click();
-    await expect(page.getByRole('checkbox', { name: 'Villa' })).toBeChecked();
+    await expect(page.getByRole('button', { name: 'Villa', pressed: true })).toBeVisible();
     await expect(page.locator('#filter-min-price')).toHaveValue('1000');
 
     // Assert search results match the filter

@@ -74,10 +74,10 @@ test.describe('PRD §3.4 — Property Detail View', () => {
     expect(numberMatch![1]).not.toContain('+');
     expect(numberMatch![1]).not.toContain(' ');
 
-    // Message contains property title and reference ID
+    // Message contains property title and listing URL
     const message = decodeURIComponent(href!.split('text=')[1] ?? '');
     expect(message).toContain(expectedTitle);
-    expect(message).toMatch(/ref/i);
+    expect(message).toMatch(/maskany/i);
   });
 
   test('[AC-31] WhatsApp number is in international format (no +, no spaces)', async ({ page }) => {
