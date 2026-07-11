@@ -309,16 +309,31 @@ export function PropertyForm({ mode, initialValues, onSubmit, submitting }: Prop
   };
 
   const reviewSummary = useMemo(
-    () => ({
-      Title: values.title,
-      Type: values.propertyType,
-      Price: `${values.currency} ${values.price} ${values.priceUnit}`,
-      Rooms: `${values.rooms} bed / ${values.bathrooms} bath`,
-      Location: [values.area, values.city, values.country].filter(Boolean).join(', '),
-      WhatsApp: values.whatsappNumber,
-      Images: mode === 'create' ? `${images.length} selected` : 'Managed separately',
-    }),
-    [values, images, mode],
+    () => [
+      { key: t('propertyForm.reviewTitle'), value: values.title },
+      { key: t('propertyForm.reviewType'), value: t(`propertyType.${values.propertyType}`) },
+      {
+        key: t('propertyForm.reviewPrice'),
+        value: `${values.currency} ${values.price} ${t(`priceUnit.${values.priceUnit}`)}`,
+      },
+      {
+        key: t('propertyForm.reviewRooms'),
+        value: `${t('property.bed', { count: values.rooms })} / ${t('property.bath', { count: values.bathrooms })}`,
+      },
+      {
+        key: t('propertyForm.reviewLocation'),
+        value: [values.area, values.city, values.country].filter(Boolean).join(', '),
+      },
+      { key: t('propertyForm.reviewWhatsapp'), value: values.whatsappNumber },
+      {
+        key: t('propertyForm.reviewImages'),
+        value:
+          mode === 'create'
+            ? t('propertyForm.reviewImagesSelected', { count: images.length })
+            : t('propertyForm.reviewImagesManaged'),
+      },
+    ],
+    [values, images, mode, t],
   );
 
   return (
@@ -548,10 +563,10 @@ export function PropertyForm({ mode, initialValues, onSubmit, submitting }: Prop
         <section className="space-y-4 animate-fade-in">
           <StepHeader step={6} labelKey="propertyForm.stepReview" t={t} />
           <dl className="rounded-2xl bg-white p-4 shadow-[var(--shadow-card)] divide-y divide-stone-100">
-            {Object.entries(reviewSummary).map(([key, value]) => (
+            {reviewSummary.map(({ key, value }) => (
               <div key={key} className="flex justify-between gap-4 py-2 first:pt-0 last:pb-0">
                 <dt className="text-sm text-stone-500">{key}</dt>
-                <dd className="text-sm font-medium text-stone-900 text-right">{value || '—'}</dd>
+                <dd className="text-sm font-medium text-stone-900 text-end">{value || '—'}</dd>
               </div>
             ))}
           </dl>

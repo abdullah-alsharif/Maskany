@@ -1,8 +1,9 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
-import { ArrowLeft, Share2 } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Share2 } from 'lucide-react';
 import { type ReactNode } from 'react';
+import { useTranslation } from 'react-i18next';
 
 type HeaderProps = {
   /** Show back button instead of logo */
@@ -28,6 +29,9 @@ export function Header({
   transparent = false,
 }: HeaderProps) {
   const router = useRouter();
+  const { t, i18n } = useTranslation();
+  const isRtl = i18n.language.startsWith('ar');
+  const BackIcon = isRtl ? ArrowRight : ArrowLeft;
 
   const handleShare = async () => {
     if (onShare) {
@@ -68,9 +72,9 @@ export function Header({
                   : 'hover:bg-stone-100 text-stone-700'
               }
             `}
-            aria-label="Go back"
+            aria-label={t('aria.headerBack')}
           >
-            <ArrowLeft size={20} strokeWidth={2} />
+            <BackIcon size={20} strokeWidth={2} />
           </button>
         ) : (
           <h1 className="font-display text-2xl text-stone-950 tracking-tight">Maskany</h1>
@@ -96,7 +100,7 @@ export function Header({
                   : 'hover:bg-stone-100 text-stone-600'
               }
             `}
-            aria-label="Share"
+            aria-label={t('aria.headerShare')}
           >
             <Share2 size={18} strokeWidth={2} />
           </button>

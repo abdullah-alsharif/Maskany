@@ -13,6 +13,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { Header } from '../components/layout/header';
 import { PropertyForm, type PropertyFormSubmitPayload } from '../components/property-form';
 import { SeoHead } from '../components/seo-head';
+import { useTranslation } from 'react-i18next';
 import {
   createProperty,
   uploadPropertyImages,
@@ -22,6 +23,7 @@ import {
 export function CreatePropertyPage() {
   const router = useRouter();
   const queryClient = useQueryClient();
+  const { t } = useTranslation();
   const [error, setError] = useState<string | null>(null);
 
   const mutation = useMutation({
@@ -57,14 +59,14 @@ export function CreatePropertyPage() {
       router.push(`/properties/${property.id}`);
     },
     onError: () => {
-      setError('We could not save this listing. Please try again.');
+      setError(t('createListing.error'));
     },
   });
 
   return (
     <section className="page-content">
-      <SeoHead title="Create listing | Maskany" description="List your property on Maskany." />
-      <Header showBack title="Create listing" />
+      <SeoHead title={t('meta.createListing.title')} description={t('meta.createListing.desc')} />
+      <Header showBack title={t('createListing.header')} />
       <div className="px-4 py-5 max-w-2xl mx-auto">
         <PropertyForm
           mode="create"

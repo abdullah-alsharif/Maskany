@@ -76,7 +76,7 @@ export function EditPropertyPage() {
       router.push(`/properties/${updated.id}`);
     },
     onError: () => {
-      setError('We could not update this listing. Please try again.');
+      setError(t('editListing.updateError'));
     },
   });
 
@@ -119,10 +119,14 @@ export function EditPropertyPage() {
         area: transForm.area.trim() || null,
         country: transForm.country.trim() || 'SA',
       });
-      setTransMsg(t('propertyForm.translationSaved') || 'Translation saved.');
-      await queryClient.invalidateQueries({ queryKey: ['property', id] });
+      setTransMsg(t('propertyForm.translationSaved'));
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['property', id] }),
+        queryClient.invalidateQueries({ queryKey: ['properties'] }),
+        queryClient.invalidateQueries({ queryKey: ['my-properties'] }),
+      ]);
     } catch {
-      setTransMsg(t('propertyForm.translationError') || 'Could not save translation.');
+      setTransMsg(t('propertyForm.translationError'));
     } finally {
       setTransSaving(false);
     }
@@ -131,7 +135,7 @@ export function EditPropertyPage() {
   if (isPending) {
     return (
       <section className="page-content">
-        <Header showBack title={t('editListing.header') || 'Edit listing'} />
+        <Header showBack title={t('editListing.header')} />
         <SkeletonDetailPage />
       </section>
     );
@@ -140,8 +144,8 @@ export function EditPropertyPage() {
   if (loadError || !property) {
     return (
       <section className="page-content">
-        <Header showBack title={t('editListing.header') || 'Edit listing'} />
-        <EmptyState title="Listing not found" description="This property could not be loaded." />
+        <Header showBack title={t('editListing.header')} />
+        <EmptyState title={t('editListing.notFound')} description={t('editListing.notFoundDesc')} />
       </section>
     );
   }
@@ -150,11 +154,8 @@ export function EditPropertyPage() {
 
   return (
     <section className="page-content">
-      <SeoHead
-        title={`Edit ${property.title} | Maskany`}
-        description="Update your listing details."
-      />
-      <Header showBack title="Edit listing" />
+      <SeoHead title={t('meta.myProperties.title')} description={t('meta.myProperties.desc')} />
+      <Header showBack title={t('editListing.header')} />
       <div className="px-4 py-5 max-w-2xl mx-auto space-y-6">
         <PropertyForm
           mode="edit"

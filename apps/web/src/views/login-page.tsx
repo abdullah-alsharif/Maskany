@@ -71,7 +71,7 @@ export function LoginPage() {
 
   return (
     <section className="page-content px-4 py-8 max-w-md mx-auto">
-      <SeoHead title="Sign in | Maskany" description="Sign in to your Maskany account." />
+      <SeoHead title={t('meta.login.title')} description={t('meta.login.desc')} />
       <h1 className="font-display text-3xl text-stone-950">{t('login.heading')}</h1>
       <p className="mt-2 text-stone-600">{t('login.subheading')}</p>
 
@@ -133,7 +133,7 @@ export function LoginPage() {
                 autoComplete="tel-national"
                 value={phone}
                 onChange={(e) => setPhone(e.target.value)}
-                placeholder="5XXXXXXXX"
+                placeholder={t('placeholder.phone')}
                 className="h-12 w-full rounded-xl border border-stone-300 bg-white px-3 text-base focus:outline-none focus:border-terracotta-400 focus:ring-2 focus:ring-terracotta-100 transition-shadow duration-200"
               />
             </div>
@@ -149,7 +149,7 @@ export function LoginPage() {
               autoComplete="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              placeholder="you@example.com"
+              placeholder={t('placeholder.email')}
               className="h-12 w-full rounded-xl border border-stone-300 bg-white px-3 text-base focus:outline-none focus:border-terracotta-400 focus:ring-2 focus:ring-terracotta-100 transition-shadow duration-200"
             />
           </div>

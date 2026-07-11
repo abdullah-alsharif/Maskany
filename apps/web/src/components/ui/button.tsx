@@ -51,7 +51,7 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
         {...props}
       >
         {loading && (
-          <svg className="animate-spin -ml-1 mr-2 h-4 w-4" viewBox="0 0 24 24" fill="none">
+          <svg className="animate-spin -ms-1 me-2 h-4 w-4" viewBox="0 0 24 24" fill="none">
             <circle
               className="opacity-25"
               cx="12"

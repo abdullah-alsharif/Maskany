@@ -55,8 +55,11 @@ function errorMessageOf(error: unknown, t: (key: string) => string): string {
   return maybe.response?.data?.error?.message ?? maybe.message ?? t('review.somethingWentWrong');
 }
 
-function countLabel(count: number): string {
-  return `${count} review${count === 1 ? '' : 's'}`;
+function countLabel(
+  count: number,
+  t: (key: string, opts?: Record<string, unknown>) => string,
+): string {
+  return t('review.count', { count });
 }
 
 function toDistributionNumbers(dist: ReviewSummary['distribution']): Record<number, number> {
@@ -84,7 +87,7 @@ function SummaryHeader({ summary, t }: { summary: ReviewSummary; t: (key: string
           <div className="space-y-1">
             <StarRating value={avg} size="sm" showValue={false} />
             <span className="block text-xs font-medium text-stone-500 uppercase tracking-wider">
-              {countLabel(summary.reviewCount)}
+              {countLabel(summary.reviewCount, t)}
             </span>
           </div>
         </div>

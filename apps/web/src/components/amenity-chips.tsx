@@ -20,6 +20,7 @@ import {
   Wifi,
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { amenityConfig } from '../styles/design-tokens';
 
 const iconMap: Record<string, LucideIcon> = {
@@ -42,10 +43,11 @@ type AmenityChipsProps = {
 };
 
 export function AmenityChips({ amenities }: AmenityChipsProps) {
+  const { t } = useTranslation();
   if (amenities.length === 0) return null;
 
   return (
-    <ul aria-label="Amenities" className="flex flex-wrap gap-2">
+    <ul aria-label={t('aria.amenities')} className="flex flex-wrap gap-2">
       {amenities.map((key) => {
         const config = amenityConfig[key];
         const Icon = config ? (iconMap[config.icon] ?? Sparkles) : Sparkles;

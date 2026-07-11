@@ -162,7 +162,7 @@ describe('EditPropertyPage', () => {
     }) as AxiosAdapter;
 
     renderPage();
-    expect(screen.getByText('editListing.header')).toBeInTheDocument();
+    expect(screen.getByText('Edit listing')).toBeInTheDocument();
     expect(screen.queryByLabelText(/title/i)).toBeNull();
 
     resolveGet!({

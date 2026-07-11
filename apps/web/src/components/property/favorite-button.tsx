@@ -1,4 +1,5 @@
 import { Heart } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 
 type FavoriteButtonProps = {
   propertyId: string;
@@ -14,6 +15,8 @@ export function FavoriteButton({
   onToggle,
   size = 'sm',
 }: FavoriteButtonProps) {
+  const { t } = useTranslation();
+
   const handleClick = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
@@ -36,7 +39,7 @@ export function FavoriteButton({
         focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-terracotta-400
         ${isFavorite ? 'text-red-500' : 'text-stone-600 hover:text-red-400'}
       `}
-      aria-label={isFavorite ? 'Remove from favorites' : 'Add to favorites'}
+      aria-label={isFavorite ? t('aria.favoriteRemove') : t('aria.favoriteAdd')}
       aria-pressed={isFavorite}
     >
       <Heart

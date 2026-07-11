@@ -34,7 +34,7 @@ import { WhatsAppFab } from '../components/property/whatsapp-button';
 import { useProperty } from '../hooks/use-property';
 import { useFavorites } from '../hooks/use-favorites';
 import { useAuth } from '../hooks/use-auth';
-import { priceUnitLabels, propertyTypeConfig } from '../styles/design-tokens';
+import { propertyTypeConfig } from '../styles/design-tokens';
 import type { Property } from '../types/property';
 
 const DESCRIPTION_CLAMP = 200;
@@ -127,7 +127,7 @@ function PropertyBody({ property }: { property: Property }) {
       />
 
       <article className="page-content -mt-14">
-        <ImageGallery images={property.images ?? []} alt={property.title} />
+        <ImageGallery images={property.images ?? []} alt={displayTitle} />
 
         <div className="px-4 py-5 space-y-7">
           {/* Title + type badge + location + rating */}
@@ -135,7 +135,7 @@ function PropertyBody({ property }: { property: Property }) {
             <div className="flex items-start justify-between gap-3">
               <h1 className="font-display text-3xl text-stone-950 leading-tight">{displayTitle}</h1>
               <Badge variant={typeConfig.color.includes('terracotta') ? 'terracotta' : 'olive'}>
-                {typeConfig.label}
+                {t(`propertyType.${property.propertyType}`)}
               </Badge>
             </div>
             <p className="text-stone-600 text-base">{displaySummary}</p>
@@ -164,7 +164,7 @@ function PropertyBody({ property }: { property: Property }) {
                 {property.currency} {formatPrice(property.price)}
               </span>
               <span className="text-sm text-stone-500 font-medium">
-                {priceUnitLabels[property.priceUnit]}
+                {t(`priceUnit.${property.priceUnit}`)}
               </span>
             </div>
           </section>

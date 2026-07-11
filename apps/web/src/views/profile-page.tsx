@@ -3,7 +3,16 @@
 import { useCallback, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { Calendar, ChevronRight, Heart, Home, LogOut, Share2, User } from 'lucide-react';
+import {
+  Calendar,
+  ChevronRight,
+  ChevronLeft,
+  Heart,
+  Home,
+  LogOut,
+  Share2,
+  User,
+} from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { formatMemberSince } from '../utils/format';
 import { Badge } from '../components/ui/badge';
@@ -93,18 +102,21 @@ function ActionItem({
   label,
   right,
   onClick,
+  isRtl,
 }: {
   icon: typeof Home;
   label: string;
   right?: React.ReactNode;
   onClick?: () => void;
+  isRtl?: boolean;
 }) {
   const Component = onClick ? 'button' : 'div';
+  const ChevronIcon = isRtl ? ChevronLeft : ChevronRight;
   return (
     <Component
       type={onClick ? 'button' : undefined}
       onClick={onClick}
-      className="flex items-center justify-between w-full px-4 py-3.5 min-h-[44px] text-left transition-colors hover:bg-stone-50 active:bg-stone-100"
+      className="flex items-center justify-between w-full px-4 py-3.5 min-h-[44px] text-start transition-colors hover:bg-stone-50 active:bg-stone-100"
     >
       <div className="flex items-center gap-3">
         <div className="w-9 h-9 rounded-lg bg-stone-100 text-stone-600 flex items-center justify-center">
@@ -114,7 +126,7 @@ function ActionItem({
       </div>
       <div className="flex items-center gap-2">
         {right}
-        {onClick && <ChevronRight size={16} className="text-stone-400" strokeWidth={1.5} />}
+        {onClick && <ChevronIcon size={16} className="text-stone-400" strokeWidth={1.5} />}
       </div>
     </Component>
   );
@@ -123,7 +135,8 @@ function ActionItem({
 export function ProfilePage() {
   const { user, isAuthenticated, logout } = useAuth();
   const router = useRouter();
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
+  const isRtl = i18n.language.startsWith('ar');
   const { count: favoriteCount } = useFavorites();
   const [showLogoutDialog, setShowLogoutDialog] = useState(false);
   const [loggingOut, setLoggingOut] = useState(false);
@@ -151,7 +164,7 @@ export function ProfilePage() {
   if (!isAuthenticated || !user) {
     return (
       <section className="page-content px-4 py-6 max-w-md mx-auto">
-        <SeoHead title="Profile | Maskany" description="Manage your account and listings." />
+        <SeoHead title={t('meta.profile.title')} description={t('meta.profile.desc')} />
         <div className="flex flex-col items-center pt-10 animate-fade-in">
           <div className="w-20 h-20 rounded-full bg-stone-200 flex items-center justify-center">
             <User size={32} className="text-stone-400" strokeWidth={1.5} />
@@ -181,7 +194,7 @@ export function ProfilePage() {
 
   return (
     <section className="page-content px-4 py-6 max-w-md mx-auto">
-      <SeoHead title="Profile | Maskany" description="Manage your account and listings." />
+      <SeoHead title={t('meta.profile.title')} description={t('meta.profile.desc')} />
 
       {/* Avatar & identity */}
       <div className="flex flex-col items-center pt-2 animate-slide-up">
@@ -221,7 +234,11 @@ export function ProfilePage() {
               <Home size={20} strokeWidth={1.5} />
             </div>
             <span className="text-lg font-bold text-stone-950">
-              <ChevronRight size={18} strokeWidth={2} />
+              {isRtl ? (
+                <ChevronLeft size={18} strokeWidth={2} />
+              ) : (
+                <ChevronRight size={18} strokeWidth={2} />
+              )}
             </span>
             <span className="text-xs text-stone-500">{t('profile.myProperties')}</span>
           </Link>
@@ -243,11 +260,20 @@ export function ProfilePage() {
                 {t('profile.myProperties')}
               </span>
             </div>
-            <ChevronRight size={16} className="text-stone-400" strokeWidth={1.5} />
+            {isRtl ? (
+              <ChevronLeft size={16} className="text-stone-400" strokeWidth={1.5} />
+            ) : (
+              <ChevronRight size={16} className="text-stone-400" strokeWidth={1.5} />
+            )}
           </Link>
         )}
 
-        <ActionItem icon={Share2} label={t('profile.shareApp')} onClick={handleShareApp} />
+        <ActionItem
+          icon={Share2}
+          label={t('profile.shareApp')}
+          onClick={handleShareApp}
+          isRtl={isRtl}
+        />
       </div>
 
       {/* Sign out */}

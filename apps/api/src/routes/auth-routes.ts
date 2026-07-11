@@ -127,6 +127,7 @@ export function createAuthRouter(): Router {
     '/register',
     asyncHandler(async (req, res) => {
       const body = parseOrThrow(registerSchema, req.body);
+      const locale = (req as Request & { locale?: string }).locale;
 
       await guardIdentifier(body.phone, 'phone');
       if (body.email) {
@@ -146,14 +147,14 @@ export function createAuthRouter(): Router {
 
       const { code } = await generateOtp(body.phone, 'SMS');
       try {
-        await sendSms(body.phone, formatOtpMessage(code));
+        await sendSms(body.phone, formatOtpMessage(code, locale));
       } catch (smsErr) {
         if (body.email) {
           logger.warn('[SMS] delivery failed, falling back to email', {
             phone: maskPhone(body.phone),
             error: smsErr instanceof Error ? smsErr.message : 'Unknown',
           });
-          await sendOtpEmail(body.email, code);
+          await sendOtpEmail(body.email, code, locale);
         } else {
           throw smsErr;
         }
@@ -170,6 +171,7 @@ export function createAuthRouter(): Router {
     '/login',
     asyncHandler(async (req, res) => {
       const body = parseOrThrow(loginSchema, req.body);
+      const locale = (req as Request & { locale?: string }).locale;
       const channel = classifyIdentifier(body.identifier);
 
       if (channel === 'SMS' && !isValidPhoneNumber(body.identifier)) {
@@ -187,20 +189,20 @@ export function createAuthRouter(): Router {
       const { code } = await generateOtp(body.identifier, channel);
       if (channel === 'SMS') {
         try {
-          await sendSms(body.identifier, formatOtpMessage(code));
+          await sendSms(body.identifier, formatOtpMessage(code, locale));
         } catch (smsErr) {
           if (user.email) {
             logger.warn('[SMS] delivery failed, falling back to email', {
               phone: maskPhone(body.identifier),
               error: smsErr instanceof Error ? smsErr.message : 'Unknown',
             });
-            await sendOtpEmail(user.email, code);
+            await sendOtpEmail(user.email, code, locale);
           } else {
             throw smsErr;
           }
         }
       } else {
-        await sendOtpEmail(body.identifier, code);
+        await sendOtpEmail(body.identifier, code, locale);
       }
 
       res.status(200).json({

@@ -1,4 +1,5 @@
 import { useRef, useState, useEffect, type ClipboardEvent, type KeyboardEvent } from 'react';
+import { useTranslation } from 'react-i18next';
 
 type OtpInputProps = {
   length?: number;
@@ -8,6 +9,7 @@ type OtpInputProps = {
 };
 
 export function OtpInput({ length = 6, onComplete, disabled = false, error }: OtpInputProps) {
+  const { t } = useTranslation();
   const [values, setValues] = useState<string[]>(Array(length).fill(''));
   const inputRefs = useRef<(HTMLInputElement | null)[]>([]);
 
@@ -39,6 +41,7 @@ export function OtpInput({ length = 6, onComplete, disabled = false, error }: Ot
   };
 
   const handleKeyDown = (index: number, e: KeyboardEvent<HTMLInputElement>) => {
+    const isRtl = document.documentElement.dir === 'rtl';
     if (e.key === 'Backspace') {
       if (!values[index] && index > 0) {
         const newValues = [...values];
@@ -51,9 +54,9 @@ export function OtpInput({ length = 6, onComplete, disabled = false, error }: Ot
         setValues(newValues);
       }
     } else if (e.key === 'ArrowLeft') {
-      focusInput(index - 1);
+      focusInput(isRtl ? index + 1 : index - 1);
     } else if (e.key === 'ArrowRight') {
-      focusInput(index + 1);
+      focusInput(isRtl ? index - 1 : index + 1);
     }
   };
 
@@ -77,11 +80,7 @@ export function OtpInput({ length = 6, onComplete, disabled = false, error }: Ot
 
   return (
     <div>
-      <div
-        className="flex justify-center gap-2.5"
-        role="group"
-        aria-label="One-time password input"
-      >
+      <div className="flex justify-center gap-2.5" role="group" aria-label={t('aria.otpGroup')}>
         {values.map((value, index) => (
           <input
             key={index}
@@ -113,7 +112,7 @@ export function OtpInput({ length = 6, onComplete, disabled = false, error }: Ot
                     : 'border-stone-300 text-stone-900 bg-white focus:border-terracotta-400 focus:ring-2 focus:ring-terracotta-100'
               }
             `}
-            aria-label={`Digit ${index + 1}`}
+            aria-label={t('aria.otpDigit', { n: String(index + 1) })}
           />
         ))}
       </div>
@@ -135,6 +134,7 @@ type CountdownProps = {
 };
 
 export function OtpCountdown({ seconds, onExpired, onResend }: CountdownProps) {
+  const { t } = useTranslation();
   const [remaining, setRemaining] = useState(seconds);
   const [canResend, setCanResend] = useState(false);
 
@@ -166,7 +166,7 @@ export function OtpCountdown({ seconds, onExpired, onResend }: CountdownProps) {
   return (
     <div className="text-center space-y-2">
       <p className="text-sm text-stone-500">
-        Code expires in{' '}
+        {t('aria.otpExpiresIn')}{' '}
         <span className="font-semibold text-stone-700 tabular-nums">
           {mins}:{secs.toString().padStart(2, '0')}
         </span>
@@ -180,7 +180,7 @@ export function OtpCountdown({ seconds, onExpired, onResend }: CountdownProps) {
           }}
           className="inline-flex items-center justify-center min-h-[44px] px-4 text-sm font-semibold text-terracotta-600 hover:text-terracotta-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-terracotta-100 rounded-lg transition-colors"
         >
-          Resend code
+          {t('aria.otpResend')}
         </button>
       )}
     </div>

@@ -82,8 +82,7 @@
     "sentBySms": "We sent a 6-digit code to {{identifier}} by SMS.",
     "errorCode": "That code didn't match. Please try again.",
     "expired": "Your code has expired. Tap resend to get a new one.",
-    "errorResend": "We could not resend the code. Please try again.",
-    "errorCode": "That code didn't match. Please try again."
+    "errorResend": "We could not resend the code. Please try again."
   },
   "myProperties": {
     "heading": "My properties",
@@ -104,13 +103,14 @@
     "price": "Price",
     "details": "Details",
     "rooms": "{{count}} room",
-    "rooms_plural": "{{count}} rooms",
+    "rooms_other": "{{count}} rooms",
     "bathrooms": "{{count}} bathroom",
-    "bathrooms_plural": "{{count}} bathrooms",
+    "bathrooms_other": "{{count}} bathrooms",
     "area": "{{count}} m²",
     "listingsCount": "{{count}} listing",
-    "listingsCount_plural": "{{count}} listings",
-    "noImage": "No image"
+    "listingsCount_other": "{{count}} listings",
+    "noImage": "No image",
+    "deleteError": "Could not delete property. Please try again."
   },
   "filter": {
     "propertyType": "Property Type",
@@ -132,6 +132,8 @@
     "sortRatingDesc": "Highest Rated",
     "clearAll": "Clear All",
     "applyFilters": "Apply Filters",
+    "filters": "Filters",
+    "active": "active",
     "nStars": "{{n}} stars"
   },
   "category": {
@@ -246,13 +248,22 @@
     "back": "Back",
     "next": "Next",
     "publishChanges": "Publish changes",
-    "publishListing": "Publish listing"
+    "publishListing": "Publish listing",
+    "reviewTitle": "Title",
+    "reviewType": "Type",
+    "reviewPrice": "Price",
+    "reviewRooms": "Rooms",
+    "reviewLocation": "Location",
+    "reviewWhatsapp": "WhatsApp",
+    "reviewImages": "Images",
+    "reviewImagesSelected": "{{count}} selected",
+    "reviewImagesManaged": "Managed separately"
   },
   "priceUnit": {
-    "per_night": "per night",
-    "per_month": "per month",
-    "per_year": "per year",
-    "total": "total"
+    "per_night": "/night",
+    "per_month": "/month",
+    "per_year": "/year",
+    "total": ""
   },
   "review": {
     "heading": "Reviews",
@@ -279,7 +290,10 @@
     "dayAgo": "{{count}} day ago",
     "weekAgo": "{{count}} week ago",
     "monthAgo": "{{count}} month ago",
-    "yearAgo": "{{count}} year ago"
+    "yearAgo": "{{count}} year ago",
+    "count": "{{count}} review",
+    "count_2": "{{count}} reviews",
+    "count_other": "{{count}} reviews"
   },
   "propertyDetail": {
     "aboutThisPlace": "About this place",
@@ -295,5 +309,110 @@
     "bathrooms": "{{count}} bathrooms",
     "bathroom": "{{count}} bathroom",
     "areaValue": "{{count}} m²"
+  },
+  "aria": {
+    "skipLink": "Skip to main content",
+    "filterSheet": "Filters",
+    "headerBack": "Go back",
+    "headerShare": "Share",
+    "searchInput": "Search properties",
+    "searchClear": "Clear search",
+    "favoriteAdd": "Add to favorites",
+    "favoriteRemove": "Remove from favorites",
+    "whatsappCard": "Contact on WhatsApp",
+    "whatsappFab": "Contact property owner on WhatsApp",
+    "galleryPrev": "Previous image",
+    "galleryNext": "Next image",
+    "galleryGoTo": "Go to image {{n}}",
+    "galleryOpenFullscreen": "Open fullscreen gallery",
+    "galleryCloseFullscreen": "Close fullscreen",
+    "galleryShowAll": "Show all {{count}} photos",
+    "categoryBar": "Property categories",
+    "quickSort": "Sort properties",
+    "amenities": "Amenities",
+    "ratingDistribution": "Rating distribution",
+    "otpGroup": "One-time password input",
+    "otpDigit": "Digit {{n}}",
+    "otpExpiresIn": "Code expires in",
+    "otpResend": "Resend code",
+    "starRatingLabel": "Rate this property",
+    "starRatingDisplay": "{{value}} out of 5 stars",
+    "starRatingSelected": "Selected: {{value}} out of 5",
+    "starRatingHalf": "Rate {{value}} star",
+    "starRatingHalf_other": "Rate {{value}} stars",
+    "starRatingFull": "Rate {{value}} star",
+    "starRatingFull_other": "Rate {{value}} stars",
+    "propertyCardViewDetails": "View details for {{title}}",
+    "propertyCardBed": "{{count}} bed",
+    "propertyCardBed_other": "{{count}} beds",
+    "propertyCardBath": "{{count}} bath",
+    "propertyCardBath_other": "{{count}} baths",
+    "propertyCardReview": "{{count}} review",
+    "propertyCardReview_2": "{{count}} reviews",
+    "propertyCardReview_other": "{{count}} reviews",
+    "bottomNav": "Main navigation"
+  },
+  "placeholder": {
+    "phone": "5XXXXXXXX",
+    "email": "you@example.com"
+  },
+  "editListing": {
+    "header": "Edit listing",
+    "notFound": "Listing not found",
+    "notFoundDesc": "This property could not be loaded.",
+    "updateError": "We could not update this listing. Please try again."
+  },
+  "createListing": {
+    "header": "Create listing",
+    "error": "We could not save this listing. Please try again."
+  },
+  "meta": {
+    "login": {
+      "title": "Sign in | Maskany",
+      "desc": "Sign in to your Maskany account."
+    },
+    "register": {
+      "title": "Create account | Maskany",
+      "desc": "Create your Maskany account."
+    },
+    "verifyOtp": {
+      "title": "Verify code | Maskany",
+      "desc": "Enter the code we sent you."
+    },
+    "profile": {
+      "title": "Profile | Maskany",
+      "desc": "Manage your account and listings."
+    },
+    "favorites": {
+      "title": "Favorites | Maskany",
+      "desc": "Properties you have saved."
+    },
+    "myProperties": {
+      "title": "My properties | Maskany",
+      "desc": "Manage your property listings."
+    },
+    "createListing": {
+      "title": "Create listing | Maskany",
+      "desc": "List your property on Maskany."
+    },
+    "home": {
+      "title": "Maskany - Find Your Perfect Property",
+      "desc": "Curated homes, rooms, and getaways near you."
+    },
+    "search": {
+      "title": "Search | Maskany",
+      "desc": "Search properties by location, type, and price."
+    }
+  },
+  "whatsapp": {
+    "buttonLabel": "WhatsApp",
+    "message": "Hey! I came across this listing on Maskany and wanted to ask about:\n\n\"{{title}}\"\n{{url}}\n\nIs it still available?",
+    "message_ar": "مرحباً! وجدت هذا الإعلان على مسكني وأريد الاستفسار عنه:\n\n\"{{title}}\"\n{{url}}\n\nهل لا يزال متاحاً؟"
+  },
+  "property": {
+    "bed": "{{count}} bed",
+    "bed_other": "{{count}} beds",
+    "bath": "{{count}} bath",
+    "bath_other": "{{count}} baths"
   }
 }

@@ -21,6 +21,7 @@
  * can surface a consistent error envelope to the client.
  */
 import nodemailer from 'nodemailer';
+import { t } from '../lib/i18n.js';
 import { maskEmail } from '../lib/mask.js';
 import { HttpError } from '../lib/http-error.js';
 import { logger } from '../lib/logger.js';
@@ -42,17 +43,12 @@ const MAX_EMAIL_LENGTH = 254;
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@.]+(\.[^\s@.]+)*\.[^\s@.]{2,}$/;
 
 /**
- * Subject line for the OTP verification email (PRD §2.3 / task hint).
- */
-const OTP_EMAIL_SUBJECT = 'Your Maskany Verification Code';
-
-/**
  * PRD-mandated subject for OTP verification emails. Exposed as a function so
  * future localisation can vary the value without callers depending on a
  * constant export.
  */
-export function formatOtpEmailSubject(): string {
-  return OTP_EMAIL_SUBJECT;
+export function formatOtpEmailSubject(locale?: string): string {
+  return t('otp_email_subject', locale);
 }
 
 /**
@@ -79,13 +75,18 @@ export function isValidEmail(email: string): boolean {
  *   - A 5-minute expiration notice.
  *   - A "don't share" warning aligned with the SMS copy.
  */
-export function formatOtpEmailHtml(code: string): string {
+export function formatOtpEmailHtml(code: string, locale?: string): string {
+  const subject = t('otp_email_subject', locale);
+  const heading = t('otp_email_heading', locale);
+  const expiry = t('otp_email_expiry', locale);
+  const security = t('otp_email_security', locale);
+  const langAttr = locale?.startsWith('ar') ? 'ar' : 'en';
   return `<!doctype html>
-<html lang="en">
+<html lang="${langAttr}">
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>${OTP_EMAIL_SUBJECT}</title>
+    <title>${subject}</title>
   </head>
   <body style="margin:0;padding:0;background-color:#fdfcfa;font-family:'Plus Jakarta Sans',Arial,sans-serif;color:#1c1917;">
     <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#fdfcfa;">
@@ -102,7 +103,7 @@ export function formatOtpEmailHtml(code: string): string {
             </tr>
             <tr>
               <td style="padding-bottom:16px;font-size:18px;line-height:1.4;color:#1c1917;">
-                Your verification code
+                ${heading}
               </td>
             </tr>
             <tr>
@@ -114,12 +115,12 @@ export function formatOtpEmailHtml(code: string): string {
             </tr>
             <tr>
               <td style="padding-bottom:12px;font-size:14px;line-height:1.5;color:#57534e;">
-                This code will expire in 5 minutes.
+                ${expiry}
               </td>
             </tr>
             <tr>
               <td style="font-size:14px;line-height:1.5;color:#57534e;">
-                For your security, don't share this code with anyone. Maskany staff will never ask you for it.
+                ${security}
               </td>
             </tr>
           </table>
@@ -212,9 +213,9 @@ function logEmailFailure(to: string, err: unknown): void {
  * HTML template. Thin wrapper around `sendEmail` so route layers can invoke
  * a single function after generating an OTP code.
  */
-export async function sendOtpEmail(to: string, code: string): Promise<void> {
+export async function sendOtpEmail(to: string, code: string, locale?: string): Promise<void> {
   if (process.env.NODE_ENV !== 'production') {
     logger.info(`[EMAIL] OTP for ${maskEmail(to)}: ${code}`);
   }
-  await sendEmail(to, formatOtpEmailSubject(), formatOtpEmailHtml(code));
+  await sendEmail(to, formatOtpEmailSubject(locale), formatOtpEmailHtml(code, locale));
 }

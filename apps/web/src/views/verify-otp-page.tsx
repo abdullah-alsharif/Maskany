@@ -81,7 +81,7 @@ export function VerifyOtpPage() {
 
   return (
     <section className="page-content px-4 py-8 max-w-md mx-auto">
-      <SeoHead title="Verify code | Maskany" description="Enter the code we sent you." />
+      <SeoHead title={t('meta.verifyOtp.title')} description={t('meta.verifyOtp.desc')} />
       <h1 className="font-display text-3xl text-stone-950">{t('verifyOtp.heading')}</h1>
       <p className="mt-2 text-stone-600">
         {channel === 'email'

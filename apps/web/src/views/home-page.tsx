@@ -2,6 +2,8 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useQueryClient } from '@tanstack/react-query';
+import { setLangCookie } from '../utils/lang-cookie';
 import { Globe } from 'lucide-react';
 import { CategoryBar } from '../components/property/category-bar';
 import { QuickSort } from '../components/property/quick-sort';
@@ -71,6 +73,7 @@ interface HomePageProps {
 
 export function HomePage({ mode = 'home' }: HomePageProps) {
   const { t, i18n } = useTranslation();
+  const queryClient = useQueryClient();
   const [category, setCategory] = useState<CategoryFilter>('ALL');
   const [filterOpen, setFilterOpen] = useState(false);
   const { filters, apply, clearAll, setQuery, activeFilterCount, queryParams } = useFilters();
@@ -89,6 +92,10 @@ export function HomePage({ mode = 'home' }: HomePageProps) {
     if (mode !== 'search') return;
     searchInputRef.current?.focus();
   }, [mode]);
+
+  useEffect(() => {
+    void queryClient.invalidateQueries({ queryKey: ['properties'] });
+  }, [i18n.language, queryClient]);
 
   useEffect(() => {
     if (mode !== 'home') return;
@@ -115,12 +122,8 @@ export function HomePage({ mode = 'home' }: HomePageProps) {
   return (
     <section ref={isSearch ? undefined : containerRef} className="page-content grain-overlay">
       <SeoHead
-        title={isSearch ? 'Search | Maskany' : 'Maskany - Find Your Perfect Property'}
-        description={
-          isSearch
-            ? 'Search properties by location, type, and price.'
-            : 'Curated homes, rooms, and getaways near you.'
-        }
+        title={isSearch ? t('meta.search.title') : t('meta.home.title')}
+        description={isSearch ? t('meta.search.desc') : t('meta.home.desc')}
       />
 
       <header className="px-4 pt-6 pb-2 flex items-start justify-between gap-3">
@@ -135,7 +138,11 @@ export function HomePage({ mode = 'home' }: HomePageProps) {
         {!isSearch && (
           <button
             type="button"
-            onClick={() => i18n.changeLanguage(i18n.language.startsWith('ar') ? 'en' : 'ar')}
+            onClick={() => {
+              const next = i18n.language.startsWith('ar') ? 'en' : 'ar';
+              void i18n.changeLanguage(next);
+              setLangCookie(next);
+            }}
             aria-label={
               i18n.language.startsWith('ar') ? t('language.switchToEn') : t('language.switchToAr')
             }

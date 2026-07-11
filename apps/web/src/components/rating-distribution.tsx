@@ -1,4 +1,5 @@
 import { Star } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 
 type RatingDistributionProps = {
   /** Count of reviews per star tier (keys: 1-5) */
@@ -10,8 +11,9 @@ type RatingDistributionProps = {
 const TIERS = [5, 4, 3, 2, 1] as const;
 
 export function RatingDistribution({ distribution, total }: RatingDistributionProps) {
+  const { t } = useTranslation();
   return (
-    <div className="space-y-1.5" role="group" aria-label="Rating distribution">
+    <div className="space-y-1.5" role="group" aria-label={t('aria.ratingDistribution')}>
       {TIERS.map((stars) => {
         const count = distribution[stars] ?? 0;
         const percentage = total > 0 ? (count / total) * 100 : 0;
@@ -19,7 +21,7 @@ export function RatingDistribution({ distribution, total }: RatingDistributionPr
           <div key={stars} className="flex items-center gap-2.5">
             <span
               data-testid="distribution-label"
-              className="text-xs text-stone-500 w-3 text-right font-medium"
+              className="text-xs text-stone-500 w-3 text-end font-medium"
             >
               {stars}
             </span>
@@ -36,7 +38,7 @@ export function RatingDistribution({ distribution, total }: RatingDistributionPr
             </div>
             <span
               data-testid="distribution-count"
-              className="text-xs text-stone-400 w-7 text-right tabular-nums"
+              className="text-xs text-stone-400 w-7 text-end tabular-nums"
             >
               {count}
             </span>

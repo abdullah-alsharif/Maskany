@@ -71,20 +71,19 @@ export function TranslationEditor({
       <div className="flex items-center justify-between">
         <div>
           <h3 className="font-semibold text-stone-900 text-base">
-            {t('propertyForm.translationHeading') || 'Translation'}
+            {t('propertyForm.translationHeading')}
           </h3>
           <p className="text-xs text-stone-500">
             {mode === 'create'
-              ? t('propertyForm.translationHintOptional') ||
-                'Optionally add content in the other language'
+              ? t('propertyForm.translationHintOptional')
               : t('propertyForm.translationHint', { lang: targetLangLabel })}
           </p>
         </div>
         <Button type="button" variant="secondary" size="sm" onClick={onToggle}>
           {open
-            ? t('propertyForm.hide') || 'Hide'
+            ? t('propertyForm.hide')
             : mode === 'create'
-              ? t('propertyForm.addTranslationOptional') || 'Add translation'
+              ? t('propertyForm.addTranslationOptional')
               : t('propertyForm.addTranslation', { lang: targetLangLabel })}
         </Button>
       </div>
@@ -102,7 +101,7 @@ export function TranslationEditor({
           </Field>
 
           {mode === 'edit' && (
-            <Field id="trans-summary" label={t('propertyForm.summary') || 'Summary'}>
+            <Field id="trans-summary" label={t('propertyForm.summary')}>
               <input
                 id="trans-summary"
                 type="text"
@@ -146,7 +145,7 @@ export function TranslationEditor({
           {mode === 'edit' && (
             <div className="flex justify-end">
               <Button type="button" size="sm" onClick={onSave} loading={saving}>
-                {t('propertyForm.saveTranslation') || 'Save translation'}
+                {t('propertyForm.saveTranslation')}
               </Button>
             </div>
           )}

@@ -1,9 +1,11 @@
 import type { Metadata, Viewport } from 'next';
+import { cookies } from 'next/headers';
 import { BottomNav } from '../components/layout/bottom-nav';
 import { OfflineBanner } from '../components/offline-banner';
 import { PwaInit } from '../components/pwa-init';
 import { SkipLink } from '../components/skip-link';
 import { RootProviders } from './providers';
+import { LANG_COOKIE } from '../utils/lang-cookie';
 import './globals.css';
 
 export const viewport: Viewport = {
@@ -21,9 +23,13 @@ export const metadata: Metadata = {
   },
 };
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+export default async function RootLayout({ children }: { children: React.ReactNode }) {
+  const cookieStore = await cookies();
+  const lang = cookieStore.get(LANG_COOKIE)?.value?.startsWith('ar') ? 'ar' : 'en';
+  const dir = lang === 'ar' ? 'rtl' : 'ltr';
+
   return (
-    <html lang="en" suppressHydrationWarning>
+    <html lang={lang} dir={dir} suppressHydrationWarning>
       <body suppressHydrationWarning>
         <RootProviders>
           <PwaInit />

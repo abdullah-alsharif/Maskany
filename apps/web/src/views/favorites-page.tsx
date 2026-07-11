@@ -1,7 +1,9 @@
 'use client';
 
+import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useTranslation } from 'react-i18next';
+import { useQueryClient } from '@tanstack/react-query';
 import { PropertyCard } from '../components/property/property-card';
 import { SeoHead } from '../components/seo-head';
 import { SkeletonCard } from '../components/ui/skeleton';
@@ -11,8 +13,13 @@ import { useFavoriteProperties } from '../hooks/use-favorite-properties';
 
 export function FavoritesPage() {
   const router = useRouter();
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
+  const queryClient = useQueryClient();
   const { favorites } = useFavorites();
+
+  useEffect(() => {
+    void queryClient.invalidateQueries({ queryKey: ['favorite-properties'] });
+  }, [i18n.language, queryClient]);
 
   const { properties: loadedProperties, isLoading } = useFavoriteProperties(favorites);
 
@@ -20,7 +27,7 @@ export function FavoritesPage() {
 
   return (
     <section className="page-content">
-      <SeoHead title="Favorites | Maskany" description="Properties you have saved." />
+      <SeoHead title={t('meta.favorites.title')} description={t('meta.favorites.desc')} />
       <h1 className="sr-only">{t('nav.favorites')}</h1>
 
       <header className="px-4 pt-6 pb-2">

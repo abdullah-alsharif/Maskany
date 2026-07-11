@@ -1,13 +1,16 @@
 'use client';
 
 import { useTranslation } from 'react-i18next';
+import { setLangCookie } from '../utils/lang-cookie';
 
 export function LanguageSwitcher({ className = '' }: { className?: string }) {
   const { i18n, t } = useTranslation();
   const isAr = i18n.language.startsWith('ar');
 
   function toggle() {
-    void i18n.changeLanguage(isAr ? 'en' : 'ar');
+    const next = isAr ? 'en' : 'ar';
+    void i18n.changeLanguage(next);
+    setLangCookie(next);
   }
 
   return (

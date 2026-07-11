@@ -1,6 +1,6 @@
 import cookieParser from 'cookie-parser';
 import cors from 'cors';
-import express, { type Express } from 'express';
+import express, { type Express, type Request, type Response, type NextFunction } from 'express';
 import helmet from 'helmet';
 import { env } from './config/env.js';
 import { errorHandler, notFoundHandler } from './middleware/error-handler.js';
@@ -13,6 +13,17 @@ import { createPropertyRouter } from './routes/property-routes.js';
 import { createPushRouter } from './routes/push-routes.js';
 import { createReviewRouter } from './routes/review-routes.js';
 import { createUploadRouter } from './routes/upload-routes.js';
+
+/**
+ * Parse the `Accept-Language` header and attach the detected locale to
+ * `req.locale`. Defaults to `'en'` when the header is absent or does not
+ * start with `ar`.
+ */
+function localeMiddleware(req: Request, _res: Response, next: NextFunction): void {
+  const acceptLanguage = req.headers['accept-language'] ?? '';
+  (req as Request & { locale: string }).locale = acceptLanguage.startsWith('ar') ? 'ar' : 'en';
+  next();
+}
 
 export interface CreateAppOptions {
   /**
@@ -35,6 +46,7 @@ export function createApp(options: CreateAppOptions = {}): Express {
 
   app.use(requestId);
   app.use(helmet());
+  app.use(localeMiddleware);
   app.use(
     cors({
       // Resolve the allowed origin per-request so test suites can mutate

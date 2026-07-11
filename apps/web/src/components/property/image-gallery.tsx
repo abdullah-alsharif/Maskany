@@ -1,5 +1,6 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
 import { ChevronLeft, ChevronRight, X, Grid3X3 } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import type { PropertyImage } from '../../types/property';
 
 type ImageGalleryProps = {
@@ -34,6 +35,8 @@ function Img({
 }
 
 export function ImageGallery({ images, alt }: ImageGalleryProps) {
+  const { t, i18n } = useTranslation();
+  const isRtl = i18n.language.startsWith('ar');
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const touchStartX = useRef(0);
@@ -60,14 +63,16 @@ export function ImageGallery({ images, alt }: ImageGalleryProps) {
       if (event.key === 'Escape') {
         setIsFullscreen(false);
       } else if (event.key === 'ArrowRight') {
-        goNext();
+        if (isRtl) goPrev();
+        else goNext();
       } else if (event.key === 'ArrowLeft') {
-        goPrev();
+        if (isRtl) goNext();
+        else goPrev();
       }
     };
     document.addEventListener('keydown', onKeyDown);
     return () => document.removeEventListener('keydown', onKeyDown);
-  }, [isFullscreen, goNext, goPrev]);
+  }, [isFullscreen, goNext, goPrev, isRtl]);
 
   const [swipeOffset, setSwipeOffset] = useState(0);
   const isSwiping = useRef(false);
@@ -88,13 +93,17 @@ export function ImageGallery({ images, alt }: ImageGalleryProps) {
     isSwiping.current = false;
     setSwipeOffset(0);
     const threshold = 50;
-    if (touchDeltaX.current < -threshold) goNext();
-    else if (touchDeltaX.current > threshold) goPrev();
+    const effectiveDelta = isRtl ? -touchDeltaX.current : touchDeltaX.current;
+    if (effectiveDelta < -threshold) goNext();
+    else if (effectiveDelta > threshold) goPrev();
   };
 
   if (images.length === 0) {
     return null;
   }
+
+  const PrevIcon = isRtl ? ChevronRight : ChevronLeft;
+  const NextIcon = isRtl ? ChevronLeft : ChevronRight;
 
   const slideTrack = (inFullscreen: boolean) => (
     <div
@@ -130,7 +139,7 @@ export function ImageGallery({ images, alt }: ImageGalleryProps) {
           }}
           className="
             hidden md:flex
-            absolute left-3 top-1/2 -translate-y-1/2
+            absolute start-3 top-1/2 -translate-y-1/2
             w-9 h-9 items-center justify-center rounded-full
             bg-white/90 text-stone-700
             shadow-md hover:bg-white
@@ -138,9 +147,9 @@ export function ImageGallery({ images, alt }: ImageGalleryProps) {
             focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-stone-800
             transition-colors transition-shadow duration-150
           "
-          aria-label="Previous image"
+          aria-label={t('aria.galleryPrev')}
         >
-          <ChevronLeft size={18} />
+          <PrevIcon size={18} />
         </button>
       )}
       {currentIndex < images.length - 1 && (
@@ -151,7 +160,7 @@ export function ImageGallery({ images, alt }: ImageGalleryProps) {
           }}
           className="
             hidden md:flex
-            absolute right-3 top-1/2 -translate-y-1/2
+            absolute end-3 top-1/2 -translate-y-1/2
             w-9 h-9 items-center justify-center rounded-full
             bg-white/90 text-stone-700
             shadow-md hover:bg-white
@@ -159,9 +168,9 @@ export function ImageGallery({ images, alt }: ImageGalleryProps) {
             focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-stone-800
             transition-colors transition-shadow duration-150
           "
-          aria-label="Next image"
+          aria-label={t('aria.galleryNext')}
         >
-          <ChevronRight size={18} />
+          <NextIcon size={18} />
         </button>
       )}
     </>
@@ -169,7 +178,7 @@ export function ImageGallery({ images, alt }: ImageGalleryProps) {
 
   const dots =
     images.length > 1 ? (
-      <div className="absolute bottom-3 left-1/2 -translate-x-1/2 flex gap-1.5">
+      <div className="absolute bottom-3 start-1/2 -translate-x-1/2 rtl:translate-x-1/2 flex gap-1.5">
         {images.map((_, i) => (
           <button
             key={i}
@@ -186,7 +195,7 @@ export function ImageGallery({ images, alt }: ImageGalleryProps) {
                 : 'w-1.5 h-1.5 bg-white/50 hover:bg-white/70 active:scale-90'
             }
           `}
-            aria-label={`Go to image ${i + 1}`}
+            aria-label={t('aria.galleryGoTo', { n: i + 1 })}
             aria-current={i === currentIndex ? 'true' : undefined}
           />
         ))}
@@ -194,7 +203,7 @@ export function ImageGallery({ images, alt }: ImageGalleryProps) {
     ) : null;
 
   const counter = (
-    <div className="absolute top-3 right-3 px-2.5 py-1 rounded-full bg-black/40 backdrop-blur-sm text-white text-xs font-medium pointer-events-none select-none">
+    <div className="absolute top-3 end-3 px-2.5 py-1 rounded-full bg-black/40 backdrop-blur-sm text-white text-xs font-medium pointer-events-none select-none">
       {currentIndex + 1} / {images.length}
     </div>
   );
@@ -213,7 +222,7 @@ export function ImageGallery({ images, alt }: ImageGalleryProps) {
       <button
         onClick={() => openFullscreen(currentIndex)}
         className="absolute inset-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-white/50"
-        aria-label="Open fullscreen gallery"
+        aria-label={t('aria.galleryOpenFullscreen')}
       />
     </div>
   );
@@ -288,7 +297,7 @@ export function ImageGallery({ images, alt }: ImageGalleryProps) {
         className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-white border border-stone-200 text-stone-700 text-sm font-medium hover:border-stone-300 hover:bg-stone-50 active:scale-[0.97] transition-colors transition-shadow transition-transform duration-150 shadow-sm"
       >
         <Grid3X3 size={16} strokeWidth={1.8} />
-        Show all {images.length} photos
+        {t('aria.galleryShowAll', { count: images.length })}
       </button>
     </div>
   );
@@ -309,7 +318,7 @@ export function ImageGallery({ images, alt }: ImageGalleryProps) {
         <button
           onClick={() => setIsFullscreen(false)}
           className="
-            absolute top-4 right-4
+            absolute top-4 end-4
             w-10 h-10 rounded-full
             bg-white/10 backdrop-blur-md text-white
             flex items-center justify-center
@@ -318,7 +327,7 @@ export function ImageGallery({ images, alt }: ImageGalleryProps) {
             focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white
             transition-colors transition-transform duration-150
           "
-          aria-label="Close fullscreen"
+          aria-label={t('aria.galleryCloseFullscreen')}
         >
           <X size={20} />
         </button>

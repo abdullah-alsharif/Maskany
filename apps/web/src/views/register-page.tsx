@@ -81,7 +81,7 @@ export function RegisterPage() {
 
   return (
     <section className="page-content px-4 py-8 max-w-md mx-auto">
-      <SeoHead title="Create account | Maskany" description="Create your Maskany account." />
+      <SeoHead title={t('meta.register.title')} description={t('meta.register.desc')} />
       <h1 className="font-display text-3xl text-stone-950">{t('register.heading')}</h1>
       <p className="mt-2 text-stone-600">{t('register.subheading')}</p>
 
@@ -129,7 +129,7 @@ export function RegisterPage() {
               autoComplete="tel-national"
               value={phone}
               onChange={(e) => setPhone(e.target.value)}
-              placeholder="5XXXXXXXX"
+              placeholder={t('placeholder.phone')}
               className="h-12 w-full rounded-xl border border-stone-300 bg-white px-3 text-base focus:outline-none focus:border-terracotta-400 focus:ring-2 focus:ring-terracotta-100 transition-shadow duration-200"
             />
           </div>
@@ -145,7 +145,7 @@ export function RegisterPage() {
             autoComplete="email"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            placeholder="you@example.com"
+            placeholder={t('placeholder.email')}
             className="h-12 w-full rounded-xl border border-stone-300 bg-white px-3 text-base focus:outline-none focus:border-terracotta-400 focus:ring-2 focus:ring-terracotta-100 transition-shadow duration-200"
           />
         </div>

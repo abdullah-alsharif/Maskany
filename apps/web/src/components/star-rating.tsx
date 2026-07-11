@@ -1,4 +1,5 @@
 import { useId, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 
 type StarRatingProps = {
   /** Current rating value (0-5, supports half values) */
@@ -61,10 +62,6 @@ function getFill(displayValue: number, starIndex: number): Fill {
   return 'empty';
 }
 
-function starLabel(n: number): string {
-  return `${n} star${n === 1 ? '' : 's'}`;
-}
-
 export function StarRating({
   value,
   onChange,
@@ -77,6 +74,7 @@ export function StarRating({
   const displayValue = hoverValue ?? value;
   const { starSize, gap, textClass } = sizeConfig[size];
   const baseGradientId = useId();
+  const { t } = useTranslation();
 
   const handleStarSelect = (starIndex: number, isLeftHalf: boolean) => {
     if (!onChange) return;
@@ -89,7 +87,11 @@ export function StarRating({
         className="flex items-center"
         style={{ gap: `${gap * 4}px` }}
         role={interactive ? 'radiogroup' : 'img'}
-        aria-label={interactive ? 'Rate this property' : `${value} out of 5 stars`}
+        aria-label={
+          interactive
+            ? t('aria.starRatingLabel')
+            : t('aria.starRatingDisplay', { value: String(value) })
+        }
       >
         <div
           className="flex"
@@ -111,21 +113,27 @@ export function StarRating({
                 <>
                   <button
                     type="button"
-                    className="absolute inset-y-0 left-0 w-1/2 cursor-pointer transition-transform duration-150 hover:scale-110 active:scale-95"
+                    className="absolute inset-y-0 start-0 w-1/2 cursor-pointer transition-transform duration-150 hover:scale-110 active:scale-95"
                     onMouseEnter={() => setHoverValue(starIndex - 0.5)}
                     onFocus={() => setHoverValue(starIndex - 0.5)}
                     onBlur={() => setHoverValue(null)}
                     onClick={() => handleStarSelect(starIndex, true)}
-                    aria-label={`Rate ${starIndex - 0.5} stars`}
+                    aria-label={t('aria.starRatingHalf', {
+                      value: String(starIndex - 0.5),
+                      count: 2,
+                    })}
                   />
                   <button
                     type="button"
-                    className="absolute inset-y-0 right-0 w-1/2 cursor-pointer transition-transform duration-150 hover:scale-110 active:scale-95"
+                    className="absolute inset-y-0 end-0 w-1/2 cursor-pointer transition-transform duration-150 hover:scale-110 active:scale-95"
                     onMouseEnter={() => setHoverValue(starIndex)}
                     onFocus={() => setHoverValue(starIndex)}
                     onBlur={() => setHoverValue(null)}
                     onClick={() => handleStarSelect(starIndex, false)}
-                    aria-label={`Rate ${starLabel(starIndex)}`}
+                    aria-label={t('aria.starRatingFull', {
+                      value: String(starIndex),
+                      count: starIndex,
+                    })}
                   />
                 </>
               )}
@@ -139,14 +147,14 @@ export function StarRating({
 
         {reviewCount !== undefined && reviewCount > 0 && !interactive && (
           <span className={`${textClass} text-stone-400`}>
-            ({reviewCount} review{reviewCount === 1 ? '' : 's'})
+            ({t('aria.propertyCardReview', { count: reviewCount })})
           </span>
         )}
       </div>
 
       {interactive && value > 0 && (
         <span className={`${textClass} text-stone-600`} aria-live="polite">
-          Selected: {value} out of 5
+          {t('aria.starRatingSelected', { value: String(value) })}
         </span>
       )}
     </div>

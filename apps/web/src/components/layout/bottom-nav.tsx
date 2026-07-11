@@ -38,12 +38,12 @@ export function BottomNav() {
   return (
     <nav
       className="
-        fixed bottom-0 left-0 right-0 z-[var(--z-nav)]
+        fixed bottom-0 inset-x-0 z-[var(--z-nav)]
         bg-white/95 backdrop-blur-lg
         border-t border-stone-200/80
         pb-safe
       "
-      aria-label="Main navigation"
+      aria-label={t('aria.bottomNav')}
     >
       <div className="flex items-center justify-around h-14 max-w-lg mx-auto">
         {items.map(({ to, labelKey, icon, badge }) => {
@@ -73,7 +73,7 @@ export function BottomNav() {
                 {badge !== undefined && badge > 0 && (
                   <span
                     className="
-                      absolute -top-1.5 -right-2
+                      absolute -top-1.5 -end-2
                       min-w-[16px] h-4 px-1
                       flex items-center justify-center
                       bg-terracotta-500 text-white

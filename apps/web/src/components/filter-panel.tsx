@@ -128,7 +128,7 @@ export function FilterPanel({ value, onApply, onClear, filterCounts }: FilterPan
                 {t(`propertyType.${type}`, { defaultValue: propertyTypeConfig[type].label })}
                 {filterCounts?.[type] !== undefined && (
                   <span
-                    className={`text-xs ml-0.5 ${checked ? 'text-white/70' : 'text-stone-400'}`}
+                    className={`text-xs ms-0.5 ${checked ? 'text-white/70' : 'text-stone-400'}`}
                   >
                     {filterCounts[type]}
                   </span>

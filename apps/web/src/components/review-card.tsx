@@ -82,7 +82,7 @@ export function ReviewCard({ review, isOwn = false, onEdit }: ReviewCardProps) {
             <div className="min-w-0">
               <span className="text-sm font-semibold text-stone-800">{review.user.fullName}</span>
               {isOwn && (
-                <span className="ml-2 text-[10px] font-medium text-terracotta-600 uppercase tracking-wider">
+                <span className="ms-2 text-[10px] font-medium text-terracotta-600 uppercase tracking-wider">
                   {t('review.yourReview')}
                 </span>
               )}

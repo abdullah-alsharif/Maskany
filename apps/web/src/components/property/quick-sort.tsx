@@ -43,11 +43,11 @@ export function QuickSort({ currentSort, filters, onApply }: QuickSortProps) {
     <div
       className="flex items-center gap-2 overflow-x-auto scrollbar-hide px-4 py-3 -mx-4"
       role="group"
-      aria-label="Sort properties"
+      aria-label={t('aria.quickSort')}
     >
       <span
         className={`
-          flex items-center gap-1.5 shrink-0 mr-0.5
+          flex items-center gap-1.5 shrink-0 me-0.5
           text-[12px] font-semibold tracking-wide
           transition-colors duration-300
           ${hasActiveSort ? 'text-terracotta-600' : 'text-stone-400'}

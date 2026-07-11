@@ -55,7 +55,7 @@ export function CategoryBar({ selected, onSelect }: CategoryBarProps) {
         -mx-4
       "
       role="tablist"
-      aria-label="Property categories"
+      aria-label={t('aria.categoryBar')}
     >
       {categories.map(({ value, labelKey, icon }) => {
         const label = t(labelKey);

@@ -21,6 +21,7 @@
  * consistent error envelope to the client.
  */
 import twilio from 'twilio';
+import { t } from '../lib/i18n.js';
 import { maskPhone } from '../lib/mask.js';
 import { HttpError } from '../lib/http-error.js';
 import { logger } from '../lib/logger.js';
@@ -39,8 +40,8 @@ const PHONE_NUMBER_PATTERN = /^\+[1-9]\d{6,14}$/;
  * Kept as a separate export so tests, email templates, or future channels can
  * reuse the wording without duplicating the magic string.
  */
-export function formatOtpMessage(code: string): string {
-  return `Your Maskany verification code is: ${code}. Valid for 5 minutes.`;
+export function formatOtpMessage(code: string, locale?: string): string {
+  return t('otp_sms', locale, { code });
 }
 
 /**

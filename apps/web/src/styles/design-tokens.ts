@@ -70,8 +70,8 @@ export const colors = {
 
 export const typography = {
   fontFamily: {
-    display: "'Plus Jakarta Sans', system-ui, sans-serif",
-    sans: "'Plus Jakarta Sans', system-ui, sans-serif",
+    display: "'Plus Jakarta Sans', 'Noto Naskh Arabic', 'Tajawal', system-ui, sans-serif",
+    sans: "'Plus Jakarta Sans', 'Noto Naskh Arabic', 'Tajawal', system-ui, sans-serif",
   },
   /** Mobile-first type scale (px) */
   scale: {

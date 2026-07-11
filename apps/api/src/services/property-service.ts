@@ -659,14 +659,33 @@ export async function getPropertyTranslation(
 
 export async function getPropertiesByIds(ids: string[]): Promise<PropertySummary[]> {
   if (ids.length === 0) return [];
-  const rows = await db
+  const rows = (await db
     .selectFrom('properties')
     .where('id', 'in', ids)
     .where('status', '=', 'ACTIVE')
     .select(PROPERTY_COLUMNS)
-    .execute();
+    .execute()) as unknown as PropertyRow[];
   const covers = await fetchCoverImages(rows.map((r) => r.id));
-  return rows.map((row) => toSummary(row, covers.get(row.id) ?? null));
+
+  const enProps = rows.filter((r) => r.locale === 'en');
+  const arProps = rows.filter((r) => r.locale === 'ar');
+  const [enTranslations, arTranslations] = await Promise.all([
+    enProps.length > 0
+      ? fetchTranslationMap(
+          enProps.map((r) => r.id),
+          'ar',
+        )
+      : Promise.resolve(new Map()),
+    arProps.length > 0
+      ? fetchTranslationMap(
+          arProps.map((r) => r.id),
+          'en',
+        )
+      : Promise.resolve(new Map()),
+  ]);
+  const allTranslations = new Map([...enTranslations, ...arTranslations]);
+
+  return rows.map((row) => toSummary(row, covers.get(row.id) ?? null, allTranslations.get(row.id)));
 }
 
 export async function listMyProperties(userId: string): Promise<PropertySummary[]> {

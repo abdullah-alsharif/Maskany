@@ -106,7 +106,7 @@ function PropertyRow({
     >
       <div className="flex flex-col sm:flex-row">
         {/* Cover image */}
-        <div className="relative w-full sm:w-44 h-36 sm:h-auto shrink-0 bg-stone-100 overflow-hidden sm:rounded-l-2xl">
+        <div className="relative w-full sm:w-44 h-36 sm:h-auto shrink-0 bg-stone-100 overflow-hidden sm:rounded-s-2xl">
           {property.coverImage?.url ? (
             <img
               src={property.coverImage.url}
@@ -237,9 +237,7 @@ export function MyPropertiesPage() {
     deleteMutation.mutate(pendingDelete.id, {
       onSuccess: () => setPendingDelete(null),
       onError: () => {
-        setDeleteError(
-          t('myProperties.deleteError') || 'Could not delete property. Please try again.',
-        );
+        setDeleteError(t('myProperties.deleteError'));
       },
     });
   };
@@ -257,7 +255,7 @@ export function MyPropertiesPage() {
 
   return (
     <section className="page-content">
-      <SeoHead title="My properties | Maskany" description="Manage your property listings." />
+      <SeoHead title={t('meta.myProperties.title')} description={t('meta.myProperties.desc')} />
       <header className="px-4 pt-8 pb-3 flex items-end justify-between gap-4">
         <div>
           <h1 className="font-display text-4xl text-stone-950 leading-tight">
@@ -318,7 +316,7 @@ export function MyPropertiesPage() {
       {deleteError && (
         <p
           role="alert"
-          className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 px-5 py-3 rounded-xl bg-red-600 text-white text-sm font-medium shadow-lg"
+          className="fixed bottom-6 start-1/2 -translate-x-1/2 rtl:translate-x-1/2 z-50 px-5 py-3 rounded-xl bg-red-600 text-white text-sm font-medium shadow-lg"
         >
           {deleteError}
         </p>

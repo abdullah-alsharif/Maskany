@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import { generateWhatsAppLink } from '../../services/whatsapp-service';
 
 /* ── WhatsApp SVG Icon ── */
@@ -21,8 +22,9 @@ export function WhatsAppIconButton({
   propertyTitle,
   propertyId,
 }: WhatsAppIconButtonProps) {
+  const { t, i18n } = useTranslation();
   const propertyUrl = `${window.location.origin}/properties/${propertyId}`;
-  const link = generateWhatsAppLink(whatsappNumber, propertyTitle, propertyUrl);
+  const link = generateWhatsAppLink(whatsappNumber, propertyTitle, propertyUrl, i18n.language);
   if (!link) return null;
 
   return (
@@ -41,7 +43,7 @@ export function WhatsAppIconButton({
         hover:bg-[#20bd5a]
         focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-[#25d366]
       "
-      aria-label="Contact on WhatsApp"
+      aria-label={t('aria.whatsappCard')}
     >
       <WhatsAppIcon size={20} />
     </a>
@@ -56,8 +58,9 @@ type WhatsAppFabProps = {
 };
 
 export function WhatsAppFab({ whatsappNumber, propertyTitle, propertyId }: WhatsAppFabProps) {
+  const { t, i18n } = useTranslation();
   const propertyUrl = `${window.location.origin}/properties/${propertyId}`;
-  const link = generateWhatsAppLink(whatsappNumber, propertyTitle, propertyUrl);
+  const link = generateWhatsAppLink(whatsappNumber, propertyTitle, propertyUrl, i18n.language);
   if (!link) return null;
 
   return (
@@ -67,7 +70,7 @@ export function WhatsAppFab({ whatsappNumber, propertyTitle, propertyId }: Whats
       rel="noopener noreferrer"
       className="
         fixed z-[var(--z-fab)]
-        right-4 animate-scale-in
+        end-4 animate-scale-in
         flex items-center gap-2.5
         h-14 px-5 rounded-full
         bg-[#25d366] text-white
@@ -79,10 +82,10 @@ export function WhatsAppFab({ whatsappNumber, propertyTitle, propertyId }: Whats
         font-semibold text-[15px]
         bottom-20 pb-safe
       "
-      aria-label="Contact property owner on WhatsApp"
+      aria-label={t('aria.whatsappFab')}
     >
       <WhatsAppIcon size={22} />
-      <span>WhatsApp</span>
+      <span>{t('whatsapp.buttonLabel')}</span>
     </a>
   );
 }

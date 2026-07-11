@@ -103,13 +103,14 @@
     "price": "السعر",
     "details": "التفاصيل",
     "rooms": "{{count}} غرفة",
-    "rooms_plural": "{{count}} غرف",
+    "rooms_other": "{{count}} غرف",
     "bathrooms": "{{count}} دورة مياه",
-    "bathrooms_plural": "{{count}} دورات مياه",
+    "bathrooms_other": "{{count}} دورات مياه",
     "area": "{{count}} م²",
     "listingsCount": "{{count}} قائمة",
-    "listingsCount_plural": "{{count}} قوائم",
-    "noImage": "لا توجد صورة"
+    "listingsCount_other": "{{count}} قوائم",
+    "noImage": "لا توجد صورة",
+    "deleteError": "تعذر حذف العقار. حاول مرة أخرى."
   },
   "filter": {
     "propertyType": "نوع العقار",
@@ -131,6 +132,8 @@
     "sortRatingDesc": "الأعلى تقييماً",
     "clearAll": "مسح الكل",
     "applyFilters": "تطبيق الفلاتر",
+    "filters": "الفلاتر",
+    "active": "نشط",
     "nStars": "{{n}} نجوم"
   },
   "category": {
@@ -245,7 +248,16 @@
     "back": "رجوع",
     "next": "التالي",
     "publishChanges": "نشر التغييرات",
-    "publishListing": "نشر الإعلان"
+    "publishListing": "نشر الإعلان",
+    "reviewTitle": "العنوان",
+    "reviewType": "النوع",
+    "reviewPrice": "السعر",
+    "reviewRooms": "الغرف",
+    "reviewLocation": "الموقع",
+    "reviewWhatsapp": "واتساب",
+    "reviewImages": "الصور",
+    "reviewImagesSelected": "{{count}} محددة",
+    "reviewImagesManaged": "تُدار منفصلًا"
   },
   "priceUnit": {
     "per_night": "ليلة",
@@ -278,7 +290,10 @@
     "dayAgo": "منذ {{count}} يوم",
     "weekAgo": "منذ {{count}} أسبوع",
     "monthAgo": "منذ {{count}} شهر",
-    "yearAgo": "منذ {{count}} سنة"
+    "yearAgo": "منذ {{count}} سنة",
+    "count": "تقييم واحد",
+    "count_2": "{{count}} تقييمان",
+    "count_other": "{{count}} تقييمات"
   },
   "propertyDetail": {
     "aboutThisPlace": "عن هذا المكان",
@@ -294,5 +309,110 @@
     "bathrooms": "{{count}} دورات مياه",
     "bathroom": "{{count}} دورة مياه",
     "areaValue": "{{count}} م²"
+  },
+  "aria": {
+    "skipLink": "انتقل إلى المحتوى الرئيسي",
+    "filterSheet": "الفلاتر",
+    "headerBack": "رجوع",
+    "headerShare": "مشاركة",
+    "searchInput": "البحث عن عقارات",
+    "searchClear": "مسح البحث",
+    "favoriteAdd": "إضافة إلى المفضلة",
+    "favoriteRemove": "إزالة من المفضلة",
+    "whatsappCard": "التواصل عبر واتساب",
+    "whatsappFab": "التواصل مع مالك العقار عبر واتساب",
+    "galleryPrev": "الصورة السابقة",
+    "galleryNext": "الصورة التالية",
+    "galleryGoTo": "الانتقال إلى الصورة {{n}}",
+    "galleryOpenFullscreen": "فتح معرض الصور بملء الشاشة",
+    "galleryCloseFullscreen": "إغلاق ملء الشاشة",
+    "galleryShowAll": "عرض كل الصور {{count}}",
+    "categoryBar": "فئات العقارات",
+    "quickSort": "ترتيب العقارات",
+    "amenities": "المرافق",
+    "ratingDistribution": "توزيع التقييمات",
+    "otpGroup": "إدخال كلمة مرور لمرة واحدة",
+    "otpDigit": "الرقم {{n}}",
+    "otpExpiresIn": "ينتهي الرمز خلال",
+    "otpResend": "إعادة إرسال الرمز",
+    "starRatingLabel": "قيّم هذا العقار",
+    "starRatingDisplay": "{{value}} من 5 نجوم",
+    "starRatingSelected": "محدد: {{value}} من 5",
+    "starRatingHalf": "قيّم {{value}} نجمة",
+    "starRatingHalf_other": "قيّم {{value}} نجوم",
+    "starRatingFull": "قيّم {{value}} نجمة",
+    "starRatingFull_other": "قيّم {{value}} نجوم",
+    "propertyCardViewDetails": "عرض تفاصيل {{title}}",
+    "propertyCardBed": "{{count}} سرير",
+    "propertyCardBed_other": "{{count}} سريرات",
+    "propertyCardBath": "{{count}} حمام",
+    "propertyCardBath_other": "{{count}} حمامات",
+    "propertyCardReview": "تقييم واحد",
+    "propertyCardReview_2": "{{count}} تقييمان",
+    "propertyCardReview_other": "{{count}} تقييمات",
+    "bottomNav": "التنقل الرئيسي"
+  },
+  "placeholder": {
+    "phone": "5XXXXXXXX",
+    "email": "you@example.com"
+  },
+  "editListing": {
+    "header": "تعديل الإعلان",
+    "notFound": "الإعلان غير موجود",
+    "notFoundDesc": "تعذر تحميل هذا العقار.",
+    "updateError": "لم نتمكن من تحديث هذا الإعلان. حاول مجدداً."
+  },
+  "createListing": {
+    "header": "إنشاء إعلان",
+    "error": "لم نتمكن من حفظ هذا الإعلان. حاول مجدداً."
+  },
+  "meta": {
+    "login": {
+      "title": "تسجيل الدخول | مسكني",
+      "desc": "سجّل الدخول إلى حسابك في مسكني."
+    },
+    "register": {
+      "title": "إنشاء حساب | مسكني",
+      "desc": "أنشئ حسابك في مسكني."
+    },
+    "verifyOtp": {
+      "title": "التحقق من الرمز | مسكني",
+      "desc": "أدخل الرمز الذي أرسلناه لك."
+    },
+    "profile": {
+      "title": "الملف الشخصي | مسكني",
+      "desc": "إدارة حسابك وقوائمك."
+    },
+    "favorites": {
+      "title": "المفضلة | مسكني",
+      "desc": "العقارات التي حفظتها."
+    },
+    "myProperties": {
+      "title": "عقاراتي | مسكني",
+      "desc": "إدارة قوائم عقاراتك."
+    },
+    "createListing": {
+      "title": "إنشاء قائمة | مسكني",
+      "desc": "أدرج عقارك على مسكني."
+    },
+    "home": {
+      "title": "مسكني - ابحث عن عقارك المثالي",
+      "desc": "منازل وغرف وإقامات منتقاة بعناية بالقرب منك."
+    },
+    "search": {
+      "title": "بحث | مسكني",
+      "desc": "ابحث عن عقارات حسب الموقع والنوع والسعر."
+    }
+  },
+  "whatsapp": {
+    "buttonLabel": "واتساب",
+    "message": "مرحباً! وجدت هذا الإعلان على مسكني وأريد الاستفسار عنه:\n\n\"{{title}}\"\n{{url}}\n\nهل لا يزال متاحاً؟",
+    "message_ar": "مرحباً! وجدت هذا الإعلان على مسكني وأريد الاستفسار عنه:\n\n\"{{title}}\"\n{{url}}\n\nهل لا يزال متاحاً؟"
+  },
+  "property": {
+    "bed": "{{count}} سرير",
+    "bed_other": "{{count}} سريرات",
+    "bath": "{{count}} حمام",
+    "bath_other": "{{count}} حمامات"
   }
 }

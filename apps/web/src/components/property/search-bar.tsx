@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, type Ref } from 'react';
 import { Search, X, SlidersHorizontal } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 
 type SearchBarProps = {
   value: string;
@@ -19,9 +20,10 @@ export function SearchBar({
   onChange,
   onFilterClick,
   activeFilterCount = 0,
-  placeholder = 'Search properties...',
+  placeholder,
   ref,
 }: SearchBarProps) {
+  const { t } = useTranslation();
   const [localValue, setLocalValue] = useState(value);
   const inputRef = useRef<HTMLInputElement>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
@@ -55,7 +57,7 @@ export function SearchBar({
         <Search
           size={18}
           strokeWidth={2}
-          className="absolute left-3.5 top-1/2 -translate-y-1/2 text-stone-400 pointer-events-none"
+          className="absolute start-3.5 top-1/2 -translate-y-1/2 text-stone-400 pointer-events-none"
         />
         <input
           ref={(node) => {
@@ -66,10 +68,10 @@ export function SearchBar({
           type="search"
           value={localValue}
           onChange={(e) => handleChange(e.target.value)}
-          placeholder={placeholder}
+          placeholder={placeholder ?? t('search.placeholder')}
           className="
             w-full h-11
-            pl-10 pr-9
+            ps-10 pe-9
             rounded-xl
             bg-white border border-stone-300
             text-[15px] text-stone-800
@@ -77,13 +79,13 @@ export function SearchBar({
             focus:outline-none focus:border-terracotta-400 focus:ring-2 focus:ring-terracotta-100
             transition-shadow duration-200
           "
-          aria-label="Search properties"
+          aria-label={t('aria.searchInput')}
         />
         {localValue && (
           <button
             onClick={handleClear}
             className="
-              absolute right-2.5 top-1/2 -translate-y-1/2
+              absolute end-2.5 top-1/2 -translate-y-1/2
               w-6 h-6 rounded-full
               flex items-center justify-center
               text-stone-400 hover:text-stone-600
@@ -91,7 +93,7 @@ export function SearchBar({
               focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-terracotta-100
               transition-colors duration-150
             "
-            aria-label="Clear search"
+            aria-label={t('aria.searchClear')}
           >
             <X size={14} strokeWidth={2.5} />
           </button>
@@ -115,13 +117,13 @@ export function SearchBar({
             transition-colors transition-shadow transition-transform duration-200
             shrink-0
           "
-          aria-label={`Filters${activeFilterCount > 0 ? ` (${activeFilterCount} active)` : ''}`}
+          aria-label={`${t('filter.filters')}${activeFilterCount > 0 ? ` (${activeFilterCount} ${t('filter.active')})` : ''}`}
         >
           <SlidersHorizontal size={18} strokeWidth={2} />
           {activeFilterCount > 0 && (
             <span
               className="
-                absolute -top-1 -right-1
+                absolute -top-1 -end-1
                 min-w-[18px] h-[18px] px-1
                 flex items-center justify-center
                 bg-terracotta-500 text-white
