@@ -11,6 +11,7 @@
  */
 import { Capacitor } from '@capacitor/core';
 import { PushNotifications } from '@capacitor/push-notifications';
+import { logger } from '../lib/logger';
 import { apiClient } from './api';
 
 async function registerTokenWithApi(token: string): Promise<void> {
@@ -41,12 +42,20 @@ export async function initPushNotifications(): Promise<void> {
     try {
       await registerTokenWithApi(token.value);
     } catch (err) {
-      console.warn('[push-service] Failed to register token with API:', err);
+      logger.warn('Failed to register token with API', {
+        component: 'push-service',
+        action: 'register-token',
+        error: String(err),
+      });
     }
   });
 
   PushNotifications.addListener('registrationError', (err) => {
-    console.warn('[push-service] Registration error:', err.error);
+    logger.warn('Registration error', {
+      component: 'push-service',
+      action: 'registration-error',
+      error: err.error,
+    });
   });
 
   await PushNotifications.register();
@@ -64,6 +73,10 @@ export async function unregisterPushToken(): Promise<void> {
   try {
     await apiClient.delete('/api/push/token');
   } catch (err) {
-    console.warn('[push-service] Failed to clear push token on logout:', err);
+    logger.warn('Failed to clear push token on logout', {
+      component: 'push-service',
+      action: 'unregister-token',
+      error: String(err),
+    });
   }
 }

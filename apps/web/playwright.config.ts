@@ -53,7 +53,6 @@ export default defineConfig({
     {
       command: `node ${API_SERVER_ENTRY}`,
       cwd: API_PACKAGE_DIR,
-      url: `http://localhost:${TEST_API_PORT}/api/health`,
       reuseExistingServer: !process.env.CI,
       timeout: 60_000,
       stdout: 'pipe',

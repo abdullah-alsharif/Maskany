@@ -3,9 +3,10 @@ import cors from 'cors';
 import express, { type Express, type Request, type Response, type NextFunction } from 'express';
 import helmet from 'helmet';
 import { env } from './config/env.js';
+import { pinoInstance } from './lib/logger.js';
 import { errorHandler, notFoundHandler } from './middleware/error-handler.js';
 import { createAuthRateLimiter } from './middleware/rate-limit.js';
-import { requestId } from './middleware/request-id.js';
+import { createRequestLogger } from './middleware/request-logger.js';
 import { createTestRoutes } from './middleware/test-routes.js';
 import { createAuthRouter } from './routes/auth-routes.js';
 import { createHealthRouter } from './routes/health.js';
@@ -44,7 +45,7 @@ export function createApp(options: CreateAppOptions = {}): Express {
 
   app.disable('x-powered-by');
 
-  app.use(requestId);
+  app.use(createRequestLogger({ logger: pinoInstance }));
   app.use(helmet());
   app.use(localeMiddleware);
   app.use(

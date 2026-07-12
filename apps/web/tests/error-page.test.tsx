@@ -22,7 +22,13 @@ describe('GlobalError (T-045)', () => {
     const spy = vi.spyOn(console, 'error').mockImplementation(() => {});
     const err = new Error('crash');
     render(<GlobalError error={err} reset={vi.fn()} />);
-    expect(spy).toHaveBeenCalledWith(err);
+    expect(spy).toHaveBeenCalledTimes(1);
+    const output = JSON.parse(spy.mock.calls[0][0]);
+    expect(output).toMatchObject({
+      level: 'error',
+      message: 'crash',
+      component: 'GlobalError',
+    });
     spy.mockRestore();
   });
 });

@@ -1,9 +1,15 @@
+import { randomUUID } from 'node:crypto';
 import { describe, expect, it } from 'vitest';
 import express from 'express';
 import request from 'supertest';
 import { errorHandler, notFoundHandler } from '../src/middleware/error-handler.js';
 import { ErrorCode, HttpError } from '../src/lib/http-error.js';
-import { requestId } from '../src/middleware/request-id.js';
+
+function attachRequestId(req: express.Request, res: express.Response, next: express.NextFunction) {
+  req.requestId = randomUUID();
+  res.setHeader('x-request-id', req.requestId);
+  next();
+}
 
 describe('notFoundHandler', () => {
   it('returns 404 with NOT_FOUND error code', async () => {
@@ -23,7 +29,7 @@ describe('errorHandler', () => {
     handler: (req: express.Request, res: express.Response, next: express.NextFunction) => void,
   ): express.Express {
     const app = express();
-    app.use(requestId);
+    app.use(attachRequestId);
     app.get('/error', handler);
     app.use(errorHandler);
     return app;
@@ -41,9 +47,9 @@ describe('errorHandler', () => {
     });
   });
 
-  it('includes requestId in the response when res.locals has one', async () => {
+  it('includes requestId in the response when req.requestId is set', async () => {
     const app = express();
-    app.use(requestId);
+    app.use(attachRequestId);
     app.get('/error', (_req, _res, next) => {
       next(new HttpError(403, ErrorCode.FORBIDDEN, 'Access denied.'));
     });

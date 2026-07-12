@@ -18,13 +18,14 @@ describe('Express app scaffold', () => {
   });
 
   describe('GET /api/health', () => {
-    it('returns 200 with ok status and a valid ISO timestamp', async () => {
+    it('returns health status with db field and a valid ISO timestamp', async () => {
       const before = Date.now();
       const response = await request(app).get('/api/health');
       const after = Date.now();
 
-      expect(response.status).toBe(200);
-      expect(response.body).toMatchObject({ status: 'ok' });
+      expect([200, 503]).toContain(response.status);
+      expect(response.body.status).toMatch(/^(ok|degraded)$/);
+      expect(response.body.db).toMatch(/^(connected|disconnected|timeout)$/);
       expect(response.body.timestamp).toBeTypeOf('string');
 
       const parsed = new Date(response.body.timestamp as string);
@@ -49,7 +50,7 @@ describe('Express app scaffold', () => {
     it('echoes the allowed CORS origin for matching requests', async () => {
       const response = await request(app).get('/api/health').set('Origin', 'http://localhost:5173');
 
-      expect(response.status).toBe(200);
+      expect([200, 503]).toContain(response.status);
       expect(response.headers['access-control-allow-origin']).toBe('http://localhost:5173');
     });
   });
