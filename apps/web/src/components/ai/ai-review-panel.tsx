@@ -15,7 +15,6 @@ type AiReviewPanelProps = {
 };
 
 const severityOrder: Record<string, number> = { high: 0, medium: 1, low: 2 };
-const severityLabel: Record<string, string> = { high: 'High', medium: 'Medium', low: 'Low' };
 const severityColor: Record<string, string> = {
   high: 'bg-red-50 border-red-200 text-red-700',
   medium: 'bg-amber-50 border-amber-200 text-amber-700',
@@ -136,7 +135,7 @@ export function AiReviewPanel({
                         className={`rounded-xl border p-3 transition-opacity ${
                           isApplied
                             ? 'opacity-50 border-green-300 bg-green-50'
-                            : severityColor[suggestion.severity]
+                            : severityColor[suggestion.severity ?? 'medium']
                         }`}
                       >
                         <div className="flex items-start gap-2">
@@ -154,16 +153,20 @@ export function AiReviewPanel({
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center gap-2 mb-1">
                               <span
-                                className={`w-2 h-2 rounded-full ${severityDot[suggestion.severity]}`}
+                                className={`w-2 h-2 rounded-full ${severityDot[suggestion.severity ?? 'medium']}`}
                               />
                               <span className="text-xs font-semibold uppercase tracking-wide">
-                                {severityLabel[suggestion.severity]}
+                                {t(
+                                  `ai.severity${(suggestion.severity ?? 'medium').charAt(0).toUpperCase() + (suggestion.severity ?? 'medium').slice(1)}` as const,
+                                )}
                               </span>
                               <span className="text-xs text-stone-400 font-mono">
                                 {suggestion.field}
                               </span>
                               {isApplied && (
-                                <span className="text-xs text-green-600 font-medium">Applied</span>
+                                <span className="text-xs text-green-600 font-medium">
+                                  {t('ai.applied')}
+                                </span>
                               )}
                             </div>
                             <p className="text-sm">{suggestion.message}</p>

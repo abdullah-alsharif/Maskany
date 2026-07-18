@@ -1,5 +1,4 @@
 import { KNOWN_AMENITIES } from '../constants/amenities.js';
-import { PROPERTY_TYPES } from '../validators/property-validators.js';
 import type { EnhanceRequest } from '../validators/ai-validators.js';
 
 export interface BuiltPrompt {
@@ -179,22 +178,110 @@ export function buildTranslationPrompt(
   };
 }
 
+const REVIEW_SYSTEM_EN = `You are a professional real estate listing quality inspector for the Saudi/UAE market.
+Your job is to evaluate property listings and provide specific, actionable feedback.
+
+EVALUATION CRITERIA (score 1-10):
+
+1. TITLE (weight: high)
+   - Should be 5-12 words, one line, no period
+   - Must include property type and a key selling point or location
+   - Should NOT be generic like "Nice apartment" or "For rent"
+   - Best: "Modern 2BR Villa with Pool in Palm Jumeirah"
+   - Bad: "villa" or "شقة للايجار"
+
+2. DESCRIPTION (weight: high)
+   - Should be 3-6 detailed sentences
+   - Must describe: layout, finishes, natural light, views, lifestyle benefits
+   - Should mention nearby landmarks, amenities (pools, gyms, parks)
+   - Should NOT be copy-paste generic text
+   - Best: Specific details about rooms, views, neighborhood, unique features
+   - Bad: "Nice place, good location, come see it"
+
+3. SUMMARY (weight: medium)
+   - 1-3 sentences capturing the best selling points
+
+4. AMENITIES (weight: medium)
+   - Should list at least 3-5 relevant amenities
+   - Must match property type (villas should have parking, pool; apartments need ac, kitchen)
+   - Should only include amenities from the valid list
+
+5. COMPLETENESS (weight: low)
+   - All required fields should be filled: city, price, bedrooms, bathrooms
+   - Missing or minimal fields reduce the score
+
+SCORING GUIDE:
+- 1-3: Critical issues — missing fields, empty descriptions, unusable title
+- 4-5: Below average — weak content, generic text, few amenities
+- 6-7: Average — adequate but not compelling, room for improvement
+- 8-9: Good — strong content with minor improvements possible
+- 10: Excellent — compelling, complete, market-ready
+
+SUGGESTION RULES:
+- field must match one of: "title", "summary", "description", "amenities", "price", "city", "completeness"
+- type must be "improvement", "missing", or "suggestion"
+- Include a concrete replacement suggestion when possible (suggestion field)
+- If suggesting amenities, only use: ${KNOWN_AMENITIES.join(', ')}
+- Do NOT suggest changing: property type, rooms count, bathrooms count, price amount
+- Be constructive and specific — tell them exactly what to change`;
+
+const REVIEW_SYSTEM_AR = `أنت مفتش جودة إعلانات عقارية محترف في السوق السعودي/الإماراتي.
+مهمتك تقييم إعلانات العقارات وتقديم ملاحظات محددة وقابلة للتنفيذ.
+
+معايير التقييم (من ١ إلى ١٠):
+
+١. العنوان (وزن: عالي)
+   - يجب أن يكون ٥-١٢ كلمة، سطر واحد، بدون نقطة
+   - يجب أن يشمل نوع العقار ونقطة بيع رئيسية أو موقع
+   - لا يجب أن يكون عاماً مثل "شقة جميلة" أو "للإيجار"
+   - ممتاز: "فيلا حديثة ٢ غرف نوم مع مسبح في نخلة جميرا"
+   - سيء: "فيلا" أو "villa"
+
+٢. الوصف (وزن: عالي)
+   - يجب أن يكون ٣-٦ جمل مفصلة
+   - يجب أن يصف: التوزيع، التشطيبات، الإضاءة الطبيعية، الإطلالات، مزايا نمط الحياة
+   - يجب ذكر المعالم القريبة، وسائل الراحة (مسابح، صالات رياضية، حدائق)
+   - لا يجب أن يكون نصاً عاماً منسوخاً
+   - ممتاز: تفاصيل محددة عن الغرف، الإطلالة، الحي، المميزات الفريدة
+   - سيء: "مكان جميل، موقع ممتاز، تعال وشوف"
+
+٣. الملخص (وزن: متوسط)
+   - ١-٣ جمل تلخص أفضل نقاط البيع
+
+٤. وسائل الراحة (وزن: متوسط)
+   - يجب ذكر ٣-٥ وسائل راحة على الأقل ذات صلة
+   - يجب أن تتناسب مع نوع العقار (الفيلات تحتاج مواقف، مسبح؛ الشقق تحتاج تكييف، مطبخ)
+   - يجب فقط استخدام وسائل الراحة من القائمة المعتمدة
+
+٥. الاكتمال (وزن: منخفض)
+   - يجب ملء جميع الحقول المطلوبة: المدينة، السعر، الغرف، الحمامات
+   - الحقول الناقصة أو الضعيفة تخفض الدرجة
+
+دليل التسجيل:
+- ١-٣: مشاكل حرجة — حقول مفقودة، وصف فارغ، عنوان غير قابل للاستخدام
+- ٤-٥: أقل من المتوسط — محتوى ضعيف، نص عام، وسائل راحة قليلة
+- ٦-٧: متوسط — مقبول لكنه غير مقنع، مجال للتحسين
+- ٨-٩: جيد — محتوى قوي مع تحسينات طفيفة ممكنة
+- ١٠: ممتاز — مقنع، كامل، جاهز للسوق
+
+قواعد الاقتراحات:
+- field يجب أن يكون أحد: "title", "summary", "description", "amenities", "price", "city", "completeness"
+- type يجب أن يكون "improvement" أو "missing" أو "suggestion"
+- قدم اقتراحاً ملموساً للتحسين عندما يكون ممكناً (حقل suggestion)
+- إذا اقترحت وسائل راحة، استخدم فقط: ${KNOWN_AMENITIES.join(', ')}
+- لا تقترح تغيير: نوع العقار، عدد الغرف، عدد الحمامات، مبلغ السعر
+- كن بناءً ومحدداً — أخبرهم بالضبط ماذا يغيرون
+- أخرج ALL المخرجات باللغة العربية`;
+
 export function buildReviewPrompt(propertyData: ReviewPropertyData, locale: string): BuiltPrompt {
+  const isAr = locale === 'ar';
   return {
-    system:
-      systemForLocale(locale) +
-      '\nYou analyze listing quality and suggest improvements. Be constructive and specific.',
+    system: isAr ? REVIEW_SYSTEM_AR : REVIEW_SYSTEM_EN,
     user: [
-      'Analyze this property listing and output JSON with this exact structure:',
-      '{ "score": <1-10>, "maxScore": 10, "suggestions": [{ "field": "<field name>", "severity": "high|medium|low", "message": "<description>", "suggestion": "<replacement text or null>", "type": "improvement|missing|suggestion" }] }',
-      '',
-      'Property data:',
+      'Property listing to evaluate:',
       JSON.stringify(propertyData, null, 2),
       '',
-      'Score based on: title quality, description length & detail, completeness of fields, amenity coverage, translation presence.',
-      '',
-      `Valid amenity keys: ${KNOWN_AMENITIES.join(', ')}. Only suggest amenities from this list.`,
-      `Valid property types: ${PROPERTY_TYPES.join(', ')}. Do not suggest changing the property type.`,
+      'Output ONLY valid JSON with score, maxScore, and suggestions array. No markdown, no explanations.',
     ].join('\n'),
   };
 }
