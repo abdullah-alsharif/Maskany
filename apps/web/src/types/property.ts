@@ -1,13 +1,5 @@
 export type PropertyType =
-  | 'APARTMENT'
-  | 'ROOM'
-  | 'CHALET'
-  | 'VILLA'
-  | 'HOUSE'
-  | 'STUDIO'
-  | 'PENTHOUSE'
-  | 'DUPLEX'
-  | 'OTHER';
+  'APARTMENT' | 'ROOM' | 'CHALET' | 'VILLA' | 'HOUSE' | 'STUDIO' | 'PENTHOUSE' | 'DUPLEX' | 'OTHER';
 
 export type PriceUnit = 'per_night' | 'per_month' | 'per_year' | 'total';
 

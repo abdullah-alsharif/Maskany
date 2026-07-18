@@ -41,8 +41,7 @@ describe('requestLogger middleware', () => {
     const { app, logs } = buildTestApp();
     await request(app).get('/test');
     const entry = logs.find((l) => (l as { msg?: string }).msg?.includes('request completed')) as
-      | { req?: { id?: string } }
-      | undefined;
+      { req?: { id?: string } } | undefined;
     expect(entry?.req?.id).toBeDefined();
   });
 

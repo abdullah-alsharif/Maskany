@@ -24,8 +24,7 @@ type EditImageManagerProps = {
 };
 
 type ImageItem =
-  | { kind: 'existing'; media: PropertyMedia }
-  | { kind: 'new'; file: File; index: number };
+  { kind: 'existing'; media: PropertyMedia } | { kind: 'new'; file: File; index: number };
 
 function formatMegabytes(bytes: number): string {
   const mb = bytes / (1024 * 1024);
