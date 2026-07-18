@@ -14,6 +14,7 @@
 import type { AuthResponse, User } from '../types/user';
 
 const ACCESS_KEY = 'maskany:accessToken';
+const REFRESH_KEY = 'maskany:refreshToken';
 const USER_KEY = 'maskany:user';
 
 function readString(key: string): string | null {
@@ -46,7 +47,7 @@ export const tokenStorage = {
   },
 
   getRefreshToken(): string | null {
-    return null;
+    return readString(REFRESH_KEY);
   },
 
   getUser(): User | null {
@@ -61,6 +62,7 @@ export const tokenStorage = {
 
   setSession(session: AuthResponse): void {
     writeString(ACCESS_KEY, session.accessToken);
+    writeString(REFRESH_KEY, session.refreshToken ?? '');
     writeString(USER_KEY, JSON.stringify(session.user));
   },
 
@@ -68,8 +70,13 @@ export const tokenStorage = {
     writeString(ACCESS_KEY, token);
   },
 
+  setRefreshToken(token: string): void {
+    writeString(REFRESH_KEY, token);
+  },
+
   clear(): void {
     remove(ACCESS_KEY);
+    remove(REFRESH_KEY);
     remove(USER_KEY);
   },
 };

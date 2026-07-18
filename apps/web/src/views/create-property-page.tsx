@@ -7,7 +7,7 @@
  */
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { Header } from '../components/layout/header';
@@ -19,12 +19,30 @@ import {
   uploadPropertyImages,
   savePropertyTranslation,
 } from '../services/property-service';
+import { AiConsentDialog } from '../components/ai/ai-consent-dialog';
 
 export function CreatePropertyPage() {
   const router = useRouter();
   const queryClient = useQueryClient();
   const { t } = useTranslation();
   const [error, setError] = useState<string | null>(null);
+  const [consentOpen, setConsentOpen] = useState(false);
+
+  useEffect(() => {
+    if (typeof window !== 'undefined' && !localStorage.getItem('ai-consent')) {
+      setConsentOpen(true);
+    }
+  }, []);
+
+  const handleConsentAccept = () => {
+    localStorage.setItem('ai-consent', 'true');
+    setConsentOpen(false);
+  };
+
+  const handleConsentDecline = () => {
+    localStorage.setItem('ai-consent', 'declined');
+    setConsentOpen(false);
+  };
 
   const mutation = useMutation({
     mutationFn: async (payload: PropertyFormSubmitPayload) => {
@@ -82,6 +100,12 @@ export function CreatePropertyPage() {
           </p>
         )}
       </div>
+
+      <AiConsentDialog
+        open={consentOpen}
+        onAccept={handleConsentAccept}
+        onDecline={handleConsentDecline}
+      />
     </section>
   );
 }

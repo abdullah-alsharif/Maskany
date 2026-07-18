@@ -14,13 +14,20 @@
  * "Next" button runs lightweight validation before advancing. On the
  * final step the `onSubmit` callback receives the collected payload.
  */
-import { type ReactNode, useMemo, useState } from 'react';
+import { type ReactNode, useMemo, useState, forwardRef, useImperativeHandle } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Button } from './ui/button';
 import { ImageUploader } from './image-uploader';
 import { EditImageManager } from './edit-image-manager';
 import { TranslationEditor, type TranslationData } from './translation-editor';
+import { AiEnhanceButton } from './ai/ai-enhance-button';
+import { buildPropertyMetadata } from '../services/ai-service';
+import { useAiHistory } from '../hooks/use-ai-history';
 import type { PropertyMedia } from '../types/property';
+
+export type PropertyFormHandle = {
+  applySuggestion: (field: string, value: string) => void;
+};
 
 export type PropertyFormValues = {
   title: string;
@@ -247,15 +254,30 @@ const inputErrorClass =
 const textareaClass =
   'min-h-[120px] w-full rounded-xl border border-stone-300 bg-white p-3 text-base focus:outline-none focus:border-terracotta-400 focus:ring-2 focus:ring-terracotta-100 transition-shadow duration-200';
 
-export function PropertyForm({
-  mode,
-  initialValues,
-  initialImages,
-  onSubmit,
-  submitting,
-}: PropertyFormProps) {
-  const { t } = useTranslation();
+export const PropertyForm = forwardRef<PropertyFormHandle, PropertyFormProps>(function PropertyForm(
+  { mode, initialValues, initialImages, onSubmit, submitting },
+  ref,
+) {
+  const { t, i18n } = useTranslation();
+  const locale = i18n.language?.startsWith('ar') ? 'ar' : 'en';
+  const history = useAiHistory();
   const [values, setValues] = useState<PropertyFormValues>(() => defaultValues(initialValues));
+
+  useImperativeHandle(ref, () => ({
+    applySuggestion(field: string, value: string) {
+      if (field in defaultValues()) {
+        setValues((prev) => ({ ...prev, [field as keyof PropertyFormValues]: value }));
+        setFieldErrors((prev) => {
+          if (prev[field]) {
+            const next = { ...prev };
+            delete next[field];
+            return next;
+          }
+          return prev;
+        });
+      }
+    },
+  }));
   const [images, setImages] = useState<File[]>([]);
   const [existingImages, setExistingImages] = useState<PropertyMedia[]>(() => initialImages ?? []);
   const [step, setStep] = useState(1);
@@ -321,6 +343,8 @@ export function PropertyForm({
     }));
   };
 
+  const metadata = useMemo(() => buildPropertyMetadata(values), [values]);
+
   const reviewSummary = useMemo(
     () => [
       { key: t('propertyForm.reviewTitle'), value: values.title },
@@ -359,14 +383,27 @@ export function PropertyForm({
         <section className="space-y-4 animate-fade-in">
           <StepHeader step={1} labelKey="propertyForm.stepBasics" t={t} />
           <Field id="property-title" label={t('propertyForm.title')} error={fieldErrors.title}>
-            <input
-              id="property-title"
-              type="text"
-              value={values.title}
-              onChange={(e) => update('title', e.target.value)}
-              className={fieldErrors.title ? inputErrorClass : inputClass}
-              placeholder={t('propertyForm.titlePlaceholder')}
-            />
+            <div className="relative">
+              <input
+                id="property-title"
+                type="text"
+                value={values.title}
+                onChange={(e) => update('title', e.target.value)}
+                className={`${fieldErrors.title ? inputErrorClass : inputClass} pe-28`}
+                placeholder={t('propertyForm.titlePlaceholder')}
+              />
+              <div className="absolute end-1 top-1/2 -translate-y-1/2 z-10">
+                <AiEnhanceButton
+                  fieldKey="title"
+                  currentValue={values.title}
+                  fieldType="title"
+                  metadata={metadata}
+                  onResult={(v) => update('title', v)}
+                  locale={locale}
+                  history={history}
+                />
+              </div>
+            </div>
           </Field>
           <Field id="property-type" label={t('propertyForm.propertyType')}>
             <select
@@ -382,14 +419,49 @@ export function PropertyForm({
               ))}
             </select>
           </Field>
+          <Field id="property-summary" label={t('propertyForm.summary')}>
+            <div className="relative">
+              <textarea
+                id="property-summary"
+                value={values.summary}
+                onChange={(e) => update('summary', e.target.value)}
+                className={`${textareaClass} pe-28`}
+                placeholder={t('propertyForm.summaryPlaceholder')}
+              />
+              <div className="absolute end-1 top-1 z-10">
+                <AiEnhanceButton
+                  fieldKey="summary"
+                  currentValue={values.summary}
+                  fieldType="summary"
+                  metadata={metadata}
+                  onResult={(v) => update('summary', v)}
+                  locale={locale}
+                  history={history}
+                />
+              </div>
+            </div>
+          </Field>
           <Field id="property-description" label={t('propertyForm.description')}>
-            <textarea
-              id="property-description"
-              value={values.description}
-              onChange={(e) => update('description', e.target.value)}
-              className={textareaClass}
-              placeholder={t('propertyForm.descriptionPlaceholder')}
-            />
+            <div className="relative">
+              <textarea
+                id="property-description"
+                value={values.description}
+                onChange={(e) => update('description', e.target.value)}
+                className={`${textareaClass} pe-28`}
+                placeholder={t('propertyForm.descriptionPlaceholder')}
+              />
+              <div className="absolute end-1 top-1 z-10">
+                <AiEnhanceButton
+                  fieldKey="description"
+                  currentValue={values.description}
+                  fieldType="description"
+                  metadata={metadata}
+                  onResult={(v) => update('description', v)}
+                  locale={locale}
+                  history={history}
+                />
+              </div>
+            </div>
           </Field>
         </section>
       )}
@@ -512,22 +584,37 @@ export function PropertyForm({
         <section className="space-y-4 animate-fade-in">
           <StepHeader step={3} labelKey="propertyForm.stepLocation" t={t} />
           <Field id="property-city" label={t('propertyForm.city')} error={fieldErrors.city}>
-            <input
-              id="property-city"
-              type="text"
-              value={values.city}
-              onChange={(e) => update('city', e.target.value)}
-              className={fieldErrors.city ? inputErrorClass : inputClass}
-            />
+            <div className="relative">
+              <input
+                id="property-city"
+                type="text"
+                value={values.city}
+                onChange={(e) => update('city', e.target.value)}
+                className={`${fieldErrors.city ? inputErrorClass : inputClass}`}
+              />
+            </div>
           </Field>
           <Field id="property-area" label={t('propertyForm.areaNeighborhood')}>
-            <input
-              id="property-area"
-              type="text"
-              value={values.area}
-              onChange={(e) => update('area', e.target.value)}
-              className={inputClass}
-            />
+            <div className="relative">
+              <input
+                id="property-area"
+                type="text"
+                value={values.area}
+                onChange={(e) => update('area', e.target.value)}
+                className={`${inputClass} pe-28`}
+              />
+              <div className="absolute end-1 top-1/2 -translate-y-1/2 z-10">
+                <AiEnhanceButton
+                  fieldKey="area"
+                  currentValue={values.area}
+                  fieldType="area"
+                  metadata={metadata}
+                  onResult={(v) => update('area', v)}
+                  locale={locale}
+                  history={history}
+                />
+              </div>
+            </div>
           </Field>
           <Field id="property-country" label={t('propertyForm.country')}>
             <input
@@ -598,6 +685,16 @@ export function PropertyForm({
               onToggle={() => setTransOpen(!transOpen)}
               value={translation}
               onChange={(data: TranslationData) => setTranslation(data)}
+              metadata={metadata}
+              locale={locale}
+              sourceFields={{
+                title: values.title,
+                summary: values.summary || undefined,
+                description: values.description,
+                city: values.city,
+                area: values.area || undefined,
+                country: values.country,
+              }}
             />
           )}
         </section>
@@ -625,4 +722,4 @@ export function PropertyForm({
       </div>
     </div>
   );
-}
+});

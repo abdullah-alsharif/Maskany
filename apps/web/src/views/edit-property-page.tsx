@@ -4,7 +4,7 @@
  */
 'use client';
 
-import { useState } from 'react';
+import { useState, useMemo, useEffect, useRef } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
@@ -12,6 +12,7 @@ import { Header } from '../components/layout/header';
 import { EmptyState } from '../components/ui/empty-state';
 import {
   PropertyForm,
+  type PropertyFormHandle,
   type PropertyFormSubmitPayload,
   type PropertyFormValues,
 } from '../components/property-form';
@@ -27,6 +28,9 @@ import {
 } from '../services/property-service';
 import { apiClient } from '../services/api';
 import { TranslationEditor, type TranslationData } from '../components/translation-editor';
+import { AiConsentDialog } from '../components/ai/ai-consent-dialog';
+import { AiReviewPanel } from '../components/ai/ai-review-panel';
+import { buildPropertyMetadata } from '../services/ai-service';
 import type { Property, PropertyMedia } from '../types/property';
 
 function toFormValues(property: Property): PropertyFormValues {
@@ -50,7 +54,8 @@ function toFormValues(property: Property): PropertyFormValues {
 }
 
 export function EditPropertyPage() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
+  const locale = (i18n.language?.startsWith('ar') ? 'ar' : 'en') as 'en' | 'ar';
   const params = useParams() ?? {};
   const id = params['id'] as string | undefined;
   const router = useRouter();
@@ -67,6 +72,15 @@ export function EditPropertyPage() {
     area: '',
     country: '',
   });
+  const [consentOpen, setConsentOpen] = useState(false);
+  const [reviewOpen, setReviewOpen] = useState(false);
+  const formRef = useRef<PropertyFormHandle>(null);
+
+  useEffect(() => {
+    if (typeof window !== 'undefined' && !localStorage.getItem('ai-consent')) {
+      setConsentOpen(true);
+    }
+  }, []);
 
   const { data: property, isPending, error: loadError } = useProperty(id);
 
@@ -180,6 +194,60 @@ export function EditPropertyPage() {
     }
   };
 
+  const targetLang = property?.locale === 'en' ? 'العربية' : 'English';
+
+  const propertyMetadata = useMemo(
+    () =>
+      property
+        ? buildPropertyMetadata({
+            propertyType: property.propertyType,
+            rooms: property.rooms,
+            bathrooms: property.bathrooms,
+            city: property.city,
+            area: property.area ?? '',
+            country: property.country,
+            price: String(property.price),
+            currency: property.currency,
+            priceUnit: property.priceUnit,
+            areaSqm: property.areaSqm === null ? '' : String(property.areaSqm),
+            amenities: property.amenities,
+          })
+        : undefined,
+    [property],
+  );
+
+  const reviewPropertyData = useMemo(
+    () => ({
+      title: property?.title ?? '',
+      summary: property?.summary ?? undefined,
+      description: property?.description ?? '',
+      propertyType: property?.propertyType ?? 'APARTMENT',
+      rooms: property?.rooms ?? 0,
+      bathrooms: property?.bathrooms ?? 0,
+      city: property?.city ?? '',
+      area: property?.area ?? undefined,
+      price: property ? String(property.price) : '',
+      amenities: property?.amenities ?? [],
+    }),
+    [property],
+  );
+
+  const handleConsentAccept = () => {
+    localStorage.setItem('ai-consent', 'true');
+    setConsentOpen(false);
+  };
+
+  const handleConsentDecline = () => {
+    localStorage.setItem('ai-consent', 'declined');
+    setConsentOpen(false);
+  };
+
+  const handleApplySuggestion = (field: string, value: string | null) => {
+    if (value !== null) {
+      formRef.current?.applySuggestion(field, value);
+    }
+  };
+
   if (isPending) {
     return (
       <section className="page-content">
@@ -198,14 +266,13 @@ export function EditPropertyPage() {
     );
   }
 
-  const targetLang = property.locale === 'en' ? 'العربية' : 'English';
-
   return (
     <section className="page-content">
       <SeoHead title={t('meta.myProperties.title')} description={t('meta.myProperties.desc')} />
       <Header showBack title={t('editListing.header')} />
       <div className="px-4 py-5 max-w-2xl mx-auto space-y-6">
         <PropertyForm
+          ref={formRef}
           mode="edit"
           initialValues={toFormValues(property)}
           initialImages={property.images ?? []}
@@ -231,8 +298,42 @@ export function EditPropertyPage() {
           saving={transSaving}
           message={transMsg}
           targetLangLabel={targetLang}
+          metadata={propertyMetadata}
+          locale={locale}
+          sourceFields={{
+            title: property.title,
+            summary: property.summary ?? undefined,
+            description: property.description,
+            city: property.city,
+            area: property.area ?? undefined,
+            country: property.country,
+          }}
         />
+
+        <div className="flex justify-center pt-2">
+          <button
+            type="button"
+            onClick={() => setReviewOpen(true)}
+            className="flex items-center gap-2 px-6 py-3 rounded-2xl bg-terracotta-50 text-terracotta-700 font-semibold text-sm hover:bg-terracotta-100 transition-colors"
+          >
+            ✨ {t('ai.startReview')}
+          </button>
+        </div>
       </div>
+
+      <AiConsentDialog
+        open={consentOpen}
+        onAccept={handleConsentAccept}
+        onDecline={handleConsentDecline}
+      />
+
+      <AiReviewPanel
+        open={reviewOpen}
+        onClose={() => setReviewOpen(false)}
+        propertyData={reviewPropertyData}
+        locale={locale}
+        onApplySuggestion={handleApplySuggestion}
+      />
     </section>
   );
 }

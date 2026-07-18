@@ -128,7 +128,7 @@ export function ImageUploader({
           id="image-uploader-input"
           ref={inputRef}
           type="file"
-          accept="image/*"
+          accept="image/jpeg,image/png,image/webp,image/avif"
           multiple
           className="sr-only"
           aria-label="Upload images"

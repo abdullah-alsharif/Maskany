@@ -175,7 +175,7 @@ export function EditImageManager({
             id="edit-image-input"
             ref={inputRef}
             type="file"
-            accept="image/*"
+            accept="image/jpeg,image/png,image/webp,image/avif"
             multiple
             className="sr-only"
             aria-label={t('editImage.uploadAria')}
@@ -210,7 +210,7 @@ export function EditImageManager({
               >
                 <img src={src} alt={label} className="h-full w-full object-cover" />
                 {item.kind === 'new' && (
-                  <span className="absolute top-1.5 left-1.5 text-[10px] font-semibold bg-terracotta-500 text-white px-1.5 py-0.5 rounded-full">
+                  <span className="absolute top-1.5 start-1.5 text-[10px] font-semibold bg-terracotta-500 text-white px-1.5 py-0.5 rounded-full">
                     {t('editImage.newBadge')}
                   </span>
                 )}

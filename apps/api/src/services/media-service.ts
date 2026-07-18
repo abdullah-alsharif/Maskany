@@ -26,7 +26,12 @@ export const IMAGE_MAX_BYTES = 5 * 1024 * 1024;
 /** Per-video byte cap enforced by multer (50MB). */
 export const VIDEO_MAX_BYTES = 50 * 1024 * 1024;
 
-export const ALLOWED_IMAGE_MIME_TYPES = ['image/jpeg', 'image/png', 'image/webp'] as const;
+export const ALLOWED_IMAGE_MIME_TYPES = [
+  'image/jpeg',
+  'image/png',
+  'image/webp',
+  'image/avif',
+] as const;
 
 export const ALLOWED_VIDEO_MIME_TYPES = ['video/mp4', 'video/quicktime', 'video/webm'] as const;
 

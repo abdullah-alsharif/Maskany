@@ -23,7 +23,9 @@ type RetriableConfig = AxiosRequestConfig & { _authRetried?: boolean };
 
 export interface AuthInterceptorOptions {
   getAccessToken: () => string | null;
+  getRefreshToken?: () => string | null;
   onTokenRefreshed: (accessToken: string) => void;
+  onRefreshTokenRefreshed?: (refreshToken: string) => void;
   onRefreshFailed: () => void;
 }
 
@@ -63,16 +65,21 @@ export function installAuthInterceptors(
         isRefreshing = true;
         refreshPromise = (async () => {
           try {
+            const refreshToken = options.getRefreshToken?.();
             const refreshResponse = await client.request({
               url: REFRESH_URL,
               method: 'POST',
+              data: refreshToken ? { refreshToken } : undefined,
             });
-            const newAccess = (refreshResponse.data as { accessToken?: string }).accessToken;
-            if (!newAccess) {
+            const data = refreshResponse.data as { accessToken?: string; refreshToken?: string };
+            if (!data.accessToken) {
               options.onRefreshFailed();
               return false;
             }
-            options.onTokenRefreshed(newAccess);
+            options.onTokenRefreshed(data.accessToken);
+            if (data.refreshToken) {
+              options.onRefreshTokenRefreshed?.(data.refreshToken);
+            }
             return true;
           } catch {
             options.onRefreshFailed();

@@ -7,6 +7,8 @@
  */
 import { describe, expect, it } from 'vitest';
 import {
+  type AiGenerationCacheTable,
+  type AiUsageLogsTable,
   type Database,
   type OtpCodesTable,
   type PropertiesTable,
@@ -19,7 +21,7 @@ import {
 } from '../src/lib/db-types.js';
 
 describe('db-types interfaces', () => {
-  it('declares all seven tables on the Database interface', () => {
+  it('declares all tables on the Database interface', () => {
     // A witness object that must type-check against `Database`. If any table
     // key is missing or renamed, this fails at compile time.
     const witness = {
@@ -31,10 +33,14 @@ describe('db-types interfaces', () => {
       refresh_tokens: null as unknown as RefreshTokensTable,
       push_tokens: null as unknown as PushTokensTable,
       property_translations: null as unknown as PropertyTranslationsTable,
+      ai_generation_cache: null as unknown as AiGenerationCacheTable,
+      ai_usage_logs: null as unknown as AiUsageLogsTable,
     } satisfies Database;
 
     expect(Object.keys(witness).sort()).toEqual(
       [
+        'ai_generation_cache',
+        'ai_usage_logs',
         'otp_codes',
         'properties',
         'property_media',

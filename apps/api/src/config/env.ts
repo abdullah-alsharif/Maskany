@@ -88,4 +88,36 @@ export const env = {
     const raw = process.env.FCM_SERVICE_ACCOUNT_JSON;
     return raw && raw.length > 0 ? raw : undefined;
   },
+
+  get openrouterApiKey(): string | undefined {
+    return process.env.OPENROUTER_API_KEY;
+  },
+
+  get openrouterPaidApiKey(): string | undefined {
+    return process.env.OPENROUTER_PAID_API_KEY;
+  },
+
+  get nvidiaApiKey(): string | undefined {
+    return process.env.NVIDIA_API_KEY;
+  },
+
+  get redisUrl(): string {
+    return process.env.REDIS_URL ?? 'redis://localhost:6379';
+  },
+
+  get aiCacheEnabled(): boolean {
+    return process.env.AI_CACHE_ENABLED !== 'false';
+  },
+
+  get aiGlobalCostCapCents(): number {
+    return Number(process.env.AI_GLOBAL_COST_CAP_CENTS) || 500;
+  },
+
+  get aiUserCostCapCents(): number {
+    return Number(process.env.AI_USER_COST_CAP_CENTS) || 100;
+  },
+
+  get aiCacheVersion(): string {
+    return process.env.AI_CACHE_VERSION ?? 'v1';
+  },
 };

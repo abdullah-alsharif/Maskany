@@ -3,7 +3,12 @@
  */
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { fireEvent, render, screen, within } from '@testing-library/react';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { PropertyForm } from '../src/components/property-form';
+
+const queryClient = new QueryClient({
+  defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
+});
 
 beforeEach(() => {
   Object.defineProperty(URL, 'createObjectURL', {
@@ -17,7 +22,11 @@ beforeEach(() => {
 });
 
 function renderForm(onSubmit = vi.fn()) {
-  return render(<PropertyForm mode="create" onSubmit={onSubmit} />);
+  return render(
+    <QueryClientProvider client={queryClient}>
+      <PropertyForm mode="create" onSubmit={onSubmit} />
+    </QueryClientProvider>,
+  );
 }
 
 describe('PropertyForm', () => {
@@ -186,27 +195,29 @@ describe('PropertyForm', () => {
 
   it('pre-fills fields when given initialValues in edit mode and renders an update button', () => {
     render(
-      <PropertyForm
-        mode="edit"
-        onSubmit={() => undefined}
-        initialValues={{
-          title: 'Prefilled Villa',
-          summary: '',
-          description: 'Nice view',
-          propertyType: 'VILLA',
-          city: 'Jeddah',
-          area: 'Corniche',
-          country: 'SA',
-          price: '3000',
-          currency: 'SAR',
-          priceUnit: 'per_month',
-          rooms: 4,
-          bathrooms: 3,
-          areaSqm: '250',
-          amenities: ['pool'],
-          whatsappNumber: '+966500000000',
-        }}
-      />,
+      <QueryClientProvider client={queryClient}>
+        <PropertyForm
+          mode="edit"
+          onSubmit={() => undefined}
+          initialValues={{
+            title: 'Prefilled Villa',
+            summary: '',
+            description: 'Nice view',
+            propertyType: 'VILLA',
+            city: 'Jeddah',
+            area: 'Corniche',
+            country: 'SA',
+            price: '3000',
+            currency: 'SAR',
+            priceUnit: 'per_month',
+            rooms: 4,
+            bathrooms: 3,
+            areaSqm: '250',
+            amenities: ['pool'],
+            whatsappNumber: '+966500000000',
+          }}
+        />
+      </QueryClientProvider>,
     );
     expect((screen.getByLabelText(/title/i) as HTMLInputElement).value).toBe('Prefilled Villa');
     expect((screen.getByLabelText(/property type/i) as HTMLSelectElement).value).toBe('VILLA');
@@ -272,18 +283,20 @@ describe('PropertyForm', () => {
 
   it('shows image upload UI on step 4 when mode is edit', () => {
     render(
-      <PropertyForm
-        mode="edit"
-        onSubmit={() => undefined}
-        initialValues={
-          {
-            title: 'Villa',
-            price: '1000',
-            city: 'Riyadh',
-            whatsappNumber: '+966500000000',
-          } as Record<string, never>
-        }
-      />,
+      <QueryClientProvider client={queryClient}>
+        <PropertyForm
+          mode="edit"
+          onSubmit={() => undefined}
+          initialValues={
+            {
+              title: 'Villa',
+              price: '1000',
+              city: 'Riyadh',
+              whatsappNumber: '+966500000000',
+            } as Record<string, never>
+          }
+        />
+      </QueryClientProvider>,
     );
     fireEvent.click(screen.getByRole('button', { name: /next/i }));
     fireEvent.click(screen.getByRole('button', { name: /next/i }));

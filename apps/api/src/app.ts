@@ -8,6 +8,7 @@ import { errorHandler, notFoundHandler } from './middleware/error-handler.js';
 import { createAuthRateLimiter } from './middleware/rate-limit.js';
 import { createRequestLogger } from './middleware/request-logger.js';
 import { createTestRoutes } from './middleware/test-routes.js';
+import { createAiRouter } from './routes/ai-routes.js';
 import { createAuthRouter } from './routes/auth-routes.js';
 import { createHealthRouter } from './routes/health.js';
 import { createPropertyRouter } from './routes/property-routes.js';
@@ -80,6 +81,7 @@ export function createApp(options: CreateAppOptions = {}): Express {
   app.use('/api/properties', createUploadRouter());
   app.use('/api/properties', createReviewRouter());
   app.use('/api/properties', createPropertyRouter());
+  app.use('/api/ai', createAiRouter());
 
   if (options.exposeTestRoutes) {
     app.use('/__test', createTestRoutes());

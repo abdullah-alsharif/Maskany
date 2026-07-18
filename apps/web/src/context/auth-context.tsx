@@ -103,9 +103,13 @@ export function AuthProvider({ children }: PropsWithChildren) {
   useEffect(() => {
     const eject = installAuthInterceptors(apiClient, {
       getAccessToken: () => accessTokenRef.current,
+      getRefreshToken: () => tokenStorage.getRefreshToken(),
       onTokenRefreshed: (token) => {
         tokenStorage.setAccessToken(token);
         setAccessTokenState(token);
+      },
+      onRefreshTokenRefreshed: (token) => {
+        tokenStorage.setRefreshToken(token);
       },
       onRefreshFailed: () => {
         tokenStorage.clear();

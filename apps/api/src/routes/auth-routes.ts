@@ -231,6 +231,7 @@ export function createAuthRouter(): Router {
 
       res.status(200).json({
         accessToken,
+        refreshToken,
         user: toUserDto(user),
       });
     }),
@@ -252,7 +253,7 @@ export function createAuthRouter(): Router {
       const newRefreshToken = await createRefreshToken(userId);
       setRefreshTokenCookie(res, newRefreshToken);
 
-      res.status(200).json({ accessToken });
+      res.status(200).json({ accessToken, refreshToken: newRefreshToken });
     }),
   );
 

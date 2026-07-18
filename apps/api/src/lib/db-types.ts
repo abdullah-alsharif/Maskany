@@ -128,6 +128,35 @@ export interface PropertyTranslationsTable {
   updated_at: Timestamp;
 }
 
+export interface AiGenerationCacheTable {
+  id: Generated<string>;
+  input_hash: string;
+  prompt_type: string;
+  output: unknown;
+  created_at: Generated<Date>;
+  expires_at: Date | string;
+}
+
+export interface AiUsageLogsTable {
+  id: Generated<string>;
+  user_id: string;
+  property_id: string | null;
+  action: string;
+  provider: string;
+  model: string;
+  locale: string | null;
+  field_type: string | null;
+  prompt_tokens: number;
+  completion_tokens: number;
+  total_tokens: number;
+  cost: string;
+  duration_ms: number;
+  cached: boolean;
+  success: boolean;
+  error: string | null;
+  created_at: Generated<Date>;
+}
+
 export interface Database {
   users: UsersTable;
   properties: PropertiesTable;
@@ -137,4 +166,6 @@ export interface Database {
   refresh_tokens: RefreshTokensTable;
   push_tokens: PushTokensTable;
   property_translations: PropertyTranslationsTable;
+  ai_generation_cache: AiGenerationCacheTable;
+  ai_usage_logs: AiUsageLogsTable;
 }

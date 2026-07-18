@@ -9,7 +9,12 @@
 
 import type { ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useMutation } from '@tanstack/react-query';
 import { Button } from './ui/button';
+import { AiEnhanceButton } from './ai/ai-enhance-button';
+import { useAiHistory } from '../hooks/use-ai-history';
+import { useIdempotencyKey } from '../hooks/use-idempotency-key';
+import { translateAllFields, type PropertyMetadata } from '../services/ai-service';
 
 export type TranslationData = {
   title: string;
@@ -17,6 +22,15 @@ export type TranslationData = {
   description: string;
   city: string;
   area: string;
+  country: string;
+};
+
+export type TranslationSourceFields = {
+  title: string;
+  summary?: string;
+  description: string;
+  city: string;
+  area?: string;
   country: string;
 };
 
@@ -30,6 +44,9 @@ type TranslationEditorProps = {
   saving?: boolean;
   message?: string | null;
   targetLangLabel?: string;
+  metadata?: PropertyMetadata;
+  locale?: 'en' | 'ar';
+  sourceFields?: TranslationSourceFields;
 };
 
 const inputClass =
@@ -59,12 +76,53 @@ export function TranslationEditor({
   saving,
   message,
   targetLangLabel,
+  metadata,
+  locale = 'en',
+  sourceFields,
 }: TranslationEditorProps) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
+  const history = useAiHistory();
+  const { key: idempotencyKey, reset: renewKey } = useIdempotencyKey();
+
+  const effectiveLocale = (i18n.language?.startsWith('ar') ? 'ar' : 'en') as 'en' | 'ar';
+  const sourceLocale = effectiveLocale;
+  const targetLocale = (effectiveLocale === 'en' ? 'ar' : 'en') as 'en' | 'ar';
 
   const update = (field: keyof TranslationData, fieldValue: string) => {
     onChange({ ...value, [field]: fieldValue });
   };
+
+  const generateMutation = useMutation({
+    mutationFn: async () => {
+      if (!metadata) throw new Error('Metadata required for AI generation');
+      const result = await translateAllFields(
+        sourceLocale,
+        targetLocale,
+        {
+          title: sourceFields?.title ?? '',
+          summary: sourceFields?.summary,
+          description: sourceFields?.description ?? '',
+          city: sourceFields?.city ?? '',
+          area: sourceFields?.area,
+          country: sourceFields?.country ?? '',
+        },
+        metadata,
+        idempotencyKey,
+      );
+      return result.translation;
+    },
+    onSuccess: (translation) => {
+      onChange({
+        title: translation.title ?? '',
+        summary: translation.summary ?? '',
+        description: translation.description ?? '',
+        city: translation.city ?? '',
+        area: translation.area ?? '',
+        country: translation.country ?? '',
+      });
+      renewKey();
+    },
+  });
 
   return (
     <section className="rounded-2xl bg-white p-4 shadow-[var(--shadow-card)] space-y-4">
@@ -79,66 +137,160 @@ export function TranslationEditor({
               : t('propertyForm.translationHint', { lang: targetLangLabel })}
           </p>
         </div>
-        <Button type="button" variant="secondary" size="sm" onClick={onToggle}>
-          {open
-            ? t('propertyForm.hide')
-            : mode === 'create'
-              ? t('propertyForm.addTranslationOptional')
-              : t('propertyForm.addTranslation', { lang: targetLangLabel })}
-        </Button>
+        <div className="flex items-center gap-2">
+          {metadata && (
+            <Button
+              type="button"
+              variant="primary"
+              size="sm"
+              onClick={() => generateMutation.mutate()}
+              loading={generateMutation.isPending}
+            >
+              ✨ {t('ai.generateTranslation')}
+            </Button>
+          )}
+          <Button
+            type="button"
+            variant="secondary"
+            size="sm"
+            onClick={onToggle}
+            data-testid="translation-toggle"
+          >
+            {open
+              ? t('propertyForm.hide')
+              : mode === 'create'
+                ? t('propertyForm.addTranslationOptional')
+                : t('propertyForm.addTranslation', { lang: targetLangLabel })}
+          </Button>
+        </div>
       </div>
 
       {open && (
         <div className="space-y-3 pt-2 border-t border-stone-100">
           <Field id="trans-title" label={t('propertyForm.title')}>
-            <input
-              id="trans-title"
-              type="text"
-              value={value.title}
-              onChange={(e) => update('title', e.target.value)}
-              className={inputClass}
-            />
+            <div className="relative">
+              <input
+                id="trans-title"
+                type="text"
+                value={value.title}
+                onChange={(e) => update('title', e.target.value)}
+                className={`${inputClass} pe-28`}
+              />
+              {metadata && (
+                <div className="absolute end-1 top-1/2 -translate-y-1/2 z-10">
+                  <AiEnhanceButton
+                    fieldKey="trans-title"
+                    currentValue={value.title}
+                    fieldType="title"
+                    metadata={metadata}
+                    onResult={(v) => update('title', v)}
+                    locale={locale}
+                    history={history}
+                  />
+                </div>
+              )}
+            </div>
           </Field>
 
           {mode === 'edit' && (
             <Field id="trans-summary" label={t('propertyForm.summary')}>
-              <input
-                id="trans-summary"
-                type="text"
-                value={value.summary}
-                onChange={(e) => update('summary', e.target.value)}
-                className={inputClass}
-              />
+              <div className="relative">
+                <input
+                  id="trans-summary"
+                  type="text"
+                  value={value.summary}
+                  onChange={(e) => update('summary', e.target.value)}
+                  className={`${inputClass} pe-28`}
+                />
+                {metadata && (
+                  <div className="absolute end-1 top-1/2 -translate-y-1/2 z-10">
+                    <AiEnhanceButton
+                      fieldKey="trans-summary"
+                      currentValue={value.summary}
+                      fieldType="summary"
+                      metadata={metadata}
+                      onResult={(v) => update('summary', v)}
+                      locale={locale}
+                      history={history}
+                    />
+                  </div>
+                )}
+              </div>
             </Field>
           )}
 
           <Field id="trans-description" label={t('propertyForm.description')}>
-            <textarea
-              id="trans-description"
-              value={value.description}
-              onChange={(e) => update('description', e.target.value)}
-              className={textareaClass}
-            />
+            <div className="relative">
+              <textarea
+                id="trans-description"
+                value={value.description}
+                onChange={(e) => update('description', e.target.value)}
+                className={`${textareaClass} pe-28`}
+              />
+              {metadata && (
+                <div className="absolute end-1 top-1 z-10">
+                  <AiEnhanceButton
+                    fieldKey="trans-description"
+                    currentValue={value.description}
+                    fieldType="description"
+                    metadata={metadata}
+                    onResult={(v) => update('description', v)}
+                    locale={locale}
+                    history={history}
+                  />
+                </div>
+              )}
+            </div>
           </Field>
 
           <div className="grid grid-cols-2 gap-3">
             <Field id="trans-city" label={t('propertyForm.city')}>
-              <input
-                id="trans-city"
-                type="text"
-                value={value.city}
-                onChange={(e) => update('city', e.target.value)}
-                className={inputClass}
-              />
+              <div className="relative">
+                <input
+                  id="trans-city"
+                  type="text"
+                  value={value.city}
+                  onChange={(e) => update('city', e.target.value)}
+                  className={`${inputClass} pe-28`}
+                />
+                {metadata && (
+                  <div className="absolute end-1 top-1/2 -translate-y-1/2 z-10">
+                    <AiEnhanceButton
+                      fieldKey="trans-city"
+                      currentValue={value.city}
+                      fieldType="title"
+                      metadata={metadata}
+                      onResult={(v) => update('city', v)}
+                      locale={locale}
+                      history={history}
+                    />
+                  </div>
+                )}
+              </div>
             </Field>
             <Field id="trans-area" label={t('propertyForm.areaNeighborhood')}>
-              <input
-                id="trans-area"
-                type="text"
-                value={value.area}
-                onChange={(e) => update('area', e.target.value)}
-                className={inputClass}
-              />
+              <div className="relative">
+                <input
+                  id="trans-area"
+                  type="text"
+                  value={value.area}
+                  onChange={(e) => update('area', e.target.value)}
+                  className={`${inputClass} pe-28`}
+                />
+                {metadata && (
+                  <div className="absolute end-1 top-1/2 -translate-y-1/2 z-10">
+                    <AiEnhanceButton
+                      fieldKey="trans-area"
+                      currentValue={value.area}
+                      fieldType="area"
+                      metadata={metadata}
+                      onResult={(v) => update('area', v)}
+                      locale={locale}
+                      history={history}
+                    />
+                  </div>
+                )}
+              </div>
             </Field>
           </div>
 
