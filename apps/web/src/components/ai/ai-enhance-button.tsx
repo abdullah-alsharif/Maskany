@@ -26,7 +26,8 @@ export function AiEnhanceButton({
   onUndo,
   history,
 }: AiEnhanceButtonProps) {
-  const { t } = useTranslation();
+  const { i18n } = useTranslation();
+  const t = i18n.getFixedT(locale);
   const [showUndo, setShowUndo] = useState(false);
   const [previousValue, setPreviousValue] = useState<string | null>(null);
   const undoTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
