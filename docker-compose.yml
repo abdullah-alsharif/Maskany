@@ -2,7 +2,7 @@ name: maskany-dev
 
 services:
   postgres:
-    image: postgres:17-alpine
+    image: pgvector/pgvector:pg17
     container_name: maskany-postgres
     restart: unless-stopped
     ports:

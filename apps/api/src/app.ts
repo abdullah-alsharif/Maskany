@@ -10,6 +10,7 @@ import { createRequestLogger } from './middleware/request-logger.js';
 import { createTestRoutes } from './middleware/test-routes.js';
 import { createAiRouter } from './routes/ai-routes.js';
 import { createAuthRouter } from './routes/auth-routes.js';
+import { createEmbeddingRouter } from './routes/embedding-routes.js';
 import { createHealthRouter } from './routes/health.js';
 import { createPropertyRouter } from './routes/property-routes.js';
 import { createPushRouter } from './routes/push-routes.js';
@@ -82,6 +83,7 @@ export function createApp(options: CreateAppOptions = {}): Express {
   app.use('/api/properties', createReviewRouter());
   app.use('/api/properties', createPropertyRouter());
   app.use('/api/ai', createAiRouter());
+  app.use('/api', createEmbeddingRouter());
 
   if (options.exposeTestRoutes) {
     app.use('/__test', createTestRoutes());

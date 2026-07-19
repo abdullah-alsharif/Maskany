@@ -110,6 +110,7 @@ describe('property routes', () => {
     // properties reference users. CASCADE on FK removes orphans.
     await db.deleteFrom('property_translations').execute();
     await db.deleteFrom('property_media').execute();
+    await db.deleteFrom('property_embeddings').execute();
     await db.deleteFrom('reviews').execute();
     await db.deleteFrom('properties').execute();
     await db.deleteFrom('refresh_tokens').execute();
@@ -265,6 +266,18 @@ describe('property routes', () => {
       const response = await request(app).get('/api/properties/not-a-uuid');
       expect(response.status).toBe(400);
       expect(response.body.error.code).toBe('VALIDATION_ERROR');
+    });
+
+    it('[T025] returns similar properties for an existing property', async () => {
+      const owner = await createUser('T025 Owner', '+966500020013', 'OWNER');
+      const source = await insertProperty(owner.id, { title: 'Source property' });
+      await insertProperty(owner.id, { title: 'Similar one' });
+      await insertProperty(owner.id, { title: 'Similar two' });
+
+      const response = await request(app).get(`/api/properties/${source}/similar`);
+
+      expect(response.status).toBe(200);
+      expect(Array.isArray(response.body)).toBe(true);
     });
   });
 
@@ -871,6 +884,44 @@ describe('property routes', () => {
       const ids = response.body.properties.map((p: { id: string }) => p.id);
       expect(ids).toEqual([garden2500.id]);
       expect(response.body.total).toBe(1);
+    });
+
+    it('[T012] falls back to ILIKE search when no embeddings exist', async () => {
+      const owner = await createUser('T012 Owner', '+966500020011', 'OWNER');
+      const match = await insertSearchable(owner.id, {
+        title: 'Beachside chalet with pool',
+      });
+      await insertSearchable(owner.id, { title: 'Downtown studio' });
+
+      const response = await request(app).get('/api/properties').query({ q: 'chalet' });
+
+      expect(response.status).toBe(200);
+      const ids = response.body.properties.map((p: { id: string }) => p.id);
+      expect(ids).toEqual([match]);
+      expect(response.body.total).toBe(1);
+    });
+
+    it('[T019] returns cross-lingual results for Arabic queries', async () => {
+      const owner = await createUser('T019 Owner', '+966500020012', 'OWNER');
+      const match = await db
+        .insertInto('properties')
+        .values({
+          title: 'شقة قريبة من المترو',
+          city: 'Riyadh',
+          price: '1000',
+          whatsapp_number: '+966500003333',
+          owner_id: owner.id,
+          status: 'ACTIVE',
+          property_type: 'APARTMENT',
+        })
+        .returning('id')
+        .executeTakeFirstOrThrow();
+
+      const response = await request(app).get('/api/properties').query({ q: 'قريبة من المترو' });
+
+      expect(response.status).toBe(200);
+      expect(response.body.total).toBe(1);
+      expect(response.body.properties[0].id).toBe(match.id);
     });
   });
 

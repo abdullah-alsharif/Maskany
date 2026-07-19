@@ -24,6 +24,7 @@ import {
   requireUserId,
 } from '../middleware/auth-middleware.js';
 import { parseAmenitiesParam, parseTypesParam } from '../services/filter-service.js';
+import { findSimilar } from '../services/similar-properties-service.js';
 import {
   createProperty,
   deleteProperty,
@@ -116,6 +117,15 @@ export function createPropertyRouter(): Router {
       const params = parseOrThrow(propertyIdParamSchema, req.params);
       const property = await getPropertyDetail(params.id);
       res.status(200).json(property);
+    }),
+  );
+
+  router.get(
+    '/:id/similar',
+    asyncHandler(async (req, res) => {
+      const params = parseOrThrow(propertyIdParamSchema, req.params);
+      const similar = await findSimilar(params.id);
+      res.status(200).json(similar);
     }),
   );
 

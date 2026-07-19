@@ -15,7 +15,8 @@
     "db:migrate": "dotenv -e ../../.env -- tsx src/scripts/migrate.ts",
     "db:migrate:down": "dotenv -e ../../.env -- tsx src/scripts/migrate.ts down",
     "db:seed": "dotenv -e ../../.env -- tsx src/scripts/seed-cli.ts",
-    "db:setup": "pnpm db:reset && pnpm db:migrate && pnpm db:seed"
+    "db:setup": "pnpm db:reset && pnpm db:migrate && pnpm db:seed",
+    "db:embed": "dotenv -e ../../.env -- tsx src/scripts/embed-cli.ts"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1090.0",

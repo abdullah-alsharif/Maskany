@@ -137,6 +137,15 @@ export interface AiGenerationCacheTable {
   expires_at: Date | string;
 }
 
+export interface PropertyEmbeddingsTable {
+  property_id: string;
+  locale: 'en' | 'ar';
+  embedding: unknown;
+  model: string;
+  created_at: Generated<Date>;
+  updated_at: Timestamp;
+}
+
 export interface AiUsageLogsTable {
   id: Generated<string>;
   user_id: string;
@@ -166,6 +175,7 @@ export interface Database {
   refresh_tokens: RefreshTokensTable;
   push_tokens: PushTokensTable;
   property_translations: PropertyTranslationsTable;
+  property_embeddings: PropertyEmbeddingsTable;
   ai_generation_cache: AiGenerationCacheTable;
   ai_usage_logs: AiUsageLogsTable;
 }

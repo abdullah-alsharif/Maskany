@@ -34,7 +34,8 @@ import {
   type PropertyFilters,
   type SortOption,
 } from './filter-service.js';
-import { buildRelevanceOrder, buildSearchWhere } from './search-service.js';
+import { buildRelevanceOrder, buildSearchWhere, decideSearchStrategy } from './search-service.js';
+import { embedProperty } from './embedding-service.js';
 
 export interface ListActivePropertiesOptions {
   cursor?: string;
@@ -365,6 +366,9 @@ export async function listActiveProperties(
   const effectiveSort: SortOption = sort ?? DEFAULT_SORT;
   const effectiveFilters: PropertyFilters = filters ?? {};
 
+  let semanticPropertyIds: string[] | null = null;
+  let semanticCursor: string | null = null;
+
   let query = db
     .selectFrom('properties')
     .where('status', '=', 'ACTIVE')
@@ -376,21 +380,33 @@ export async function listActiveProperties(
     .where('status', '=', 'ACTIVE')
     .select(sql<string>`count(*)`.as('count'));
 
-  if (hasSearch) {
-    query = query.where((eb) => buildSearchWhere(eb, q));
-    countQuery = countQuery.where((eb) => buildSearchWhere(eb, q));
-  }
-
   if (hasAnyFilter(effectiveFilters)) {
     query = query.where((eb) => buildFilterWhere(eb, effectiveFilters));
     countQuery = countQuery.where((eb) => buildFilterWhere(eb, effectiveFilters));
   }
 
   let needsCursorText = false;
+
   if (hasSearch) {
-    query = query.orderBy(buildRelevanceOrder(q), 'desc').orderBy('id', 'asc');
-    if (cursor) {
-      query = query.where('id', '>', cursor);
+    const decision = await decideSearchStrategy(q, PROPERTY_PAGE_SIZE, cursor);
+
+    if (decision.strategy === 'semantic' && decision.semanticResults) {
+      semanticPropertyIds = decision.semanticResults.map((r) => r.propertyId);
+      semanticCursor = decision.semanticCursor ?? null;
+      query = query.where('id', 'in', semanticPropertyIds);
+      countQuery = countQuery.where('id', 'in', semanticPropertyIds);
+      const idOrder = semanticPropertyIds.map((id) => `'${id.replace(/'/g, "''")}'`).join(',');
+      query = query.orderBy(
+        sql.raw(`array_position(ARRAY[${idOrder}]::uuid[], properties.id)`),
+        'asc',
+      );
+    } else {
+      query = query.where((eb) => buildSearchWhere(eb, q));
+      query = query.orderBy(buildRelevanceOrder(q), 'desc').orderBy('id', 'asc');
+      countQuery = countQuery.where((eb) => buildSearchWhere(eb, q));
+      if (cursor) {
+        query = query.where('id', '>', cursor);
+      }
     }
   } else {
     const column = getSortColumn(effectiveSort);
@@ -417,7 +433,9 @@ export async function listActiveProperties(
 
   let nextCursor: string | null = null;
   if (hasMore && lastRow) {
-    if (hasSearch) {
+    if (semanticCursor) {
+      nextCursor = semanticCursor;
+    } else if (hasSearch && !semanticPropertyIds) {
       nextCursor = lastRow.id;
     } else {
       const sortValue = needsCursorText
@@ -533,6 +551,8 @@ export async function createProperty(
     .returning(PROPERTY_COLUMNS)
     .executeTakeFirstOrThrow();
 
+  embedProperty(inserted.id).catch(() => {});
+
   return toSummary(inserted, null);
 }
 
@@ -561,6 +581,12 @@ export async function updateProperty(
     .where('id', '=', propertyId)
     .returning(PROPERTY_COLUMNS)
     .executeTakeFirstOrThrow();
+
+  if (
+    Object.keys(values).some((k) => ['title', 'summary', 'description', 'amenities'].includes(k))
+  ) {
+    embedProperty(updated.id).catch(() => {});
+  }
 
   return toSummary(updated, null);
 }

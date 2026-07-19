@@ -12,6 +12,7 @@ import {
   type Database,
   type OtpCodesTable,
   type PropertiesTable,
+  type PropertyEmbeddingsTable,
   type PropertyMediaTable,
   type PropertyTranslationsTable,
   type PushTokensTable,
@@ -33,6 +34,7 @@ describe('db-types interfaces', () => {
       refresh_tokens: null as unknown as RefreshTokensTable,
       push_tokens: null as unknown as PushTokensTable,
       property_translations: null as unknown as PropertyTranslationsTable,
+      property_embeddings: null as unknown as PropertyEmbeddingsTable,
       ai_generation_cache: null as unknown as AiGenerationCacheTable,
       ai_usage_logs: null as unknown as AiUsageLogsTable,
     } satisfies Database;
@@ -42,6 +44,7 @@ describe('db-types interfaces', () => {
         'ai_generation_cache',
         'ai_usage_logs',
         'otp_codes',
+        'property_embeddings',
         'properties',
         'property_media',
         'property_translations',
@@ -167,6 +170,24 @@ describe('db-types interfaces', () => {
 
     expect(Object.keys(refreshKeys)).toContain('user_id');
     expect(Object.keys(refreshKeys)).toContain('expires_at');
+  });
+
+  it('uses snake_case column names on PropertyEmbeddingsTable matching the schema', () => {
+    const embeddingKeys: Record<keyof PropertyEmbeddingsTable, true> = {
+      property_id: true,
+      locale: true,
+      embedding: true,
+      model: true,
+      created_at: true,
+      updated_at: true,
+    };
+
+    expect(Object.keys(embeddingKeys)).toContain('property_id');
+    expect(Object.keys(embeddingKeys)).toContain('locale');
+    expect(Object.keys(embeddingKeys)).toContain('embedding');
+    expect(Object.keys(embeddingKeys)).toContain('model');
+    expect(Object.keys(embeddingKeys)).toContain('created_at');
+    expect(Object.keys(embeddingKeys)).toContain('updated_at');
   });
 
   it('uses snake_case column names on PropertyTranslationsTable matching the YAML schema', () => {

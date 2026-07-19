@@ -97,10 +97,6 @@ export const env = {
     return process.env.OPENROUTER_PAID_API_KEY;
   },
 
-  get nvidiaApiKey(): string | undefined {
-    return process.env.NVIDIA_API_KEY;
-  },
-
   get redisUrl(): string {
     return process.env.REDIS_URL ?? 'redis://localhost:6379';
   },
@@ -131,5 +127,13 @@ export const env = {
 
   get maxEnhanceTokens(): number {
     return Number(process.env.MAX_ENHANCE_TOKENS) || 3500;
+  },
+
+  get embeddingModel(): string {
+    return process.env.EMBEDDING_MODEL ?? 'text-embedding-3-small';
+  },
+
+  get embeddingSearchEnabled(): boolean {
+    return process.env.EMBEDDING_SEARCH_ENABLED !== 'false';
   },
 };

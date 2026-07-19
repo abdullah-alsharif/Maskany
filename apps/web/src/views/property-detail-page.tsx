@@ -31,6 +31,7 @@ import { ReviewSection } from '../components/review-section';
 import { SeoHead } from '../components/seo-head';
 import { FavoriteButton } from '../components/property/favorite-button';
 import { WhatsAppFab } from '../components/property/whatsapp-button';
+import { SimilarProperties } from '../components/property/similar-properties';
 import { useProperty } from '../hooks/use-property';
 import { useFavorites } from '../hooks/use-favorites';
 import { useAuth } from '../hooks/use-auth';
@@ -264,6 +265,9 @@ function PropertyBody({ property }: { property: Property }) {
               currentUser={reviewViewer}
             />
           )}
+
+          {/* Similar Properties */}
+          <SimilarProperties propertyId={property.id} />
         </div>
       </article>
 

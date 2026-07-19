@@ -2,7 +2,7 @@ name: maskany-test
 
 services:
   postgres:
-    image: postgres:17-alpine
+    image: pgvector/pgvector:pg17
     container_name: maskany-postgres-test
     restart: unless-stopped
     ports:
