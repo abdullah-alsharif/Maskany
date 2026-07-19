@@ -47,7 +47,7 @@ export interface PropertiesTable {
   lng: number | null;
   price: Generated<string>;
   currency: Generated<string>;
-  price_unit: Generated<'per_night' | 'per_month' | 'per_year' | 'total'>;
+  price_unit: Generated<'per_night' | 'per_month' | 'per_year'>;
   rooms: Generated<number>;
   bathrooms: Generated<number>;
   area_sqm: string | null;

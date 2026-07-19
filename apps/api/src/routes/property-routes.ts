@@ -182,7 +182,18 @@ export function createPropertyRouter(): Router {
         city: z.string().trim().min(1),
         area: z.string().trim().optional().nullable(),
         country: z.string().trim().min(2).optional().nullable(),
-        amenities: z.array(z.string().trim().min(1)).optional(),
+        amenities: z
+          .preprocess(
+            (val) =>
+              typeof val === 'string'
+                ? val
+                    .split(',')
+                    .map((s) => s.trim())
+                    .filter(Boolean)
+                : val,
+            z.array(z.string().trim().min(1)),
+          )
+          .optional(),
       });
       const body = parseOrThrow(translationSchema, req.body);
       await upsertPropertyTranslation(params.id, userId, locale as 'en' | 'ar', body);

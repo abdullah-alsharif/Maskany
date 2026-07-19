@@ -1,27 +1,25 @@
 import { useState, useCallback, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
-import { enhanceField } from '../services/ai-service';
+import { streamEnhanceField } from '../services/ai-service';
 import type { PropertyMetadata } from '../services/ai-service';
+import type { AiFieldStatus } from './use-ai-enhance';
 
-export type AiFieldStatus = 'idle' | 'loading' | 'success' | 'error' | 'rate_limited';
-
-export type UseAiEnhanceOptions = {
+export type UseAiStreamEnhanceOptions = {
   fieldType: string;
   action?: string;
   metadata: PropertyMetadata;
   locale: string;
 };
 
-export type UseAiEnhanceReturn = {
+export type UseAiStreamEnhanceReturn = {
   status: AiFieldStatus;
   enhancedValue: string | null;
   errorMessage: string | null;
   enhance: (currentValue: string) => Promise<string>;
   reset: () => void;
-  clearError: () => void;
 };
 
-export function useAiEnhance(options: UseAiEnhanceOptions): UseAiEnhanceReturn {
+export function useAiStreamEnhance(options: UseAiStreamEnhanceOptions): UseAiStreamEnhanceReturn {
   const { t } = useTranslation();
   const [status, setStatus] = useState<AiFieldStatus>('idle');
   const [enhancedValue, setEnhancedValue] = useState<string | null>(null);
@@ -43,7 +41,8 @@ export function useAiEnhance(options: UseAiEnhanceOptions): UseAiEnhanceReturn {
       const requestKey = crypto.randomUUID();
 
       try {
-        const result = await enhanceField(
+        let accumulated = '';
+        for await (const chunk of streamEnhanceField(
           {
             locale: options.locale as 'en' | 'ar',
             fieldType: options.fieldType,
@@ -54,10 +53,13 @@ export function useAiEnhance(options: UseAiEnhanceOptions): UseAiEnhanceReturn {
           },
           requestKey,
           controller.signal,
-        );
-        setEnhancedValue(result.result);
+        )) {
+          accumulated += chunk;
+          setEnhancedValue(accumulated);
+        }
+
         setStatus('success');
-        return result.result;
+        return accumulated;
       } catch (err) {
         if ((err as Error)?.name === 'CanceledError' || (err as Error)?.name === 'AbortError') {
           setStatus('idle');
@@ -85,9 +87,5 @@ export function useAiEnhance(options: UseAiEnhanceOptions): UseAiEnhanceReturn {
     setErrorMessage(null);
   }, []);
 
-  const clearError = useCallback(() => {
-    setErrorMessage(null);
-  }, []);
-
-  return { status, enhancedValue, errorMessage, enhance, reset, clearError };
+  return { status, enhancedValue, errorMessage, enhance, reset };
 }

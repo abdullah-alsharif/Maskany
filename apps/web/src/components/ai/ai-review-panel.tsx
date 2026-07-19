@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { AiQualityScore } from './ai-quality-score';
 import { useAiReview } from '../../hooks/use-ai-review';
@@ -26,6 +26,10 @@ const severityDot: Record<string, string> = {
   low: 'bg-stone-400',
 };
 
+function suggestionId(s: ReviewSuggestion, idx: number): string {
+  return `${s.field}-${s.type}-${idx}`;
+}
+
 export function AiReviewPanel({
   open,
   onClose,
@@ -40,16 +44,20 @@ export function AiReviewPanel({
 
   const { data, isLoading, error, refetch } = useAiReview(open ? propertyData : null, locale);
 
-  const suggestions: ReviewSuggestion[] = (data?.suggestions ?? []).sort(
-    (a, b) => (severityOrder[a.severity] ?? 99) - (severityOrder[b.severity] ?? 99),
+  const suggestions: (ReviewSuggestion & { _id: string })[] = useMemo(
+    () =>
+      (data?.suggestions ?? [])
+        .map((s, i) => ({ ...s, _id: suggestionId(s, i) }))
+        .sort((a, b) => (severityOrder[a.severity] ?? 99) - (severityOrder[b.severity] ?? 99)),
+    [data?.suggestions],
   );
 
-  const toggleSuggestion = (field: string) => {
-    if (applied.has(field)) return;
+  const toggleSuggestion = (id: string) => {
+    if (applied.has(id)) return;
     setSelected((prev) => {
       const next = new Set(prev);
-      if (next.has(field)) next.delete(field);
-      else next.add(field);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
       return next;
     });
   };
@@ -57,13 +65,13 @@ export function AiReviewPanel({
   const handleApplySelected = async () => {
     setApplying(true);
     for (const suggestion of suggestions) {
-      if (selected.has(suggestion.field) && suggestion.suggestion) {
+      if (selected.has(suggestion._id) && suggestion.suggestion) {
         onApplySuggestion(suggestion.field, suggestion.suggestion);
       }
     }
     setApplied((prev) => {
       const next = new Set(prev);
-      for (const field of selected) next.add(field);
+      for (const id of selected) next.add(id);
       return next;
     });
     setSelected(new Set());
@@ -127,11 +135,11 @@ export function AiReviewPanel({
 
               {suggestions.length > 0 && (
                 <div className="space-y-2">
-                  {suggestions.map((suggestion, idx) => {
-                    const isApplied = applied.has(suggestion.field);
+                  {suggestions.map((suggestion) => {
+                    const isApplied = applied.has(suggestion._id);
                     return (
                       <div
-                        key={`${suggestion.field}-${idx}`}
+                        key={suggestion._id}
                         className={`rounded-xl border p-3 transition-opacity ${
                           isApplied
                             ? 'opacity-50 border-green-300 bg-green-50'
@@ -144,8 +152,8 @@ export function AiReviewPanel({
                           ) : (
                             <input
                               type="checkbox"
-                              checked={selected.has(suggestion.field)}
-                              onChange={() => toggleSuggestion(suggestion.field)}
+                              checked={selected.has(suggestion._id)}
+                              onChange={() => toggleSuggestion(suggestion._id)}
                               disabled={!suggestion.suggestion || applying}
                               className="mt-1 rounded border-stone-300 text-terracotta-600 focus:ring-terracotta-500"
                             />

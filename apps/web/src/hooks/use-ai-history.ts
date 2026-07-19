@@ -16,12 +16,19 @@ export function useAiHistory() {
 
   const addEntry = useCallback((entry: Omit<AiHistoryEntry, 'id' | 'timestamp'>) => {
     setHistory((prev) => {
-      const updated = [{ ...entry, id: crypto.randomUUID(), timestamp: Date.now() }, ...prev];
-      // Trim per-field stack to max 5
-      const kept = updated.filter((e) => {
-        const count = updated.filter((x) => x.fieldType === e.fieldType).indexOf(e);
-        return count < MAX_HISTORY_PER_FIELD;
-      });
+      const newEntry = { ...entry, id: crypto.randomUUID(), timestamp: Date.now() };
+      const updated = [newEntry, ...prev];
+
+      // Trim per-field stack to max 5 — O(n) by counting per field
+      const counts = new Map<string, number>();
+      const kept: AiHistoryEntry[] = [];
+      for (const e of updated) {
+        const count = (counts.get(e.fieldType) ?? 0) + 1;
+        if (count <= MAX_HISTORY_PER_FIELD) {
+          kept.push(e);
+          counts.set(e.fieldType, count);
+        }
+      }
       return kept;
     });
   }, []);

@@ -76,8 +76,18 @@ export function CreatePropertyPage() {
       await queryClient.invalidateQueries({ queryKey: ['my-properties'] });
       router.push(`/properties/${property.id}`);
     },
-    onError: () => {
-      setError(t('createListing.error'));
+    onError: (err: unknown) => {
+      const data = (
+        err as {
+          response?: { data?: { error?: { details?: Array<{ path: string; message: string }> } } };
+        }
+      )?.response?.data;
+      const details = data?.error?.details;
+      if (details && details.length > 0) {
+        setError(details.map((d) => `${d.path}: ${d.message}`).join('\n'));
+      } else {
+        setError(t('createListing.error'));
+      }
     },
   });
 

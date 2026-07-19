@@ -261,14 +261,14 @@ describe('PropertyForm', () => {
     expect(screen.getByRole('alert')).toHaveTextContent(/bathrooms/i);
   });
 
-  it('blocks advancing when areaSqm is not a valid decimal', () => {
+  it('allows advancing when areaSqm gets non-numeric value (type=number coerces to empty)', () => {
     renderForm();
     fireEvent.change(screen.getByLabelText(/title/i), { target: { value: 'Villa' } });
     fireEvent.click(screen.getByRole('button', { name: /next/i }));
     fireEvent.change(screen.getByLabelText(/price/i), { target: { value: '1000' } });
     fireEvent.change(screen.getByLabelText(/area \(m²\)/i), { target: { value: 'abc' } });
     fireEvent.click(screen.getByRole('button', { name: /next/i }));
-    expect(screen.getByRole('alert')).toHaveTextContent(/area/i);
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
   });
 
   it('blocks advancing when currency is not 3 letters', () => {
@@ -363,7 +363,8 @@ describe('PropertyForm', () => {
       const transSection = screen.getAllByText(/translation/i)[0].closest('section')!;
       const inputs = within(transSection).getAllByRole('textbox');
       fireEvent.change(inputs[0], { target: { value: 'منزل مشمس' } });
-      fireEvent.change(inputs[2], { target: { value: 'الرياض' } });
+      // inputs: [title, summary, description, city, area, country]
+      fireEvent.change(inputs[3], { target: { value: 'الرياض' } });
 
       fireEvent.click(screen.getByRole('button', { name: /publish/i }));
       expect(onSubmit).toHaveBeenCalledWith(

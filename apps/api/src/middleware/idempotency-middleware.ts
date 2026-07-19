@@ -1,5 +1,6 @@
 import type { RequestHandler } from 'express';
 import { ErrorCode, HttpError } from '../lib/http-error.js';
+import { db } from '../lib/db.js';
 
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -7,7 +8,9 @@ function isUUID(value: string): boolean {
   return UUID_REGEX.test(value);
 }
 
-const cache = new Map<string, { status: number; body: unknown }>();
+interface CacheRow {
+  output: unknown;
+}
 
 export function idempotencyMiddleware(): RequestHandler {
   return (req, res, next) => {
@@ -22,19 +25,41 @@ export function idempotencyMiddleware(): RequestHandler {
       );
     }
 
-    const existing = cache.get(key);
-    if (existing) {
-      return res.status(existing.status).json(existing.body);
-    }
+    db.selectFrom('ai_generation_cache')
+      .select('output')
+      .where('input_hash', '=', key)
+      .where('prompt_type', '=', 'idempotency')
+      .where('expires_at', '>', new Date())
+      .executeTakeFirst()
+      .then((row: CacheRow | undefined) => {
+        if (row) {
+          const cached = row.output as { status: number; body: unknown };
+          return res.status(cached.status).json(cached.body);
+        }
 
-    const originalJson = res.json.bind(res);
-    res.json = function (body: unknown) {
-      cache.set(key, { status: res.statusCode, body });
-      // Expire after 24h
-      setTimeout(() => cache.delete(key), 86_400_000);
-      return originalJson(body);
-    };
+        const originalJson = res.json.bind(res);
+        res.json = function (body: unknown) {
+          db.insertInto('ai_generation_cache')
+            .values({
+              input_hash: key,
+              prompt_type: 'idempotency',
+              output: JSON.stringify({ status: res.statusCode, body }),
+              created_at: new Date(),
+              expires_at: new Date(Date.now() + 86_400_000),
+            })
+            .execute()
+            .catch((err: Error) => {
+              console.error('[idempotency] Failed to cache response:', err.message);
+            });
 
-    next();
+          return originalJson(body);
+        };
+
+        next();
+      })
+      .catch((err: Error) => {
+        console.error('[idempotency] DB lookup failed, proceeding without dedup:', err.message);
+        next();
+      });
   };
 }

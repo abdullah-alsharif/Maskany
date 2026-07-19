@@ -52,7 +52,7 @@ type PropertySeed = {
   country: string;
   price: string;
   currency: string;
-  price_unit: 'per_night' | 'per_month' | 'per_year' | 'total';
+  price_unit: 'per_night' | 'per_month' | 'per_year';
   rooms: number;
   bathrooms: number;
   area_sqm: string;

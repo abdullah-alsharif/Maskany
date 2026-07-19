@@ -145,7 +145,10 @@ export function TranslationEditor({
               type="button"
               variant="primary"
               size="sm"
-              onClick={() => generateMutation.mutate()}
+              onClick={() => {
+                if (!open) onToggle();
+                generateMutation.mutate();
+              }}
               loading={generateMutation.isPending}
             >
               ✨ {t('ai.generateTranslation')}
@@ -181,9 +184,9 @@ export function TranslationEditor({
               {metadata && (
                 <div className="absolute end-1 top-1/2 -translate-y-1/2 z-10">
                   <AiEnhanceButton
-                    fieldKey="trans-title"
-                    currentValue={value.title}
-                    fieldType="title"
+                    fieldKey="trans-city"
+                    currentValue={value.city}
+                    fieldType="city"
                     metadata={metadata}
                     onResult={(v) => update('title', v)}
                     locale={targetLocale}
@@ -194,32 +197,30 @@ export function TranslationEditor({
             </div>
           </Field>
 
-          {mode === 'edit' && (
-            <Field id="trans-summary" label={targetT('propertyForm.summary')}>
-              <div className="relative">
-                <input
-                  id="trans-summary"
-                  type="text"
-                  value={value.summary}
-                  onChange={(e) => update('summary', e.target.value)}
-                  className={`${inputClass} pe-28 ${transAlign}`}
-                />
-                {metadata && (
-                  <div className="absolute end-1 top-1/2 -translate-y-1/2 z-10">
-                    <AiEnhanceButton
-                      fieldKey="trans-summary"
-                      currentValue={value.summary}
-                      fieldType="summary"
-                      metadata={metadata}
-                      onResult={(v) => update('summary', v)}
-                      locale={targetLocale}
-                      history={history}
-                    />
-                  </div>
-                )}
-              </div>
-            </Field>
-          )}
+          <Field id="trans-summary" label={targetT('propertyForm.summary')}>
+            <div className="relative">
+              <input
+                id="trans-summary"
+                type="text"
+                value={value.summary}
+                onChange={(e) => update('summary', e.target.value)}
+                className={`${inputClass} pe-28 ${transAlign}`}
+              />
+              {metadata && (
+                <div className="absolute end-1 top-1/2 -translate-y-1/2 z-10">
+                  <AiEnhanceButton
+                    fieldKey="trans-summary"
+                    currentValue={value.summary}
+                    fieldType="summary"
+                    metadata={metadata}
+                    onResult={(v) => update('summary', v)}
+                    locale={targetLocale}
+                    history={history}
+                  />
+                </div>
+              )}
+            </div>
+          </Field>
 
           <Field id="trans-description" label={targetT('propertyForm.description')}>
             <div className="relative">
@@ -256,28 +257,13 @@ export function TranslationEditor({
               />
             </Field>
             <Field id="trans-area" label={targetT('propertyForm.areaNeighborhood')}>
-              <div className="relative">
-                <input
-                  id="trans-area"
-                  type="text"
-                  value={value.area}
-                  onChange={(e) => update('area', e.target.value)}
-                  className={`${inputClass} pe-28 ${transAlign}`}
-                />
-                {metadata && (
-                  <div className="absolute end-1 top-1/2 -translate-y-1/2 z-10">
-                    <AiEnhanceButton
-                      fieldKey="trans-area"
-                      currentValue={value.area}
-                      fieldType="area"
-                      metadata={metadata}
-                      onResult={(v) => update('area', v)}
-                      locale={targetLocale}
-                      history={history}
-                    />
-                  </div>
-                )}
-              </div>
+              <input
+                id="trans-area"
+                type="text"
+                value={value.area}
+                onChange={(e) => update('area', e.target.value)}
+                className={`${inputClass} ${transAlign}`}
+              />
             </Field>
           </div>
 

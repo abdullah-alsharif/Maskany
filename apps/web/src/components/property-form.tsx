@@ -39,7 +39,7 @@ export type PropertyFormValues = {
   country: string;
   price: string;
   currency: string;
-  priceUnit: 'per_night' | 'per_month' | 'per_year' | 'total';
+  priceUnit: 'per_night' | 'per_month' | 'per_year';
   rooms: number;
   bathrooms: number;
   areaSqm: string;
@@ -489,7 +489,7 @@ export const PropertyForm = forwardRef<PropertyFormHandle, PropertyFormProps>(fu
                 }
                 className={inputClass}
               >
-                {(['per_night', 'per_month', 'per_year', 'total'] as const).map((value) => (
+                {(['per_night', 'per_month', 'per_year'] as const).map((value) => (
                   <option key={value} value={value}>
                     {t(`priceUnit.${value}`)}
                   </option>
@@ -531,8 +531,9 @@ export const PropertyForm = forwardRef<PropertyFormHandle, PropertyFormProps>(fu
             >
               <input
                 id="property-area-sqm"
-                type="text"
-                inputMode="decimal"
+                type="number"
+                step="any"
+                min="0"
                 value={values.areaSqm}
                 onChange={(e) => update('areaSqm', e.target.value)}
                 className={fieldErrors.areaSqm ? inputErrorClass : inputClass}
@@ -584,37 +585,22 @@ export const PropertyForm = forwardRef<PropertyFormHandle, PropertyFormProps>(fu
         <section className="space-y-4 animate-fade-in">
           <StepHeader step={3} labelKey="propertyForm.stepLocation" t={t} />
           <Field id="property-city" label={t('propertyForm.city')} error={fieldErrors.city}>
-            <div className="relative">
-              <input
-                id="property-city"
-                type="text"
-                value={values.city}
-                onChange={(e) => update('city', e.target.value)}
-                className={`${fieldErrors.city ? inputErrorClass : inputClass}`}
-              />
-            </div>
+            <input
+              id="property-city"
+              type="text"
+              value={values.city}
+              onChange={(e) => update('city', e.target.value)}
+              className={`${fieldErrors.city ? inputErrorClass : inputClass}`}
+            />
           </Field>
           <Field id="property-area" label={t('propertyForm.areaNeighborhood')}>
-            <div className="relative">
-              <input
-                id="property-area"
-                type="text"
-                value={values.area}
-                onChange={(e) => update('area', e.target.value)}
-                className={`${inputClass} pe-28`}
-              />
-              <div className="absolute end-1 top-1/2 -translate-y-1/2 z-10">
-                <AiEnhanceButton
-                  fieldKey="area"
-                  currentValue={values.area}
-                  fieldType="area"
-                  metadata={metadata}
-                  onResult={(v) => update('area', v)}
-                  locale={locale}
-                  history={history}
-                />
-              </div>
-            </div>
+            <input
+              id="property-area"
+              type="text"
+              value={values.area}
+              onChange={(e) => update('area', e.target.value)}
+              className={inputClass}
+            />
           </Field>
           <Field id="property-country" label={t('propertyForm.country')}>
             <input

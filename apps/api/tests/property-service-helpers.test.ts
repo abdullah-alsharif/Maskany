@@ -63,7 +63,7 @@ describe('buildInsertValues', () => {
       propertyType: 'VILLA' as const,
       city: 'Jeddah',
       price: '500000',
-      priceUnit: 'total' as const,
+      priceUnit: 'per_month' as const,
       rooms: 5,
       bathrooms: 3,
       whatsappNumber: '+966500000001',

@@ -1,40 +1,32 @@
 import { useState, useCallback, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
-import { enhanceField } from '../services/ai-service';
+import { generateField } from '../services/ai-service';
 import type { PropertyMetadata } from '../services/ai-service';
+import type { AiFieldStatus } from './use-ai-enhance';
 
-export type AiFieldStatus = 'idle' | 'loading' | 'success' | 'error' | 'rate_limited';
-
-export type UseAiEnhanceOptions = {
+export type UseAiGenerateOptions = {
   fieldType: string;
-  action?: string;
   metadata: PropertyMetadata;
   locale: string;
 };
 
-export type UseAiEnhanceReturn = {
+export type UseAiGenerateReturn = {
   status: AiFieldStatus;
   enhancedValue: string | null;
   errorMessage: string | null;
-  enhance: (currentValue: string) => Promise<string>;
+  generate: (keywords: string) => Promise<string>;
   reset: () => void;
-  clearError: () => void;
 };
 
-export function useAiEnhance(options: UseAiEnhanceOptions): UseAiEnhanceReturn {
+export function useAiGenerate(options: UseAiGenerateOptions): UseAiGenerateReturn {
   const { t } = useTranslation();
   const [status, setStatus] = useState<AiFieldStatus>('idle');
   const [enhancedValue, setEnhancedValue] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  const abortRef = useRef<AbortController | null>(null);
   const nonceRef = useRef(0);
 
-  const enhance = useCallback(
-    async (currentValue: string): Promise<string> => {
-      abortRef.current?.abort();
-      const controller = new AbortController();
-      abortRef.current = controller;
-
+  const generate = useCallback(
+    async (keywords: string): Promise<string> => {
       setStatus('loading');
       setEnhancedValue(null);
       setErrorMessage(null);
@@ -43,27 +35,18 @@ export function useAiEnhance(options: UseAiEnhanceOptions): UseAiEnhanceReturn {
       const requestKey = crypto.randomUUID();
 
       try {
-        const result = await enhanceField(
-          {
-            locale: options.locale as 'en' | 'ar',
-            fieldType: options.fieldType,
-            action: options.action ?? 'enhance',
-            currentValue,
-            metadata: options.metadata,
-            requestNonce: nonce,
-          },
+        const result = await generateField(
+          options.locale as 'en' | 'ar',
+          options.fieldType,
+          keywords,
+          options.metadata,
           requestKey,
-          controller.signal,
+          nonce,
         );
         setEnhancedValue(result.result);
         setStatus('success');
         return result.result;
       } catch (err) {
-        if ((err as Error)?.name === 'CanceledError' || (err as Error)?.name === 'AbortError') {
-          setStatus('idle');
-          return currentValue;
-        }
-
         const axiosErr = err as { response?: { status?: number } };
         if (axiosErr.response?.status === 429) {
           setStatus('rate_limited');
@@ -75,19 +58,14 @@ export function useAiEnhance(options: UseAiEnhanceOptions): UseAiEnhanceReturn {
         throw err;
       }
     },
-    [options.locale, options.fieldType, options.action, options.metadata, t],
+    [options.locale, options.fieldType, options.metadata, t],
   );
 
   const reset = useCallback(() => {
-    abortRef.current?.abort();
     setStatus('idle');
     setEnhancedValue(null);
     setErrorMessage(null);
   }, []);
 
-  const clearError = useCallback(() => {
-    setErrorMessage(null);
-  }, []);
-
-  return { status, enhancedValue, errorMessage, enhance, reset, clearError };
+  return { status, enhancedValue, errorMessage, generate, reset };
 }

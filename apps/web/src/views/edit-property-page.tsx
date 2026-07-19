@@ -214,8 +214,18 @@ export function EditPropertyPage() {
       ]);
       router.push(`/properties/${updated.id}`);
     },
-    onError: () => {
-      setError(t('editListing.updateError'));
+    onError: (err: unknown) => {
+      const data = (
+        err as {
+          response?: { data?: { error?: { details?: Array<{ path: string; message: string }> } } };
+        }
+      )?.response?.data;
+      const details = data?.error?.details;
+      if (details && details.length > 0) {
+        setError(details.map((d) => `${d.path}: ${d.message}`).join('\n'));
+      } else {
+        setError(t('editListing.updateError'));
+      }
     },
   });
 

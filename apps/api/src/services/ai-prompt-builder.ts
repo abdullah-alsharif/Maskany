@@ -109,6 +109,7 @@ export function buildEnhancePrompt(request: EnhanceRequest, locale: string): Bui
     description:
       'Detailed 2-3 paragraph description. Start with the best feature, mention lifestyle benefits, end with a subtle invitation.',
     area: 'Factual description of the neighborhood. Mention nearby landmarks, transport, shops. 1-2 sentences.',
+    city: 'Refine the city name or include a brief, factual note about the city or district. Keep it concise.',
     amenities: `List amenities naturally. Group related ones. 1 sentence. Valid keys: ${KNOWN_AMENITIES.join(', ')}.`,
   };
   const guideline = fieldGuidelines[request.fieldType] ?? 'Write naturally for this field type.';

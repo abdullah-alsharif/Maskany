@@ -120,4 +120,16 @@ export const env = {
   get aiCacheVersion(): string {
     return process.env.AI_CACHE_VERSION ?? 'v1';
   },
+
+  get cbThreshold(): number {
+    return Number(process.env.CB_THRESHOLD) || 20;
+  },
+
+  get cbResetMs(): number {
+    return Number(process.env.CB_RESET_MS) || 120_000;
+  },
+
+  get maxEnhanceTokens(): number {
+    return Number(process.env.MAX_ENHANCE_TOKENS) || 3500;
+  },
 };

@@ -1,13 +1,12 @@
 import { Router } from 'express';
 import { asyncHandler } from '../lib/async-handler.js';
 import { parseOrThrow } from '../lib/validation.js';
-import { ErrorCode, HttpError } from '../lib/http-error.js';
 import { requireAuth, type AuthenticatedRequest } from '../middleware/auth-middleware.js';
 import { createAiRateLimiter } from '../middleware/rate-limit.js';
 import { idempotencyMiddleware } from '../middleware/idempotency-middleware.js';
-import { enhance, translateAll } from '../services/ai-service.js';
+import { enhance, enhanceStreaming, translateAll, reviewListing } from '../services/ai-service.js';
+import { buildEnhancePrompt } from '../services/ai-prompt-builder.js';
 import { KNOWN_AMENITIES } from '../constants/amenities.js';
-import { buildReviewPrompt } from '../services/ai-prompt-builder.js';
 import { createOpenRouterProvider } from '../services/providers/openrouter-provider.js';
 import { createNvidiaProvider } from '../services/providers/nvidia-provider.js';
 import {
@@ -15,8 +14,10 @@ import {
   probeJsonMode,
 } from '../services/providers/paid-fallback-provider.js';
 import { getCachedResult, setCachedResult, buildCacheKey } from '../services/ai-cache.js';
-import { TASK_CONFIG, type AIProvider, type AIProviderConfig } from '../services/ai-provider.js';
-import { isCircuitClosed, recordSuccess, recordFailure } from '../services/circuit-breaker.js';
+import { TASK_CONFIG } from '../services/ai-provider.js';
+import { executeWithFallback } from '../services/execute-with-fallback.js';
+import { extractAndParseJSON } from '../lib/extract-json.js';
+import type { AIProvider } from '../services/ai-provider.js';
 import {
   enhanceRequestSchema,
   translateAllSchema,
@@ -29,7 +30,7 @@ let primaryProvider: AIProvider | null = null;
 let openRouterProvider: ReturnType<typeof createOpenRouterProvider> | null = null;
 let paidFallbackProvider: ReturnType<typeof createPaidFallbackProvider> | null = null;
 
-function getPrimaryProvider() {
+function getPrimaryProvider(): AIProvider {
   if (!primaryProvider) {
     const nvidiaKey = process.env.NVIDIA_API_KEY;
     if (nvidiaKey) {
@@ -65,33 +66,13 @@ function getPaidFallbackProvider() {
   return paidFallbackProvider;
 }
 
-function getFallbackProviders() {
+function getFallbackProviders(): AIProvider[] {
   const fallbacks: AIProvider[] = [];
   const or = getOpenRouterProvider();
   if (or && primaryProvider?.id !== 'openrouter') fallbacks.push(or);
   const paid = getPaidFallbackProvider();
   if (paid) fallbacks.push(paid);
   return fallbacks;
-}
-
-async function tryStreamingProviders(
-  providers: AIProvider[],
-  system: string,
-  user: string,
-  config: AIProviderConfig,
-) {
-  for (const provider of providers) {
-    if (!isCircuitClosed(provider.id)) continue;
-    try {
-      const stream = await provider.stream(system, user, config);
-      recordSuccess(provider.id);
-      return stream;
-    } catch (e) {
-      console.error(`[ai-routes] streaming ${provider.id} failed:`, e);
-      recordFailure(provider.id);
-    }
-  }
-  throw new Error('All providers failed for streaming');
 }
 
 export function createAiRouter(): Router {
@@ -119,18 +100,6 @@ export function createAiRouter(): Router {
     createAiRateLimiter('enhance'),
     asyncHandler(async (req: AuthenticatedRequest, res) => {
       const body = parseOrThrow(enhanceRequestSchema, req.body);
-
-      const estimatedTokens =
-        Math.ceil(body.currentValue.length / 3) +
-        Math.ceil(JSON.stringify(body.metadata).length / 3);
-      if (estimatedTokens > 3500) {
-        throw new HttpError(
-          400,
-          ErrorCode.VALIDATION_ERROR,
-          'Text is too long for AI processing. Try enhancing a shorter section.',
-        );
-      }
-
       const provider = getPrimaryProvider();
       const fallbacks = getFallbackProviders();
 
@@ -141,20 +110,16 @@ export function createAiRouter(): Router {
         res.setHeader('Connection', 'keep-alive');
 
         try {
-          const { system, user } = await import('../services/ai-prompt-builder.js').then((m) =>
-            m.buildEnhancePrompt(body, body.locale),
+          const result = await enhanceStreaming(
+            body,
+            provider,
+            fallbacks,
+            req.user?.userId ?? 'anon',
           );
-
-          const config =
-            TASK_CONFIG[body.action as keyof typeof TASK_CONFIG] ?? TASK_CONFIG.enhance;
-          const allProviders = [provider, ...getFallbackProviders()];
-          const stream = await tryStreamingProviders(allProviders, system, user, config);
-
-          for await (const chunk of stream) {
+          for await (const chunk of result.stream) {
             res.write(`event: token\ndata: ${JSON.stringify({ text: chunk })}\n\n`);
           }
-
-          res.write(`event: done\ndata: ${JSON.stringify({ usage: stream.usage })}\n\n`);
+          res.write(`event: done\ndata: ${JSON.stringify({ usage: result.usage() })}\n\n`);
           res.end();
         } catch {
           res.write(`event: error\ndata: ${JSON.stringify({ error: 'AI generation failed' })}\n\n`);
@@ -163,7 +128,7 @@ export function createAiRouter(): Router {
         return;
       }
 
-      const result = await enhance(body, provider, fallbacks);
+      const result = await enhance(body, provider, fallbacks, req.user?.userId ?? 'anon');
       res.status(200).json({ result: result.text, usage: result.usage });
     }),
   );
@@ -175,7 +140,6 @@ export function createAiRouter(): Router {
     createAiRateLimiter('translate'),
     asyncHandler(async (req: AuthenticatedRequest, res) => {
       const body = parseOrThrow(translateAllSchema, req.body);
-
       const provider = getPrimaryProvider();
       const fallbacks = getFallbackProviders();
 
@@ -186,6 +150,7 @@ export function createAiRouter(): Router {
         body.metadata,
         provider,
         fallbacks,
+        req.user?.userId ?? 'anon',
       );
 
       res.status(200).json({ translation: result.data, usage: result.usage });
@@ -198,37 +163,22 @@ export function createAiRouter(): Router {
     createAiRateLimiter('review'),
     asyncHandler(async (req: AuthenticatedRequest, res) => {
       const body = parseOrThrow(reviewRequestSchema, req.body);
-
       const provider = getPrimaryProvider();
       const fallbacks = getFallbackProviders();
-      const { system, user } = buildReviewPrompt(body.propertyData, body.locale);
 
-      const allProviders = [provider, ...fallbacks];
-      let result: Awaited<ReturnType<AIProvider['generate']>> | null = null;
-      for (const p of allProviders) {
-        if (!isCircuitClosed(p.id)) continue;
-        try {
-          result = await p.generate(
-            system,
-            user + '\n\nOutput ONLY valid JSON. No markdown, no explanations.',
-            TASK_CONFIG.review,
-          );
-          recordSuccess(p.id);
-          break;
-        } catch (e) {
-          console.error(`[review] ${p.id} failed:`, e instanceof Error ? e.message : e);
-          recordFailure(p.id);
-        }
-      }
-      if (!result) throw new Error('AI review service unavailable');
-
-      const cleaned = result.text
-        .replace(/```json?\n?/gi, '')
-        .replace(/```/g, '')
-        .trim();
-      const parsed = JSON.parse(cleaned);
-
-      res.status(200).json({ ...parsed, usage: result.usage });
+      const result = await reviewListing(
+        body.locale,
+        body.propertyData,
+        provider,
+        fallbacks,
+        req.user?.userId ?? 'anon',
+      );
+      res.status(200).json({
+        score: result.score,
+        maxScore: result.maxScore,
+        suggestions: result.suggestions,
+        usage: result.usage,
+      });
     }),
   );
 
@@ -239,8 +189,6 @@ export function createAiRouter(): Router {
     createAiRateLimiter('generate'),
     asyncHandler(async (req: AuthenticatedRequest, res) => {
       const body = parseOrThrow(generateRequestSchema, req.body);
-
-      const provider = getPrimaryProvider();
 
       const cacheKey = buildCacheKey({
         locale: body.locale,
@@ -259,19 +207,14 @@ export function createAiRouter(): Router {
         return;
       }
 
-      const { buildEnhancePrompt } = await import('../services/ai-prompt-builder.js');
-      const result = await provider.generate(
-        buildEnhancePrompt(
-          {
-            ...body,
-            currentValue: body.keywords ?? '',
-            action: 'enhance',
-          },
-          body.locale,
-        ).system,
-        `${body.fieldType === 'title' ? 'Generate a SHORT, catchy title (max 120 chars, one line, no period). It must be a title, not a sentence or paragraph.' : `Generate a ${body.fieldType} for this property`} based on: ${body.keywords ?? 'the property data'}.\n\nMetadata:\n${JSON.stringify(body.metadata, null, 2)}\n\nOutput only the generated text — no labels, no quotes.`,
-        TASK_CONFIG.generate,
-      );
+      const provider = getPrimaryProvider();
+      const system = buildEnhancePrompt(
+        { ...body, currentValue: body.keywords ?? '', action: 'enhance' },
+        body.locale,
+      ).system;
+      const user = `${body.fieldType === 'title' ? 'Generate a SHORT, catchy title (max 120 chars, one line, no period). It must be a title, not a sentence or paragraph.' : `Generate a ${body.fieldType} for this property`} based on: ${body.keywords ?? 'the property data'}.\n\nMetadata:\n${JSON.stringify(body.metadata, null, 2)}\n\nOutput only the generated text — no labels, no quotes.`;
+
+      const result = await executeWithFallback([provider], system, user, TASK_CONFIG.generate);
 
       await setCachedResult(cacheKey, result.text);
       res.status(200).json({ result: result.text, usage: result.usage });
@@ -286,17 +229,13 @@ export function createAiRouter(): Router {
     asyncHandler(async (req: AuthenticatedRequest, res) => {
       const body = parseOrThrow(suggestAmenitiesSchema, req.body);
 
-      const provider = getPrimaryProvider();
       const system =
         'You are a real estate amenity recommendation assistant. Return only a JSON array of amenity strings. No explanation.';
       const user = `Suggest amenities for a ${body.propertyType} with ${body.rooms} bedroom(s) in ${body.city}. Existing amenities: ${body.existingAmenities.join(', ') || 'none'}. Valid amenity keys: ${KNOWN_AMENITIES.join(', ')}. Only return amenities from this list. Return a JSON array of recommended amenity strings.`;
 
-      const result = await provider.generate(system, user, TASK_CONFIG.generate);
-      const cleaned = result.text
-        .replace(/```json?\n?/gi, '')
-        .replace(/```/g, '')
-        .trim();
-      const amenities = JSON.parse(cleaned) as string[];
+      const provider = getPrimaryProvider();
+      const result = await executeWithFallback([provider], system, user, TASK_CONFIG.generate);
+      const amenities = extractAndParseJSON(result.text) as string[];
 
       res.status(200).json({ amenities, usage: result.usage });
     }),

@@ -29,7 +29,7 @@ export const PROPERTY_TYPES = [
   'OTHER',
 ] as const;
 
-export const PRICE_UNITS = ['per_night', 'per_month', 'per_year', 'total'] as const;
+export const PRICE_UNITS = ['per_night', 'per_month', 'per_year'] as const;
 
 /**
  * Base field definitions shared by create (required) and update (partial).
@@ -52,7 +52,18 @@ const propertyFieldShape = {
   rooms: z.number().int().nonnegative(),
   bathrooms: z.number().int().nonnegative(),
   areaSqm: z.string().regex(DECIMAL_REGEX, 'Area must be a positive decimal string.').optional(),
-  amenities: z.array(z.string().trim().min(1)).optional(),
+  amenities: z
+    .preprocess(
+      (val) =>
+        typeof val === 'string'
+          ? val
+              .split(',')
+              .map((s) => s.trim())
+              .filter(Boolean)
+          : val,
+      z.array(z.string().trim().min(1)),
+    )
+    .optional(),
   locale: z.enum(['en', 'ar']).optional(),
   whatsappNumber: z
     .string()

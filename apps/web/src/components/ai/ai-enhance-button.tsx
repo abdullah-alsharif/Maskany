@@ -1,15 +1,17 @@
 'use client';
 
-import { useState, useCallback, useEffect, useRef } from 'react';
+import { useState, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useAiEnhance } from '../../hooks/use-ai-enhance';
+import { useAiStreamEnhance } from '../../hooks/use-ai-stream-enhance';
 import type { useAiHistory } from '../../hooks/use-ai-history';
 import type { PropertyMetadata } from '../../services/ai-service';
 
 type AiEnhanceButtonProps = {
   fieldKey: string;
   currentValue: string;
-  fieldType: 'title' | 'summary' | 'description' | 'area' | 'amenities';
+  fieldType: 'title' | 'summary' | 'description' | 'area' | 'city' | 'amenities';
+  action?: 'enhance' | 'rewrite' | 'fix_grammar';
   metadata: PropertyMetadata;
   onResult: (newValue: string) => void;
   locale: 'en' | 'ar';
@@ -20,6 +22,7 @@ type AiEnhanceButtonProps = {
 export function AiEnhanceButton({
   currentValue,
   fieldType,
+  action = 'enhance',
   metadata,
   onResult,
   locale,
@@ -30,69 +33,84 @@ export function AiEnhanceButton({
   const t = i18n.getFixedT(locale);
   const [showUndo, setShowUndo] = useState(false);
   const [previousValue, setPreviousValue] = useState<string | null>(null);
-  const undoTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const onResultRef = useRef(onResult);
-  const onUndoRef = useRef(onUndo);
-  const historyRef = useRef(history);
-  onResultRef.current = onResult;
-  onUndoRef.current = onUndo;
-  historyRef.current = history;
 
   const isEmpty = !currentValue.trim();
 
+  const useStreaming = fieldType === 'description';
   const aiEnhance = useAiEnhance({
     fieldType,
-    action: 'enhance',
+    action,
     metadata,
     locale,
-    stream: fieldType === 'description',
+  });
+  const aiStreamEnhance = useAiStreamEnhance({
+    fieldType,
+    action,
+    metadata,
+    locale,
   });
 
   const handleEnhance = useCallback(async () => {
     if (isEmpty) return;
     setPreviousValue(currentValue);
     setShowUndo(false);
-    await aiEnhance.enhance(currentValue);
-  }, [currentValue, aiEnhance, isEmpty]);
 
-  useEffect(() => {
-    if (aiEnhance.status === 'success' && aiEnhance.enhancedValue) {
-      onResultRef.current(aiEnhance.enhancedValue);
+    try {
+      const result = useStreaming
+        ? await aiStreamEnhance.enhance(currentValue)
+        : await aiEnhance.enhance(currentValue);
+
+      onResult(result);
       setShowUndo(true);
 
-      if (previousValue !== null && historyRef.current) {
-        historyRef.current.addEntry({
+      if (previousValue !== null && history) {
+        history.addEntry({
           fieldType,
-          action: 'enhance',
+          action,
           previousValue,
-          newValue: aiEnhance.enhancedValue,
+          newValue: result,
         });
       }
-
-      if (undoTimeoutRef.current) clearTimeout(undoTimeoutRef.current);
-      undoTimeoutRef.current = setTimeout(() => setShowUndo(false), 8000);
+    } catch {
+      // error state is handled by the hook
     }
-  }, [aiEnhance.status, aiEnhance.enhancedValue, previousValue, fieldType]);
+  }, [
+    currentValue,
+    useStreaming,
+    aiStreamEnhance,
+    aiEnhance,
+    onResult,
+    previousValue,
+    history,
+    fieldType,
+    action,
+    isEmpty,
+  ]);
 
   const handleUndo = useCallback(() => {
     if (previousValue !== null) {
-      onResultRef.current(previousValue);
+      onResult(previousValue);
       setShowUndo(false);
-      onUndoRef.current?.(previousValue);
+      onUndo?.(previousValue);
     }
-  }, [previousValue]);
+  }, [previousValue, onResult, onUndo]);
+
+  const loading = aiEnhance.status === 'loading' || aiStreamEnhance.status === 'loading';
+  const errorMessage = aiEnhance.errorMessage || aiStreamEnhance.errorMessage;
+  const isRateLimited =
+    aiEnhance.status === 'rate_limited' || aiStreamEnhance.status === 'rate_limited';
 
   return (
     <div className="flex items-center gap-1">
       <button
         type="button"
         onClick={handleEnhance}
-        disabled={aiEnhance.status === 'loading' || isEmpty}
+        disabled={loading || isEmpty}
         className="min-h-[44px] flex items-center gap-1 rounded-xl px-2.5 hover:bg-stone-100 disabled:opacity-40 disabled:pointer-events-none transition-colors text-xs font-medium text-stone-500"
         title={t('ai.enhance')}
         aria-label={t('ai.enhance')}
       >
-        {aiEnhance.status === 'loading' ? (
+        {loading ? (
           <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24" fill="none">
             <circle
               className="opacity-25"
@@ -124,11 +142,9 @@ export function AiEnhanceButton({
         </button>
       )}
 
-      {aiEnhance.status === 'error' && (
-        <span className="text-xs text-red-500">{aiEnhance.errorMessage}</span>
-      )}
-      {aiEnhance.status === 'rate_limited' && (
-        <span className="text-xs text-amber-600">{aiEnhance.errorMessage}</span>
+      {!showUndo && isRateLimited && <span className="text-xs text-amber-600">{errorMessage}</span>}
+      {!showUndo && !isRateLimited && aiEnhance.status === 'error' && (
+        <span className="text-xs text-red-500">{errorMessage}</span>
       )}
     </div>
   );

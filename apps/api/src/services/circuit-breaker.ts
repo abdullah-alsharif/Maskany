@@ -1,5 +1,4 @@
-const DEFAULT_THRESHOLD = 20;
-const DEFAULT_RESET_MS = 120_000;
+import { env } from '../config/env.js';
 
 interface CircuitState {
   failures: number;
@@ -15,8 +14,8 @@ export function isCircuitOpen(providerLabel: string): boolean {
 export function isCircuitClosed(providerLabel: string): boolean {
   const entry = state.get(providerLabel);
   if (!entry) return true;
-  if (entry.failures < DEFAULT_THRESHOLD) return true;
-  if (Date.now() - entry.lastFailure > DEFAULT_RESET_MS) {
+  if (entry.failures < env.cbThreshold) return true;
+  if (Date.now() - entry.lastFailure > env.cbResetMs) {
     state.delete(providerLabel);
     return true;
   }

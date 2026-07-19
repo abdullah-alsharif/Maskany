@@ -5,6 +5,7 @@ const fieldTypeEnum = z.enum([
   'summary',
   'description',
   'area',
+  'city',
   'amenities',
   'highlights',
 ]);
@@ -38,9 +39,18 @@ const metadataSchema = z.object({
   country: z.string(),
   price: z.string(),
   currency: z.string().length(3),
-  priceUnit: z.enum(['per_night', 'per_month', 'per_year', 'total']),
+  priceUnit: z.enum(['per_night', 'per_month', 'per_year']),
   areaSqm: z.number().positive().optional(),
-  amenities: z.array(z.string()),
+  amenities: z.preprocess(
+    (val) =>
+      typeof val === 'string'
+        ? val
+            .split(',')
+            .map((s) => s.trim())
+            .filter(Boolean)
+        : val,
+    z.array(z.string()),
+  ),
   features: z.array(z.string()).optional(),
 });
 
@@ -107,7 +117,16 @@ export const reviewRequestSchema = z.object({
     city: z.string(),
     area: z.string().optional(),
     price: z.string(),
-    amenities: z.array(z.string()),
+    amenities: z.preprocess(
+      (val) =>
+        typeof val === 'string'
+          ? val
+              .split(',')
+              .map((s) => s.trim())
+              .filter(Boolean)
+          : val,
+      z.array(z.string()),
+    ),
   }),
 });
 
@@ -125,7 +144,16 @@ export const suggestAmenitiesSchema = z.object({
   propertyType: z.string(),
   rooms: z.number().int().min(0),
   city: z.string(),
-  existingAmenities: z.array(z.string()),
+  existingAmenities: z.preprocess(
+    (val) =>
+      typeof val === 'string'
+        ? val
+            .split(',')
+            .map((s) => s.trim())
+            .filter(Boolean)
+        : val,
+    z.array(z.string()),
+  ),
 });
 
 export type EnhanceRequest = z.infer<typeof enhanceRequestSchema>;
