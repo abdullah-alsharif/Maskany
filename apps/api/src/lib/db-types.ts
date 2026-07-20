@@ -166,6 +166,24 @@ export interface AiUsageLogsTable {
   created_at: Generated<Date>;
 }
 
+export interface PropertyAnalyticsTable {
+  id: Generated<string>;
+  property_id: string;
+  date: Date | string;
+  views: number;
+  created_at: Generated<Date>;
+  updated_at: Timestamp;
+}
+
+export interface InquiriesTable {
+  id: Generated<string>;
+  property_id: string;
+  owner_id: string;
+  inquirer_phone: string | null;
+  source: 'WHATSAPP';
+  created_at: Generated<Date>;
+}
+
 export interface Database {
   users: UsersTable;
   properties: PropertiesTable;
@@ -178,4 +196,6 @@ export interface Database {
   property_embeddings: PropertyEmbeddingsTable;
   ai_generation_cache: AiGenerationCacheTable;
   ai_usage_logs: AiUsageLogsTable;
+  property_analytics: PropertyAnalyticsTable;
+  inquiries: InquiriesTable;
 }

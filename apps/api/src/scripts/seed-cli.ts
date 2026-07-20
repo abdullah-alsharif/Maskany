@@ -14,7 +14,7 @@ async function main(): Promise<void> {
   try {
     await seed(db);
     console.log(
-      `[seed] inserted ${SEED_COUNTS.users} users, ${SEED_COUNTS.properties} properties, ${SEED_COUNTS.media} media, ${SEED_COUNTS.reviews} reviews, ${SEED_COUNTS.translations} translations`,
+      `[seed] inserted ${SEED_COUNTS.users} users, ${SEED_COUNTS.properties} properties, ${SEED_COUNTS.media} media, ${SEED_COUNTS.reviews} reviews, ${SEED_COUNTS.translations} translations, ${SEED_COUNTS.analytics} analytics, ${SEED_COUNTS.inquiries} inquiries`,
     );
   } finally {
     await destroy();

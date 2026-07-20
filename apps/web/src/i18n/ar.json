@@ -34,6 +34,7 @@
     "memberSince": "عضواً منذ",
     "saved": "محفوظة",
     "myProperties": "عقاراتي",
+    "insights": "الرؤى",
     "language": "اللغة",
     "shareApp": "مشاركة التطبيق",
     "signOutTitle": "تسجيل الخروج؟",
@@ -403,6 +404,10 @@
     "search": {
       "title": "بحث | مسكني",
       "desc": "ابحث عن عقارات حسب الموقع والنوع والسعر."
+    },
+    "insights": {
+      "title": "الرؤى — مسكني",
+      "desc": "رؤى أداء عقاراتك"
     }
   },
   "whatsapp": {
@@ -472,5 +477,46 @@
     "consentAccept": "موافق",
     "consentDecline": "لا شكراً",
     "generateTranslation": "إنشاء بالذكاء الاصطناعي"
+  },
+  "insights": {
+    "pageTitle": "الرؤى",
+    "pageDesc": "أداء عقاراتك في لمحة",
+    "heading": "الرؤى",
+    "subheading": "عقاراتك في لمحة",
+    "totalListings": "إجمالي العقارات",
+    "activeListings": "نشط",
+    "inactiveListings": "غير نشط",
+    "draftListings": "مسودات",
+    "totalViews": "إجمالي المشاهدات",
+    "totalInquiries": "الاستفسارات",
+    "last30d": "آخر 30 يوماً",
+    "viewsChart": "المشاهدات خلال الفترة",
+    "healthScore": "درجة الصحة",
+    "healthLabel": "صحة الإعلان",
+    "topProperties": "أفضل العقارات",
+    "topPropertiesDesc": "أفضل الإعلانات أداءً",
+    "noTopProperties": "لا توجد عقارات رائدة بعد — روج لإعلاناتك لزيادة الظهور",
+    "noProperties": "لم تقم بإنشاء أي إعلان بعد",
+    "noPropertiesAction": "أنشئ إعلانك الأول",
+    "viewDetails": "عرض التفاصيل",
+    "views": "مشاهدة",
+    "inquiries": "استفسار",
+    "score": "النقاط",
+    "loading": "جارٍ تحميل الرؤى...",
+    "errorLoading": "تعذر تحميل الرؤى",
+    "retry": "إعادة المحاولة",
+    "criteria": {
+      "cover_photo": "أضف صورة غلاف",
+      "photos_count": "أضف 3+ صور",
+      "translation": "أضف ترجمة باللغتين",
+      "ai_enhanced": "استخدم تحسين الذكاء الاصطناعي",
+      "active_status": "انشر الإعلان",
+      "rating": "حافظ على تقييم 4+ نجوم",
+      "whatsapp": "أضف رقم واتساب"
+    },
+    "todayViews": "مشاهدات اليوم",
+    "trendUp": "ارتفاع عن الفترة السابقة",
+    "trendDown": "انخفاض عن الفترة السابقة",
+    "trendFlat": "مستوى ثابت"
   }
 }

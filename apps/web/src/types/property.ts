@@ -57,6 +57,13 @@ export type CoverImage = {
   altText: string | null;
 };
 
+export type HealthBreakdown = {
+  criteria: string;
+  label: string;
+  met: boolean;
+  points: number;
+};
+
 export type Property = {
   id: string;
   title: string;
@@ -89,6 +96,8 @@ export type Property = {
   reviewCount: number;
   createdAt: string;
   updatedAt: string;
+  healthScore?: number | null;
+  healthBreakdown?: HealthBreakdown[] | null;
 };
 
 export type PropertyListResponse = {

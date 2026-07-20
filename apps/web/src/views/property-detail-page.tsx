@@ -16,7 +16,7 @@
  */
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
 import { useTranslation } from 'react-i18next';
 import { BedDouble, Bath, Ruler, MapPin, Star, UserCircle2 } from 'lucide-react';
@@ -35,6 +35,7 @@ import { SimilarProperties } from '../components/property/similar-properties';
 import { useProperty } from '../hooks/use-property';
 import { useFavorites } from '../hooks/use-favorites';
 import { useAuth } from '../hooks/use-auth';
+import { apiClient } from '../services/api';
 import { propertyTypeConfig } from '../styles/design-tokens';
 import type { Property } from '../types/property';
 
@@ -52,6 +53,10 @@ function PropertyBody({ property }: { property: Property }) {
   const { t, i18n } = useTranslation();
   const [expanded, setExpanded] = useState(false);
   const { isFavorite, toggleFavorite } = useFavorites();
+
+  useEffect(() => {
+    apiClient.post(`/properties/${property.id}/track-view`).catch(() => {});
+  }, [property.id]);
   const { user } = useAuth();
   const reviewViewer = user ? { id: user.id, fullName: user.fullName } : null;
   const typeConfig = propertyTypeConfig[property.propertyType] ?? propertyTypeConfig.OTHER;

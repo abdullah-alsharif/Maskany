@@ -4,6 +4,7 @@ import { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Bed, Bath, Expand, ImageIcon, Pencil, Plus, Power, Trash2 } from 'lucide-react';
+import { HealthBadge } from '../components/insights/health-score';
 import { useTranslation } from 'react-i18next';
 import { Badge } from '../components/ui/badge';
 import { Button } from '../components/ui/button';
@@ -171,9 +172,12 @@ function PropertyRow({
                 {displayCity}
               </p>
             </div>
-            <Badge variant={STATUS_VARIANTS[property.status]} className="shrink-0 mt-0.5">
-              {t(statusLabelKey[property.status])}
-            </Badge>
+            <div className="flex items-center gap-2 shrink-0 mt-0.5">
+              <Badge variant={STATUS_VARIANTS[property.status]}>
+                {t(statusLabelKey[property.status])}
+              </Badge>
+              {property.healthScore != null && <HealthBadge score={property.healthScore} />}
+            </div>
           </div>
 
           {/* Meta chips */}

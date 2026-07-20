@@ -34,6 +34,7 @@
     "memberSince": "Member since",
     "saved": "Saved",
     "myProperties": "My properties",
+    "insights": "Insights",
     "language": "Language",
     "shareApp": "Share app",
     "signOutTitle": "Sign out?",
@@ -403,6 +404,10 @@
     "search": {
       "title": "Search | Maskany",
       "desc": "Search properties by location, type, and price."
+    },
+    "insights": {
+      "title": "Insights — Maskany",
+      "desc": "Your property performance insights"
     }
   },
   "whatsapp": {
@@ -472,5 +477,46 @@
     "consentAccept": "Accept",
     "consentDecline": "No thanks",
     "generateTranslation": "Generate with AI"
+  },
+  "insights": {
+    "pageTitle": "Insights",
+    "pageDesc": "Your property performance at a glance",
+    "heading": "Insights",
+    "subheading": "Your properties at a glance",
+    "totalListings": "Total listings",
+    "activeListings": "Active",
+    "inactiveListings": "Inactive",
+    "draftListings": "Drafts",
+    "totalViews": "Total views",
+    "totalInquiries": "Inquiries",
+    "last30d": "Last 30 days",
+    "viewsChart": "Views over time",
+    "healthScore": "Health Score",
+    "healthLabel": "Listing health",
+    "topProperties": "Top Properties",
+    "topPropertiesDesc": "Best performing listings",
+    "noTopProperties": "No top performers yet — promote your listings to gain visibility",
+    "noProperties": "You haven't created any listings yet",
+    "noPropertiesAction": "Create your first listing",
+    "viewDetails": "View details",
+    "views": "views",
+    "inquiries": "inquiries",
+    "score": "Score",
+    "loading": "Loading insights...",
+    "errorLoading": "Could not load insights",
+    "retry": "Retry",
+    "criteria": {
+      "cover_photo": "Add cover photo",
+      "photos_count": "Add 3+ photos",
+      "translation": "Add both-locale translation",
+      "ai_enhanced": "Use AI enhancement",
+      "active_status": "Publish listing",
+      "rating": "Maintain 4+ star rating",
+      "whatsapp": "Set WhatsApp number"
+    },
+    "todayViews": "Today's views",
+    "trendUp": "Up from last period",
+    "trendDown": "Down from last period",
+    "trendFlat": "Same as last period"
   }
 }

@@ -9,6 +9,7 @@ import {
   ChevronLeft,
   Heart,
   Home,
+  LayoutDashboard,
   LogOut,
   Share2,
   User,
@@ -212,7 +213,7 @@ export function ProfilePage() {
       </div>
 
       {/* Stats */}
-      <div className={`mt-6 grid gap-3 ${isOwner ? 'grid-cols-3' : 'grid-cols-2'}`}>
+      <div className={`mt-6 grid gap-3 ${isOwner ? 'grid-cols-2' : 'grid-cols-2'}`}>
         <StatCard
           icon={Heart}
           value={favoriteCount}
@@ -225,28 +226,28 @@ export function ProfilePage() {
           label={t('profile.memberSince')}
           delay="animate-stagger-2"
         />
-        {isOwner && (
-          <Link
-            href="/my-properties"
-            className="flex flex-col items-center gap-1.5 rounded-2xl bg-white border border-stone-200 p-4 animate-slide-up animate-stagger-3 transition-shadow transition-transform duration-150 hover:shadow-[var(--shadow-card-hover)] active:scale-[0.97]"
-          >
-            <div className="w-10 h-10 rounded-xl bg-olive-50 text-olive-600 flex items-center justify-center">
-              <Home size={20} strokeWidth={1.5} />
-            </div>
-            <span className="text-lg font-bold text-stone-950">
-              {isRtl ? (
-                <ChevronLeft size={18} strokeWidth={2} />
-              ) : (
-                <ChevronRight size={18} strokeWidth={2} />
-              )}
-            </span>
-            <span className="text-xs text-stone-500">{t('profile.myProperties')}</span>
-          </Link>
-        )}
       </div>
 
       {/* Quick actions */}
       <div className="mt-6 rounded-2xl bg-white border border-stone-200 divide-y divide-stone-200 animate-slide-up animate-stagger-3">
+        {isOwner && (
+          <Link
+            href="/insights"
+            className="flex items-center justify-between w-full px-4 py-3.5 min-h-[44px] transition-colors hover:bg-stone-50 active:bg-stone-100"
+          >
+            <div className="flex items-center gap-3">
+              <div className="w-9 h-9 rounded-lg bg-terracotta-50 text-terracotta-600 flex items-center justify-center">
+                <LayoutDashboard size={18} strokeWidth={1.5} />
+              </div>
+              <span className="text-sm font-semibold text-stone-800">{t('profile.insights')}</span>
+            </div>
+            {isRtl ? (
+              <ChevronLeft size={16} className="text-stone-400" strokeWidth={1.5} />
+            ) : (
+              <ChevronRight size={16} className="text-stone-400" strokeWidth={1.5} />
+            )}
+          </Link>
+        )}
         {isOwner && (
           <Link
             href="/my-properties"

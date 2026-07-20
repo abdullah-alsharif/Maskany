@@ -464,6 +464,70 @@ const PROPERTIES: PropertySeed[] = [
     locale: 'en',
     owner_key: 'owner-omar',
   },
+  /* ── Dev Owner properties ── */
+  {
+    key: 'dev-villa-1',
+    title: 'Executive Villa in Al Nakheel',
+    summary: 'Premium gated-community villa for the discerning resident.',
+    description:
+      "Five ensuite bedrooms, private pool, landscaped garden, smart home automation, and a dedicated driver's quarter.",
+    property_type: 'VILLA',
+    city: 'Riyadh',
+    area: 'Al Nakheel',
+    country: 'SA',
+    price: '22000.00',
+    currency: 'SAR',
+    price_unit: 'per_month',
+    rooms: 5,
+    bathrooms: 5,
+    area_sqm: '480.00',
+    amenities: ['wifi', 'parking', 'pool', 'gym', 'ac', 'security', 'furnished'],
+    whatsapp_number: '+966500009002',
+    locale: 'en',
+    owner_key: 'dev-owner',
+  },
+  {
+    key: 'dev-apartment-1',
+    title: 'Downtown Riyadh Luxury 3BR',
+    summary: 'Skyline views in the heart of the city.',
+    description:
+      'Corner unit with floor-to-ceiling windows, Italian marble flooring, and a private study.',
+    property_type: 'APARTMENT',
+    city: 'Riyadh',
+    area: 'Al Olaya',
+    country: 'SA',
+    price: '8500.00',
+    currency: 'SAR',
+    price_unit: 'per_month',
+    rooms: 3,
+    bathrooms: 3,
+    area_sqm: '165.00',
+    amenities: ['wifi', 'parking', 'gym', 'ac', 'furnished', 'elevator', 'security'],
+    whatsapp_number: '+966500009002',
+    locale: 'en',
+    owner_key: 'dev-owner',
+  },
+  {
+    key: 'dev-studio-1',
+    title: 'Smart Studio in Business Gate',
+    summary: 'Compact, connected, and fully automated.',
+    description:
+      'Smart home studio with motorised blinds, built-in speakers, and a fold-away bed — ideal for the modern professional.',
+    property_type: 'STUDIO',
+    city: 'Riyadh',
+    area: 'Qurtubah',
+    country: 'SA',
+    price: '3200.00',
+    currency: 'SAR',
+    price_unit: 'per_month',
+    rooms: 1,
+    bathrooms: 1,
+    area_sqm: '42.00',
+    amenities: ['wifi', 'ac', 'furnished', 'kitchen', 'elevator', 'parking'],
+    whatsapp_number: '+966500009002',
+    locale: 'en',
+    owner_key: 'dev-owner',
+  },
 ];
 
 /**
@@ -848,6 +912,86 @@ const TRANSLATIONS: TranslationSeed[] = [
     country: 'EG',
     amenities: ['واي فاي', 'تكييف', 'مفروش', 'مصعد', 'شرفة'],
   },
+  /* ── Dev Owner translations ── */
+  {
+    property_key: 'dev-villa-1',
+    locale: 'ar',
+    title: 'فيلا تنفيذية في النخيل',
+    summary: 'فيلا راقية في مجتمع مسور للمقيم المتميز.',
+    description:
+      'خمس غرف نوم مع حمام خاص، مسبح خاص، حديقة منسقة، أتمتة المنزل الذكي، وملحق سائق خاص.',
+    city: 'الرياض',
+    area: 'النخيل',
+    country: 'SA',
+    amenities: ['واي فاي', 'مواقف سيارات', 'مسبح', 'صالة رياضية', 'تكييف', 'أمن', 'مفروش'],
+  },
+  {
+    property_key: 'dev-apartment-1',
+    locale: 'ar',
+    title: 'شقة فاخرة 3 غرف نوم في وسط الرياض',
+    summary: 'إطلالات أفق في قلب المدينة.',
+    description: 'وحدة زاوية مع نوافذ من الأرض إلى السقف، أرضيات رخام إيطالي، ودراسة خاصة.',
+    city: 'الرياض',
+    area: 'العليا',
+    country: 'SA',
+    amenities: ['واي فاي', 'مواقف سيارات', 'صالة رياضية', 'تكييف', 'مفروش', 'مصعد', 'أمن'],
+  },
+  {
+    property_key: 'dev-studio-1',
+    locale: 'ar',
+    title: 'استوديو ذكي في بوابة الأعمال',
+    summary: 'مدمج، متصل، ومؤتمت بالكامل.',
+    description:
+      'استوديو منزل ذكي مع ستائر آلية، مكبرات صوت مدمجة، وسرير قابل للطي - مثالي للمحترف العصري.',
+    city: 'الرياض',
+    area: 'قرطبة',
+    country: 'SA',
+    amenities: ['واي فاي', 'تكييف', 'مفروش', 'مطبخ', 'مصعد', 'مواقف سيارات'],
+  },
+];
+
+/**
+ * Analytics rows — daily view counts per property for the last 30 days.
+ * Generated deterministically so re-seeds produce identical data.
+ */
+function buildAnalyticsRows(): { property_key: string; date: Date; views: number }[] {
+  const rows: { property_key: string; date: Date; views: number }[] = [];
+  const propertyKeys = ['dev-villa-1', 'dev-apartment-1', 'dev-studio-1'];
+  const now = new Date();
+
+  for (const key of propertyKeys) {
+    for (let i = 29; i >= 0; i--) {
+      const d = new Date(now);
+      d.setDate(d.getDate() - i);
+      const dayOfWeek = d.getDay(); // 0=Sun … 6=Sat
+      const isWeekend = dayOfWeek === 5 || dayOfWeek === 6; // Fri/Sat in SA
+      const dayIndex = 29 - i; // 0 = furthest back, 29 = today
+
+      // Trending upward: ~8 → ~28 over 30 days
+      const trend = 8 + dayIndex * 0.7;
+      // Weekend boost 1.4×
+      const weekendBoost = isWeekend ? 1.4 : 1;
+      // Deterministic noise using sin of dayIndex
+      const noise = 0.7 + 0.6 * Math.sin(dayIndex * 1.7 + key.length);
+
+      const views = Math.max(1, Math.round(trend * weekendBoost * noise));
+      rows.push({ property_key: key, date: d, views });
+    }
+  }
+  return rows;
+}
+
+const ANALYTICS: { property_key: string; date: Date; views: number }[] = buildAnalyticsRows();
+
+const INQUIRIES: { property_key: string; source: 'WHATSAPP'; days_ago: number }[] = [
+  { property_key: 'dev-villa-1', source: 'WHATSAPP', days_ago: 0 },
+  { property_key: 'dev-villa-1', source: 'WHATSAPP', days_ago: 1 },
+  { property_key: 'dev-apartment-1', source: 'WHATSAPP', days_ago: 2 },
+  { property_key: 'dev-villa-1', source: 'WHATSAPP', days_ago: 5 },
+  { property_key: 'dev-studio-1', source: 'WHATSAPP', days_ago: 8 },
+  { property_key: 'dev-apartment-1', source: 'WHATSAPP', days_ago: 12 },
+  { property_key: 'dev-villa-1', source: 'WHATSAPP', days_ago: 18 },
+  { property_key: 'dev-studio-1', source: 'WHATSAPP', days_ago: 25 },
 ];
 
 export const SEED_COUNTS = {
@@ -856,6 +1000,8 @@ export const SEED_COUNTS = {
   media: MEDIA.length,
   reviews: REVIEWS.length,
   translations: TRANSLATIONS.length,
+  analytics: ANALYTICS.length,
+  inquiries: INQUIRIES.length,
 } as const;
 
 /**
@@ -864,7 +1010,7 @@ export const SEED_COUNTS = {
  * users`) keeps the statement safe even if cross-references are added later.
  */
 export async function truncateAll(client: Trx): Promise<void> {
-  await sql`TRUNCATE TABLE reviews, property_media, properties, property_translations, otp_codes, refresh_tokens, users RESTART IDENTITY CASCADE`.execute(
+  await sql`TRUNCATE TABLE inquiries, property_analytics, reviews, property_media, properties, property_translations, otp_codes, refresh_tokens, users RESTART IDENTITY CASCADE`.execute(
     client,
   );
 }
@@ -882,6 +1028,8 @@ export async function seed(client: Trx): Promise<void> {
     await insertTranslations(trx, propertyIdByKey);
     await insertReviews(trx, propertyIdByKey, userIdByKey);
     await updatePropertyAggregates(trx);
+    await insertAnalytics(trx, propertyIdByKey);
+    await insertInquiries(trx, propertyIdByKey, userIdByKey);
   });
 }
 
@@ -1005,6 +1153,43 @@ async function updatePropertyAggregates(trx: Trx): Promise<void> {
     ) AS agg
     WHERE p.id = agg.property_id
   `.execute(trx);
+}
+
+async function insertAnalytics(trx: Trx, propertyIdByKey: Map<string, string>): Promise<void> {
+  await trx
+    .insertInto('property_analytics')
+    .values(
+      ANALYTICS.map((a) => ({
+        property_id: getOrThrow(propertyIdByKey, a.property_key),
+        date: a.date,
+        views: a.views,
+      })),
+    )
+    .execute();
+}
+
+async function insertInquiries(
+  trx: Trx,
+  propertyIdByKey: Map<string, string>,
+  userIdByKey: Map<string, string>,
+): Promise<void> {
+  const now = new Date();
+  await trx
+    .insertInto('inquiries')
+    .values(
+      INQUIRIES.map((inq) => {
+        const createdAt = new Date(now);
+        createdAt.setDate(createdAt.getDate() - inq.days_ago);
+        return {
+          property_id: getOrThrow(propertyIdByKey, inq.property_key),
+          owner_id: getOrThrow(userIdByKey, 'dev-owner'),
+          inquirer_phone: '+966500000000',
+          source: inq.source,
+          created_at: createdAt,
+        };
+      }),
+    )
+    .execute();
 }
 
 function getOrThrow<K, V>(map: Map<K, V>, key: K): V {

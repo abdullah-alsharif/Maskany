@@ -1,4 +1,6 @@
+import { useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
+import { apiClient } from '../../services/api';
 import { generateWhatsAppLink } from '../../services/whatsapp-service';
 
 /* ── WhatsApp SVG Icon ── */
@@ -61,6 +63,13 @@ export function WhatsAppFab({ whatsappNumber, propertyTitle, propertyId }: Whats
   const { t, i18n } = useTranslation();
   const propertyUrl = `${window.location.origin}/properties/${propertyId}`;
   const link = generateWhatsAppLink(whatsappNumber, propertyTitle, propertyUrl, i18n.language);
+
+  const handleClick = useCallback(() => {
+    apiClient
+      .post(`/properties/${propertyId}/track-inquiry`, { source: 'WHATSAPP' })
+      .catch(() => {});
+  }, [propertyId]);
+
   if (!link) return null;
 
   return (
@@ -68,6 +77,7 @@ export function WhatsAppFab({ whatsappNumber, propertyTitle, propertyId }: Whats
       href={link}
       target="_blank"
       rel="noopener noreferrer"
+      onClick={handleClick}
       className="
         fixed z-[var(--z-fab)]
         end-4 animate-scale-in

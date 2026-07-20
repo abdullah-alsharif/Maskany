@@ -195,7 +195,14 @@ describe('database seed script', () => {
     await truncateAll(db);
 
     const counts = await countAll();
-    expect(counts).toEqual({ users: 0, properties: 0, property_media: 0, reviews: 0 });
+    expect(counts).toEqual({
+      users: 0,
+      properties: 0,
+      property_media: 0,
+      reviews: 0,
+      property_analytics: 0,
+      inquiries: 0,
+    });
   });
 });
 
@@ -204,8 +211,17 @@ async function countAll(): Promise<{
   properties: number;
   property_media: number;
   reviews: number;
+  property_analytics: number;
+  inquiries: number;
 }> {
-  const tables = ['users', 'properties', 'property_media', 'reviews'] as const;
+  const tables = [
+    'users',
+    'properties',
+    'property_media',
+    'reviews',
+    'property_analytics',
+    'inquiries',
+  ] as const;
   const entries = await Promise.all(
     tables.map(async (table) => {
       const row = await db
@@ -220,5 +236,7 @@ async function countAll(): Promise<{
     properties: number;
     property_media: number;
     reviews: number;
+    property_analytics: number;
+    inquiries: number;
   };
 }

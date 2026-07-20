@@ -10,8 +10,10 @@ import {
   type AiGenerationCacheTable,
   type AiUsageLogsTable,
   type Database,
+  type InquiriesTable,
   type OtpCodesTable,
   type PropertiesTable,
+  type PropertyAnalyticsTable,
   type PropertyEmbeddingsTable,
   type PropertyMediaTable,
   type PropertyTranslationsTable,
@@ -37,13 +39,17 @@ describe('db-types interfaces', () => {
       property_embeddings: null as unknown as PropertyEmbeddingsTable,
       ai_generation_cache: null as unknown as AiGenerationCacheTable,
       ai_usage_logs: null as unknown as AiUsageLogsTable,
+      property_analytics: null as unknown as PropertyAnalyticsTable,
+      inquiries: null as unknown as InquiriesTable,
     } satisfies Database;
 
     expect(Object.keys(witness).sort()).toEqual(
       [
         'ai_generation_cache',
         'ai_usage_logs',
+        'inquiries',
         'otp_codes',
+        'property_analytics',
         'property_embeddings',
         'properties',
         'property_media',
@@ -207,5 +213,35 @@ describe('db-types interfaces', () => {
 
     expect(Object.keys(translationKeys)).toContain('property_id');
     expect(Object.keys(translationKeys)).toContain('locale');
+  });
+
+  it('uses snake_case column names on PropertyAnalyticsTable matching the schema', () => {
+    const analyticsKeys: Record<keyof PropertyAnalyticsTable, true> = {
+      id: true,
+      property_id: true,
+      date: true,
+      views: true,
+      created_at: true,
+      updated_at: true,
+    };
+
+    expect(Object.keys(analyticsKeys)).toContain('property_id');
+    expect(Object.keys(analyticsKeys)).toContain('date');
+    expect(Object.keys(analyticsKeys)).toContain('views');
+  });
+
+  it('uses snake_case column names on InquiriesTable matching the schema', () => {
+    const inquiryKeys: Record<keyof InquiriesTable, true> = {
+      id: true,
+      property_id: true,
+      owner_id: true,
+      inquirer_phone: true,
+      source: true,
+      created_at: true,
+    };
+
+    expect(Object.keys(inquiryKeys)).toContain('property_id');
+    expect(Object.keys(inquiryKeys)).toContain('owner_id');
+    expect(Object.keys(inquiryKeys)).toContain('source');
   });
 });

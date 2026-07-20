@@ -225,4 +225,40 @@ describe('MyPropertiesPage', () => {
     expect(screen.getByRole('button', { name: /deactivate active one/i })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /activate inactive two/i })).toBeInTheDocument();
   });
+
+  it('renders a health score badge when healthScore is present', async () => {
+    responder = () =>
+      ok({
+        properties: [
+          makeProperty({
+            id: 'p1',
+            title: 'Healthy Villa',
+            healthScore: 85,
+            healthBreakdown: [
+              { criteria: 'cover_photo', label: 'Add cover photo', met: true, points: 20 },
+              { criteria: 'photos_count', label: 'Add 3+ photos', met: true, points: 10 },
+            ],
+          }),
+        ],
+      });
+    renderPage();
+    await waitFor(() => expect(screen.getByText(/healthy villa/i)).toBeInTheDocument());
+    expect(screen.getByText('85')).toBeInTheDocument();
+  });
+
+  it('renders a loading skeleton while fetching', async () => {
+    let resolvePromise: (v: unknown) => void = () => {};
+    apiClient.defaults.adapter = (async (config: AxiosRequestConfig) => {
+      captured.push(config);
+      await new Promise((resolve) => {
+        resolvePromise = resolve;
+      });
+      const { data, status, ...rest } = responder(config);
+      return { config, data, status, statusText: 'OK', headers: {}, ...rest } as AxiosResponse;
+    }) as AxiosAdapter;
+
+    renderPage();
+    expect(document.querySelectorAll('.animate-skeleton').length).toBeGreaterThan(0);
+    resolvePromise(null);
+  });
 });

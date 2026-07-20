@@ -36,6 +36,7 @@ import {
   updatePropertyStatus,
   upsertPropertyTranslation,
 } from '../services/property-service.js';
+import { getDashboard, trackInquiry, trackView } from '../services/dashboard-service.js';
 import {
   createPropertySchema,
   listPropertiesQuerySchema,
@@ -46,6 +47,40 @@ import {
 
 export function createPropertyRouter(): Router {
   const router = Router();
+
+  // Dashboard and tracking — must be registered before `/:id` so Express
+  // routes the literal paths instead of treating "dashboard" as a UUID.
+  router.get(
+    '/dashboard',
+    requireAuth,
+    asyncHandler(async (req: AuthenticatedRequest, res) => {
+      const userId = requireUserId(req);
+      const dashboard = await getDashboard(userId);
+      res.status(200).json(dashboard);
+    }),
+  );
+
+  router.post(
+    '/:id/track-view',
+    asyncHandler(async (req, res) => {
+      const params = parseOrThrow(propertyIdParamSchema, req.params);
+      await trackView(params.id);
+      res.status(204).send();
+    }),
+  );
+
+  router.post(
+    '/:id/track-inquiry',
+    asyncHandler(async (req, res) => {
+      const params = parseOrThrow(propertyIdParamSchema, req.params);
+      const sourceSchema = z.object({
+        source: z.literal('WHATSAPP'),
+      });
+      const body = parseOrThrow(sourceSchema, req.body);
+      await trackInquiry(params.id, body.source);
+      res.status(204).send();
+    }),
+  );
 
   // `/my` must be registered before `/:id` so Express routes the literal
   // path to the authenticated handler instead of treating "my" as a UUID.

@@ -36,6 +36,7 @@ import {
 } from './filter-service.js';
 import { buildRelevanceOrder, buildSearchWhere, decideSearchStrategy } from './search-service.js';
 import { embedProperty } from './embedding-service.js';
+import { computeHealth, type HealthBreakdown } from './dashboard-service.js';
 
 export interface ListActivePropertiesOptions {
   cursor?: string;
@@ -76,6 +77,8 @@ export interface PropertySummary {
   coverImage: { url: string; thumbnailUrl: string | null; altText: string | null } | null;
   translation: { title: string; city: string; area: string | null; country: string } | null;
   media?: PropertyImage[];
+  healthScore: number | null;
+  healthBreakdown: HealthBreakdown[] | null;
 }
 
 export interface PropertyImage {
@@ -156,6 +159,8 @@ export function toSummary(
     coverImage: cover,
     translation: translation ?? null,
     ...(media ? { media } : {}),
+    healthScore: null,
+    healthBreakdown: null,
   };
 }
 
@@ -676,7 +681,7 @@ export async function upsertPropertyTranslation(
       amenities: data.amenities ?? [],
     })
     .onConflict((oc) =>
-      oc.constraint('pk_property_translations').doUpdateSet({
+      oc.columns(['property_id', 'locale']).doUpdateSet({
         title: data.title,
         summary: data.summary ?? null,
         description: data.description ?? null,
@@ -770,12 +775,38 @@ export async function listMyProperties(userId: string): Promise<PropertySummary[
   const allTranslations = new Map([...enTranslations, ...arTranslations]);
 
   const propertyIds = rows.map((r) => r.id);
-  const [covers, allMedia] = await Promise.all([
+  const [covers, allMedia, aiLogIds] = await Promise.all([
     fetchCoverImages(propertyIds),
     fetchAllMedia(propertyIds),
+    propertyIds.length > 0
+      ? db
+          .selectFrom('ai_usage_logs')
+          .select('property_id')
+          .where('property_id', 'in', propertyIds)
+          .where('action', '=', 'enhance')
+          .execute()
+          .then((r) => new Set(r.map((l) => l.property_id)))
+      : Promise.resolve(new Set<string>()),
   ]);
 
-  return rows.map((row) =>
-    toSummary(row, covers.get(row.id) ?? null, allTranslations.get(row.id), allMedia.get(row.id)),
-  );
+  return rows.map((row) => {
+    const cover = covers.get(row.id) ?? null;
+    const media = allMedia.get(row.id);
+    const translation = allTranslations.get(row.id);
+    const { score, breakdown } = computeHealth({
+      cover_image: cover,
+      media_count: media?.length ?? 0,
+      has_en_translation: row.locale === 'en' || translation != null,
+      has_ar_translation: row.locale === 'ar' || translation != null,
+      has_ai_enhancement: aiLogIds.has(row.id),
+      status: row.status,
+      average_rating: row.average_rating,
+      whatsapp_number: row.whatsapp_number,
+    });
+    return {
+      ...toSummary(row, cover, translation, media),
+      healthScore: score,
+      healthBreakdown: breakdown,
+    };
+  });
 }
