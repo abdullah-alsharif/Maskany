@@ -16,7 +16,7 @@
  */
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useParams } from 'next/navigation';
 import { useTranslation } from 'react-i18next';
 import { BedDouble, Bath, Ruler, MapPin, Star, UserCircle2 } from 'lucide-react';
@@ -54,7 +54,11 @@ function PropertyBody({ property }: { property: Property }) {
   const [expanded, setExpanded] = useState(false);
   const { isFavorite, toggleFavorite } = useFavorites();
 
+  const trackedRef = useRef<string | null>(null);
+
   useEffect(() => {
+    if (trackedRef.current === property.id) return;
+    trackedRef.current = property.id;
     apiClient.post(`/properties/${property.id}/track-view`).catch(() => {});
   }, [property.id]);
   const { user } = useAuth();

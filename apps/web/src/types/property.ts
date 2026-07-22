@@ -1,3 +1,5 @@
+import type { HealthBreakdown } from './insights';
+
 export type PropertyType =
   'APARTMENT' | 'ROOM' | 'CHALET' | 'VILLA' | 'HOUSE' | 'STUDIO' | 'PENTHOUSE' | 'DUPLEX' | 'OTHER';
 
@@ -55,13 +57,6 @@ export type CoverImage = {
   url: string;
   thumbnailUrl: string | null;
   altText: string | null;
-};
-
-export type HealthBreakdown = {
-  criteria: string;
-  label: string;
-  met: boolean;
-  points: number;
 };
 
 export type Property = {

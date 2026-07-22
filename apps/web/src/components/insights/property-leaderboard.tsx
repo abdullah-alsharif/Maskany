@@ -10,7 +10,7 @@ function rankColor(index: number): string {
   if (index === 0) return 'text-amber-500';
   if (index === 1) return 'text-stone-400';
   if (index === 2) return 'text-stone-600';
-  return 'text-stone-300';
+  return 'text-stone-400';
 }
 
 export function PropertyLeaderboard({ properties }: { properties: InsightsProperty[] }) {

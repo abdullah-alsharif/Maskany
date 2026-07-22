@@ -36,7 +36,7 @@ import {
 } from './filter-service.js';
 import { buildRelevanceOrder, buildSearchWhere, decideSearchStrategy } from './search-service.js';
 import { embedProperty } from './embedding-service.js';
-import { computeHealth, type HealthBreakdown } from './dashboard-service.js';
+import { computeHealth, type HealthBreakdown } from './health-service.js';
 
 export interface ListActivePropertiesOptions {
   cursor?: string;
@@ -796,8 +796,9 @@ export async function listMyProperties(userId: string): Promise<PropertySummary[
     const { score, breakdown } = computeHealth({
       cover_image: cover,
       media_count: media?.length ?? 0,
-      has_en_translation: row.locale === 'en' || translation != null,
-      has_ar_translation: row.locale === 'ar' || translation != null,
+      locale: row.locale,
+      has_en_translation: row.locale === 'ar' && translation != null,
+      has_ar_translation: row.locale === 'en' && translation != null,
       has_ai_enhancement: aiLogIds.has(row.id),
       status: row.status,
       average_rating: row.average_rating,

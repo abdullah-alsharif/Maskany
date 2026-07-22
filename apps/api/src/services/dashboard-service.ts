@@ -1,6 +1,7 @@
 import { sql } from 'kysely';
 import { db } from '../lib/db.js';
 import { ErrorCode, HttpError } from '../lib/http-error.js';
+import { computeHealth, type HealthBreakdown } from './health-service.js';
 
 const THIRTY_DAYS_AGO = () =>
   new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
@@ -12,24 +13,6 @@ interface DashboardStats {
   draftListings: number;
   totalViews30d: number;
   totalInquiries30d: number;
-}
-
-interface HealthInput {
-  cover_image: { url: string } | null;
-  media_count: number;
-  has_en_translation: boolean;
-  has_ar_translation: boolean;
-  has_ai_enhancement: boolean;
-  status: string;
-  average_rating: string;
-  whatsapp_number: string | null;
-}
-
-export interface HealthBreakdown {
-  criteria: string;
-  label: string;
-  met: boolean;
-  points: number;
 }
 
 interface DashboardProperty {
@@ -52,59 +35,6 @@ interface DashboardResponse {
   viewsOverTime: { date: string; views: number }[];
 }
 
-export function computeHealth(property: HealthInput): {
-  score: number;
-  breakdown: HealthBreakdown[];
-} {
-  const checks: { criteria: string; label: string; met: boolean; points: number }[] = [
-    {
-      criteria: 'cover_photo',
-      label: 'Add cover photo',
-      met: property.cover_image !== null,
-      points: 20,
-    },
-    {
-      criteria: 'photos_count',
-      label: 'Add 3+ photos',
-      met: property.media_count >= 3,
-      points: 10,
-    },
-    {
-      criteria: 'translation',
-      label: 'Add both-locale translation',
-      met: property.has_en_translation && property.has_ar_translation,
-      points: 20,
-    },
-    {
-      criteria: 'ai_enhanced',
-      label: 'Use AI enhancement',
-      met: property.has_ai_enhancement,
-      points: 15,
-    },
-    {
-      criteria: 'active_status',
-      label: 'Publish listing',
-      met: property.status === 'ACTIVE',
-      points: 15,
-    },
-    {
-      criteria: 'rating',
-      label: 'Maintain 4+ star rating',
-      met: Number(property.average_rating) >= 4.0,
-      points: 10,
-    },
-    {
-      criteria: 'whatsapp',
-      label: 'Set WhatsApp number',
-      met: property.whatsapp_number !== null && property.whatsapp_number.trim().length > 0,
-      points: 10,
-    },
-  ];
-
-  const score = checks.reduce((sum, c) => sum + (c.met ? c.points : 0), 0);
-  return { score, breakdown: checks };
-}
-
 export async function getDashboard(userId: string): Promise<DashboardResponse> {
   const user = await db
     .selectFrom('users')
@@ -122,7 +52,16 @@ export async function getDashboard(userId: string): Promise<DashboardResponse> {
   const ownProps = await db
     .selectFrom('properties')
     .where('owner_id', '=', userId)
-    .select(['id', 'title', 'city', 'property_type', 'status', 'average_rating', 'whatsapp_number'])
+    .select([
+      'id',
+      'title',
+      'city',
+      'property_type',
+      'status',
+      'locale',
+      'average_rating',
+      'whatsapp_number',
+    ])
     .execute();
 
   const propertyIds = ownProps.map((p) => p.id);
@@ -229,6 +168,7 @@ export async function getDashboard(userId: string): Promise<DashboardResponse> {
     const { score, breakdown } = computeHealth({
       cover_image: cover,
       media_count: mediaCountMap.get(p.id) ?? 0,
+      locale: p.locale,
       has_en_translation: enTranslationSet.has(p.id),
       has_ar_translation: arTranslationSet.has(p.id),
       has_ai_enhancement: aiLogSet.has(p.id),

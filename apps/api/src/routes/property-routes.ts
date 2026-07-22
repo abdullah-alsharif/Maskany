@@ -71,7 +71,8 @@ export function createPropertyRouter(): Router {
 
   router.post(
     '/:id/track-inquiry',
-    asyncHandler(async (req, res) => {
+    requireAuth,
+    asyncHandler(async (req: AuthenticatedRequest, res) => {
       const params = parseOrThrow(propertyIdParamSchema, req.params);
       const sourceSchema = z.object({
         source: z.literal('WHATSAPP'),
