@@ -25,3 +25,27 @@ apps/web/public/workbox-*.js
 specs/
 .agents/
 .impeccable/
+
+# BEGIN coding-harness-managed
+# Managed by coding-harness/install.sh — do not edit this section manually.
+# Re-run install.sh after updating the harness to keep this section current.
+
+# .claude/agents — matched by naming convention so new ch-N-* agent files are
+# picked up automatically without editing this list; project-specific agents
+# using any other filename still coexist un-ignored
+# .claude/agents/agent_common/ — fully harness-owned package, no project customisation expected inside
+.claude/agents/agent_common/
+.claude/agents/ch_*.py
+.claude/agents/semble-search.md
+
+# .claude/skills — harness-owned skill dirs, matched by naming convention so new
+# ch-N-*/speckit-* skills are picked up automatically without editing this list
+.claude/skills/ch-*/
+.claude/skills/speckit-*/
+
+# .specify subdirs — fully harness-owned, no project files expected here
+.specify/extensions/
+.specify/scripts/
+.specify/templates/
+.specify/workflows/
+# END coding-harness-managed
