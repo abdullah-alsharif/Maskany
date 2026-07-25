@@ -10,6 +10,7 @@ export type UseAiEnhanceOptions = {
   action?: string;
   metadata: PropertyMetadata;
   locale: string;
+  customInstruction?: string;
 };
 
 export type UseAiEnhanceReturn = {
@@ -49,6 +50,7 @@ export function useAiEnhance(options: UseAiEnhanceOptions): UseAiEnhanceReturn {
             fieldType: options.fieldType,
             action: options.action ?? 'enhance',
             currentValue,
+            customInstruction: options.customInstruction,
             metadata: options.metadata,
             requestNonce: nonce,
           },
@@ -75,7 +77,14 @@ export function useAiEnhance(options: UseAiEnhanceOptions): UseAiEnhanceReturn {
         throw err;
       }
     },
-    [options.locale, options.fieldType, options.action, options.metadata, t],
+    [
+      options.locale,
+      options.fieldType,
+      options.action,
+      options.customInstruction,
+      options.metadata,
+      t,
+    ],
   );
 
   const reset = useCallback(() => {

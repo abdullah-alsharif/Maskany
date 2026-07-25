@@ -17,6 +17,7 @@ import { getCachedResult, setCachedResult, buildCacheKey } from '../services/ai-
 import { TASK_CONFIG } from '../services/ai-provider.js';
 import { executeWithFallback } from '../services/execute-with-fallback.js';
 import { extractAndParseJSON } from '../lib/extract-json.js';
+import { mapCategoryToI18n } from '../services/ai-review-types.js';
 import type { AIProvider } from '../services/ai-provider.js';
 import {
   enhanceRequestSchema,
@@ -173,10 +174,13 @@ export function createAiRouter(): Router {
         fallbacks,
         req.user?.userId ?? 'anon',
       );
+      const mappedIssues = result.issues.map((issue) => ({
+        ...issue,
+        category: mapCategoryToI18n(issue.category),
+      }));
       res.status(200).json({
-        score: result.score,
-        maxScore: result.maxScore,
-        suggestions: result.suggestions,
+        issues: mappedIssues,
+        qualityScore: result.qualityScore,
         usage: result.usage,
       });
     }),

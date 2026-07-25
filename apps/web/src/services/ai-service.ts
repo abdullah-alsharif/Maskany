@@ -20,8 +20,10 @@ export interface EnhanceRequest {
     areaSqm?: number;
     amenities: string[];
   };
+  customInstruction?: string;
   constraints?: { maxLength?: number };
   requestNonce?: number;
+  promptVersion?: string;
 }
 
 export interface PropertyMetadata {
@@ -172,18 +174,40 @@ export interface ReviewPropertyData {
   amenities: string[];
 }
 
-export interface ReviewSuggestion {
+export interface FieldFix {
   field: string;
-  severity: 'high' | 'medium' | 'low';
-  message: string;
-  suggestion: string | null;
-  type: 'improvement' | 'missing' | 'suggestion';
+  findText?: string;
+  replaceWith?: string;
+  suggestion?: string;
+}
+
+export interface FixOption {
+  label: string;
+  field: string;
+  findText?: string;
+  replaceWith?: string;
+  suggestion?: string;
+  fixes?: FieldFix[];
+}
+
+export interface ReviewIssue {
+  id: string;
+  category: 'consistency' | 'content_quality' | 'trust_accuracy';
+  severity: 'critical' | 'major' | 'minor' | 'suggestion';
+  title: string;
+  description: string;
+  field?: string;
+  evidence?: string;
+  suggestion?: string;
+  findText?: string;
+  replaceWith?: string;
+  alternatives?: FixOption[];
+  fixes?: FieldFix[];
 }
 
 export interface ReviewResponse {
-  score: number;
-  maxScore: number;
-  suggestions: ReviewSuggestion[];
+  issues: ReviewIssue[];
+  qualityScore: number;
   usage: { promptTokens: number; completionTokens: number; totalTokens: number };
 }
 

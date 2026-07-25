@@ -1,10 +1,60 @@
+function parseBalanced(text: string, openChar: string, closeChar: string): unknown {
+  let depth = 0;
+  let inString = false;
+
+  for (let i = 0; i < text.length; i++) {
+    const ch = text[i];
+    if (inString) {
+      if (ch === '\\') {
+        i++;
+        continue;
+      }
+      if (ch === '"') inString = false;
+      continue;
+    }
+    if (ch === '"') {
+      inString = true;
+      continue;
+    }
+    if (ch === openChar) {
+      depth++;
+      continue;
+    }
+    if (ch === closeChar) {
+      depth--;
+      if (depth === 0) {
+        return JSON.parse(text.slice(0, i + 1));
+      }
+    }
+  }
+
+  throw new Error(`Unbalanced ${openChar}${closeChar} in response`);
+}
+
 export function extractAndParseJSON(text: string): unknown {
-  const cleaned = text
-    .replace(/```json?\n?/gi, '')
-    .replace(/```/g, '')
+  let cleaned = text
+    .replace(/```json\n?/gi, '')
+    .replace(/```\n?/g, '')
     .trim();
-  const start = cleaned.indexOf('{');
-  const end = cleaned.lastIndexOf('}');
-  if (start === -1 || end === -1) throw new Error('No JSON object found in response');
-  return JSON.parse(cleaned.slice(start, end + 1));
+
+  const arrayMatch = cleaned.match(/^\[/);
+  const objectMatch = cleaned.match(/^\{/);
+
+  if (!arrayMatch && !objectMatch) {
+    const firstBrace = cleaned.indexOf('{');
+    const firstBracket = cleaned.indexOf('[');
+    const startIdx =
+      firstBrace === -1
+        ? firstBracket
+        : firstBracket === -1
+          ? firstBrace
+          : Math.min(firstBrace, firstBracket);
+    if (startIdx === -1) throw new Error('No JSON structure found');
+    cleaned = cleaned.slice(startIdx);
+  }
+
+  if (cleaned.startsWith('[')) {
+    return parseBalanced(cleaned, '[', ']');
+  }
+  return parseBalanced(cleaned, '{', '}');
 }

@@ -17,6 +17,7 @@ type AiEnhanceButtonProps = {
   locale: 'en' | 'ar';
   onUndo?: (previousValue: string) => void;
   history?: ReturnType<typeof useAiHistory>;
+  customInstruction?: string;
 };
 
 export function AiEnhanceButton({
@@ -28,6 +29,7 @@ export function AiEnhanceButton({
   locale,
   onUndo,
   history,
+  customInstruction,
 }: AiEnhanceButtonProps) {
   const { i18n } = useTranslation();
   const t = i18n.getFixedT(locale);
@@ -42,12 +44,14 @@ export function AiEnhanceButton({
     action,
     metadata,
     locale,
+    customInstruction,
   });
   const aiStreamEnhance = useAiStreamEnhance({
     fieldType,
     action,
     metadata,
     locale,
+    customInstruction,
   });
 
   const handleEnhance = useCallback(async () => {

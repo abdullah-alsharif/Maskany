@@ -214,12 +214,6 @@
     .animate-stagger-4 {
       animation-delay: 0.2s;
     }
-    .animate-stagger-5 {
-      animation-delay: 0.25s;
-    }
-    .animate-stagger-6 {
-      animation-delay: 0.3s;
-    }
   }
 
   /* Reduced-motion fallback: show elements immediately */

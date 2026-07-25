@@ -1,9 +1,13 @@
 import { KNOWN_AMENITIES } from '../constants/amenities.js';
 import type { EnhanceRequest } from '../validators/ai-validators.js';
+import { PromptTemplateRegistry, loadExamples } from './prompts/registry.js';
 
 export interface BuiltPrompt {
   system: string;
   user: string;
+  templateId?: string;
+  templateVersion?: string;
+  sections?: Array<{ id: string; tokenCount: number }>;
 }
 
 export interface TranslationFields {
@@ -43,246 +47,457 @@ export interface PropertyMetadata {
   features?: string[];
 }
 
-const SYSTEM_PROMPT = `You are a helpful real estate copywriting assistant for Maskany. Your job is to make property text clearer, more attractive, and more professional.
+export type Locale = 'en' | 'ar';
 
-RULES:
-- Keep all facts exactly as given: rooms, bathrooms, price, area, city, amenities
-- Do not add fake features or contact info
-- Output only the improved text — no labels, no quotes, no explanations
-- Short paragraphs (2-3 sentences)
-- Match the requested language exactly
+let _registry: PromptTemplateRegistry | null = null;
 
-You will receive property metadata, current field value, field type, and an action. Follow the action instruction.`;
-
-const SYSTEM_PROMPT_AR = `أنت مساعد كتابة محتوى عقاري لمنصة ماسكاني. مهمتك جعل نص العقار أكثر وضوحاً وجاذبية واحترافية.
-
-القواعد:
-- حافظ على جميع الحقائق كما هي: الغرف، الحمامات، السعر، المساحة، المدينة، وسائل الراحة
-- لا تضف ميزات وهمية أو معلومات اتصال
-- أخرج النص المحسّن فقط — لا تسميات ولا علامات اقتباس ولا شروحات
-- فقرات قصيرة (2-3 جمل)
-- طابق اللغة المطلوبة تمامًا
-
-ستتلقى البيانات الوصفية للعقار، قيمة الحقل الحالي، نوع الحقل، والإجراء المطلوب. اتبع التعليمات.`;
-
-const ACTION_INSTRUCTIONS: Record<string, string> = {
-  enhance:
-    'Improve wording and flow. Fix grammar. Keep ALL facts intact. Make it more compelling without exaggeration.',
-  rewrite: 'Complete rewrite with fresh structure. Keep ALL facts exactly as provided.',
-  shorten: 'Condense to essential information only. Remove repetition and fluff.',
-  expand: 'Add 2-3 sentences of descriptive detail about lifestyle or nearby attractions.',
-  fix_grammar:
-    'Correct grammar, spelling, punctuation only. Do not change any creative content, word choice, or structure.',
-  simplify: 'Use simpler vocabulary and shorter sentences. Aim for reading age 12-14.',
-  persuasive: 'Add emotional hooks and subtle call-to-action. Keep ALL facts factual.',
-  generate_title:
-    'Generate a short, catchy title (max 120 chars, one line, no period). It must be a title, not a sentence or paragraph.',
-  generate_summary: 'Generate a brief 1-2 sentence summary. Capture the essence of the property.',
-  generate_neighborhood:
-    'Generate a factual description of the neighborhood. Mention nearby landmarks, transport, shops. 1-2 sentences.',
-  generate_highlights:
-    'Generate 3-5 bullet points highlighting the best features of this property.',
-};
-
-function systemForLocale(locale: string): string {
-  return locale === 'ar' ? SYSTEM_PROMPT_AR : SYSTEM_PROMPT;
+function getRegistry(): PromptTemplateRegistry {
+  if (!_registry) {
+    _registry = new PromptTemplateRegistry({ localeFallback: true });
+    _registry.loadTemplatesFromDirectory(new URL('./prompts/templates', import.meta.url).pathname);
+  }
+  return _registry;
 }
 
-export function buildEnhancePrompt(request: EnhanceRequest, locale: string): BuiltPrompt {
-  const instruction = ACTION_INSTRUCTIONS[request.action] ?? ACTION_INSTRUCTIONS.enhance;
+export function resetRegistryForTest(): void {
+  _registry = null;
+}
 
-  const userParts: string[] = [];
-  userParts.push(
-    `Property: ${request.metadata.propertyType}, ${request.metadata.rooms}BR/${request.metadata.bathrooms}BA`,
-  );
-  userParts.push(
-    `Location: ${request.metadata.city}${request.metadata.area ? `, ${request.metadata.area}` : ''}`,
-  );
-  userParts.push(`Amenities: ${request.metadata.amenities.join(', ')}`);
-  userParts.push(`Size: ${request.metadata.areaSqm ? `${request.metadata.areaSqm}m²` : 'N/A'}`);
-  userParts.push('');
-  const fieldGuidelines: Record<string, string> = {
-    title:
-      'Short, one-line title (max 120 chars, no period). Must be a title, not a paragraph. Highlight the best feature. Preserve the property type (studio, apartment, villa, etc.) and any location landmarks from the current value.',
-    summary:
-      'Brief 1-2 sentence overview. Capture the essence of the property. Keep location and property type from the original.',
-    description:
-      'Detailed 2-3 paragraph description. Start with the best feature, mention lifestyle benefits, end with a subtle invitation.',
-    area: 'Factual description of the neighborhood. Mention nearby landmarks, transport, shops. 1-2 sentences.',
-    city: 'Refine the city name or include a brief, factual note about the city or district. Keep it concise.',
-    amenities: `List amenities naturally. Group related ones. 1 sentence. Valid keys: ${KNOWN_AMENITIES.join(', ')}.`,
-  };
-  const guideline = fieldGuidelines[request.fieldType] ?? 'Write naturally for this field type.';
-
-  userParts.push(`Field: ${request.fieldType} — ${guideline}`);
-  userParts.push(`Action: ${instruction}`);
-  if (request.tone) userParts.push(`Tone: ${request.tone}`);
-  userParts.push('');
-  userParts.push(`Current value: ${request.currentValue || '(empty)'}`);
-  if (request.constraints?.maxLength) {
-    userParts.push(`\nIMPORTANT: Do not exceed ${request.constraints.maxLength} characters.`);
+export function getTemplateInfo(
+  kind: 'enhance' | 'review',
+  locale: Locale,
+  version?: string,
+): {
+  templateId: string;
+  templateVersion: string;
+  sections: Array<{ id: string; tokenCount: number }>;
+} {
+  const registry = getRegistry();
+  try {
+    const result = registry.render(kind, locale, { locale }, version ? { version } : undefined);
+    return {
+      templateId: result.templateId,
+      templateVersion: result.templateVersion,
+      sections: result.sections,
+    };
+  } catch {
+    return { templateId: `unknown-${kind}-${locale}`, templateVersion: 'unknown', sections: [] };
   }
-  userParts.push('');
-  userParts.push('Output only the improved text — no labels, no quotes, no explanations.');
-  userParts.push(
-    `REMINDER: Do NOT change: rooms (${request.metadata.rooms}), ` +
-      `bathrooms (${request.metadata.bathrooms}), price (${request.metadata.price}), ` +
-      `amenities (${request.metadata.amenities.join(', ')}). ` +
-      'Do NOT add features not listed above.',
+}
+
+function t(locale: Locale, en: string, ar: string): string {
+  return locale === 'ar' ? ar : en;
+}
+
+function formatRooms(rooms: number, locale: Locale): string {
+  if (rooms === 0) return t(locale, 'Studio', 'استوديو');
+  return `${rooms}BR`;
+}
+
+function metadataString(meta: PropertyMetadata, locale: Locale): string {
+  const lines: string[] = [];
+  lines.push(`--- ${t(locale, 'PROPERTY METADATA', 'بيانات العقار')} ---`);
+  lines.push(
+    `${t(locale, 'Type:', 'النوع:')} ${meta.propertyType}, ${formatRooms(meta.rooms, locale)}/${meta.bathrooms}BA`,
   );
-  userParts.push(
-    'IMPORTANT: Keep the property type (studio/apartment/villa/etc.) and any location landmarks (mall names, districts, landmarks) from the original text. Do not replace them.',
+  lines.push(
+    `${t(locale, 'Location:', 'الموقع:')} ${meta.city}${meta.area ? `, ${meta.area}` : ''}`,
   );
+  lines.push(`${t(locale, 'Price:', 'السعر:')} ${meta.price}`);
+  lines.push(
+    `${t(locale, 'Amenities:', 'وسائل الراحة:')} ${meta.amenities.length ? meta.amenities.join(', ') : t(locale, '(none selected)', '(غير محدد)')}`,
+  );
+  if (meta.areaSqm) {
+    lines.push(`${t(locale, 'Size:', 'المساحة:')} ${meta.areaSqm}m²`);
+  }
+  return lines.join('\n');
+}
+
+function systemForLocale(locale: Locale, kind: 'enhance' | 'review' = 'enhance'): string {
+  const registry = getRegistry();
+  try {
+    const result = registry.render(kind, locale, { locale });
+    return result.system;
+  } catch {
+    return '';
+  }
+}
+
+const ACTION_INSTRUCTIONS: Record<string, Record<Locale, string>> = {
+  enhance: {
+    en: 'Improve wording and flow. Fix grammar. Keep ALL facts intact. Make it more compelling without exaggeration.',
+    ar: 'حسّن الصياغة والتدفق. صحّح القواعد. حافظ على جميع الحقائق. اجعل النص أكثر جاذبية دون مبالغة.',
+  },
+  rewrite: {
+    en: 'Complete rewrite with fresh structure. Keep ALL facts exactly as provided.',
+    ar: 'إعادة كتابة كاملة بهيكل جديد. حافظ على جميع الحقائق كما هي.',
+  },
+  shorten: {
+    en: 'Condense to essential information only. Remove repetition and fluff.',
+    ar: 'اختصر إلى المعلومات الأساسية فقط. أزل التكرار والحشو.',
+  },
+  expand: {
+    en: 'Add 2-3 sentences of descriptive detail about lifestyle or nearby attractions.',
+    ar: 'أضف 2-3 جمل من التفاصيل الوصفية عن نمط الحياة أو المعالم القريبة.',
+  },
+  fix_grammar: {
+    en: 'Correct grammar, spelling, punctuation only. Do not change any creative content, word choice, or structure.',
+    ar: 'صحّح القواعد والإملاء وعلامات الترقيم فقط. لا تغير أي محتوى إبداعي أو اختيار الكلمات أو البنية.',
+  },
+  simplify: {
+    en: 'Use simpler vocabulary and shorter sentences. Aim for reading age 12-14.',
+    ar: 'استخدم مفردات أبسط وجمل أقصر. استهدف مستوى قراءة 12-14 سنة.',
+  },
+  persuasive: {
+    en: 'Add emotional hooks and subtle call-to-action. Keep ALL facts factual.',
+    ar: 'أضف خطافات عاطفية ودعوة خفيفة للعمل. حافظ على جميع الحقائق.',
+  },
+  professional: {
+    en: 'Use formal, polished language suitable for professional real estate. Maintain a confident, authoritative tone.',
+    ar: 'استخدم لغة رسمية ومصقولة مناسبة للعقارات الاحترافية. حافظ على نبرة واثقة وموثوقة.',
+  },
+  luxury: {
+    en: 'Use sophisticated, aspirational language. Emphasise exclusivity, premium finishes, and lifestyle prestige.',
+    ar: 'استخدم لغة راقية وطموحة. ركّز على الحصرية والتشطيبات الفاخرة ومكانة نمط الحياة.',
+  },
+  friendly: {
+    en: 'Use warm, approachable language. Write as if speaking to a friend. Keep it inviting and natural.',
+    ar: 'استخدم لغة دافئة وقريبة. اكتب وكأنك تتحدث مع صديق. اجعل النص جذاباً وطبيعياً.',
+  },
+  generate_title: {
+    en: 'Generate a short, catchy title (max 120 chars, one line, no period). It must be a title, not a sentence or paragraph.',
+    ar: 'أنشئ عنواناً قصيراً وجذاباً (حد أقصى 120 حرفاً، سطر واحد، لا نقطة في النهاية). يجب أن يكون عنواناً وليس جملة أو فقرة.',
+  },
+  generate_summary: {
+    en: 'Generate a brief 1-2 sentence summary. Capture the essence of the property.',
+    ar: 'أنشئ ملخصاً موجزاً من 1-2 جملة. التقط جوهر العقار.',
+  },
+  generate_neighborhood: {
+    en: 'Generate a factual description of the neighborhood. Mention nearby landmarks, transport, shops. 1-2 sentences.',
+    ar: 'أنشئ وصفاً واقعياً للحي. اذكر المعالم القريبة ووسائل النقل والمتاجر. 1-2 جمل.',
+  },
+  generate_highlights: {
+    en: 'Generate 3-5 bullet points highlighting the best features of this property.',
+    ar: 'أنشئ 3-5 نقاط تلخّص أبرز ميزات هذا العقار.',
+  },
+};
+
+const FIELD_GUIDELINES: Record<string, Record<Locale, string>> = {
+  title: {
+    en: 'Short, one-line title (max 120 chars, no period). Must be a title, not a paragraph. Highlight the best feature. Preserve the property type and any location landmarks from the current value.',
+    ar: 'عنوان قصير من سطر واحد (حد أقصى 120 حرفاً، لا نقطة). يجب أن يكون عنواناً وليس فقرة. أبرز أفضل ميزة. حافظ على نوع العقار وأي معالم موقع من النص الحالي.',
+  },
+  summary: {
+    en: 'Brief 1-2 sentence overview. Capture the essence of the property. Keep location and property type from the original.',
+    ar: 'نظرة عامة موجزة من 1-2 جملة. التقط جوهر العقار. حافظ على الموقع ونوع العقار من النص الأصلي.',
+  },
+  description: {
+    en: 'Detailed 2-3 paragraph description. Start with the best feature, mention lifestyle benefits, end with a subtle invitation.',
+    ar: 'وصف مفصل من 2-3 فقرات. ابدأ بأفضل ميزة، اذكر فوائد نمط الحياة، وانتهِ بدعوة لطيفة.',
+  },
+  area: {
+    en: 'Factual description of the neighborhood. Mention nearby landmarks, transport, shops. 1-2 sentences.',
+    ar: 'وصف واقعي للحي. اذكر المعالم القريبة ووسائل النقل والمتاجر. 1-2 جمل.',
+  },
+  city: {
+    en: 'Refine the city name or include a brief, factual note about the city or district. Keep it concise.',
+    ar: 'حسّن اسم المدينة أو أضف ملاحظة واقعية موجزة عن المدينة أو الحي. كن موجزاً.',
+  },
+  amenities: {
+    en: 'List amenities naturally. Group related ones. 1 sentence.',
+    ar: 'اذكر وسائل الراحة بشكل طبيعي. جمّع المتشابهة منها. جملة واحدة.',
+  },
+  highlights: {
+    en: 'Generate 3-5 bullet points highlighting the best features. Each bullet one line. Keep factual.',
+    ar: 'أنشئ 3-5 نقاط تلخّص أبرز الميزات. كل نقطة في سطر. حافظ على الدقة الواقعية.',
+  },
+};
+
+const TONE_GUIDELINES: Record<string, Record<Locale, string>> = {
+  professional: {
+    en: 'Use formal, polished language. Avoid slang and contractions. Sound confident and authoritative.',
+    ar: 'استخدم لغة رسمية ومصقولة. تجنب العامية والاختصارات. كن واثقاً وموثوقاً.',
+  },
+  luxury: {
+    en: 'Use sophisticated vocabulary. Emphasise exclusivity, premium materials, and prestige. Create desire.',
+    ar: 'استخدم مفردات راقية. ركّز على الحصرية والمواد الفاخرة والمكانة. أثِر الرغبة.',
+  },
+  friendly: {
+    en: 'Use warm, conversational language. Write as if describing the property to a friend.',
+    ar: 'استخدم لغة دافئة ومحادثة. اكتب وكأنك تصف العقار لصديق.',
+  },
+  warm: {
+    en: 'Use inviting, welcoming language. Emphasise comfort, coziness, and feeling at home.',
+    ar: 'استخدم لغة جذابة ومرحبة. ركّز على الراحة والدفء والشعور بالمنزل.',
+  },
+};
+
+function instructionBlock(action: string, locale: Locale): string {
+  const instruction = ACTION_INSTRUCTIONS[action];
+  if (!instruction) {
+    return `${t(locale, 'Action:', 'الإجراء:')} ${ACTION_INSTRUCTIONS.enhance[locale]}`;
+  }
+  return `${t(locale, 'Action:', 'الإجراء:')} ${instruction[locale]}`;
+}
+
+function fieldBlock(fieldType: string, locale: Locale): string {
+  const guideline = FIELD_GUIDELINES[fieldType];
+  if (!guideline) {
+    return `${t(locale, 'Field:', 'الحقل:')} ${fieldType} — ${t(locale, 'Write naturally for this field type.', 'اكتب بشكل طبيعي لهذا النوع من الحقول.')}`;
+  }
+  return `${t(locale, 'Field:', 'الحقل:')} ${fieldType} — ${guideline[locale]}`;
+}
+
+function toneBlock(tone: string | undefined, locale: Locale): string | null {
+  if (!tone) return null;
+  const guideline = TONE_GUIDELINES[tone];
+  if (!guideline) {
+    return `${t(locale, 'Tone:', 'النبرة:')} ${tone}`;
+  }
+  return `${t(locale, 'Tone:', 'النبرة:')} ${guideline[locale]}`;
+}
+
+function constraintBlock(
+  constraints: { maxLength?: number; minLength?: number } | undefined,
+  locale: Locale,
+): string | null {
+  if (!constraints?.maxLength && !constraints?.minLength) return null;
+  const parts: string[] = [];
+  if (constraints.maxLength) {
+    parts.push(
+      `${t(locale, 'Do not exceed', 'لا تتجاوز')} ${constraints.maxLength} ${t(locale, 'characters.', 'حرفاً.')}`,
+    );
+  }
+  if (constraints.minLength) {
+    parts.push(
+      `${t(locale, 'Do not output fewer than', 'لا تقل عن')} ${constraints.minLength} ${t(locale, 'characters.', 'حرفاً.')}`,
+    );
+  }
+  return `--- ${t(locale, 'CONSTRAINTS', 'القيود')} ---\n${parts.join(' ')}`;
+}
+
+function guardBlock(meta: PropertyMetadata, locale: Locale): string {
+  const lines: string[] = [];
+  lines.push(`--- ${t(locale, 'RULES', 'القواعد')} ---`);
+  lines.push(
+    t(
+      locale,
+      `- Do NOT change: rooms (${meta.rooms}), bathrooms (${meta.bathrooms}), price (${meta.price})`,
+      `- لا تغير: الغرف (${meta.rooms})، الحمامات (${meta.bathrooms})، السعر (${meta.price})`,
+    ),
+  );
+  lines.push(
+    t(
+      locale,
+      `- Keep currency (${meta.currency}) and price unit (${meta.priceUnit}) unchanged`,
+      `- حافظ على العملة (${meta.currency}) ووحدة السعر (${meta.priceUnit}) كما هي`,
+    ),
+  );
+  lines.push(
+    t(
+      locale,
+      `- Keep the property type (${meta.propertyType}) and location landmarks from the original text`,
+      `- حافظ على نوع العقار (${meta.propertyType}) ومعالم الموقع من النص الأصلي`,
+    ),
+  );
+  if (meta.areaSqm) {
+    lines.push(
+      t(
+        locale,
+        `- Keep area (${meta.areaSqm}m²) unchanged`,
+        `- حافظ على المساحة (${meta.areaSqm}m²) كما هي`,
+      ),
+    );
+  }
+  lines.push(
+    t(
+      locale,
+      '- Output only the improved text — no labels, no quotes, no explanations',
+      '- أخرج النص المحسّن فقط — لا تسميات ولا علامات اقتباس ولا شروحات',
+    ),
+  );
+  return lines.join('\n');
+}
+
+function contentBlock(currentValue: string, locale: Locale): string {
+  return [
+    `--- ${t(locale, 'CONTENT TO PROCESS', 'المحتوى المراد معالجته')} ---`,
+    `${t(locale, 'Current value:', 'القيمة الحالية:')}`,
+    currentValue || t(locale, '(empty)', '(فارغ)'),
+  ].join('\n');
+}
+
+function customInstructionBlock(instruction: string | undefined, locale: Locale): string | null {
+  if (!instruction?.trim()) return null;
+  return [`--- ${t(locale, 'CUSTOM INSTRUCTION', 'تعليمات مخصصة')} ---`, instruction.trim()].join(
+    '\n',
+  );
+}
+
+function amenitiesHint(fieldType: string, locale: Locale): string | null {
+  if (fieldType !== 'amenities') return null;
+  return `${t(locale, 'Valid amenity keys:', 'مفاتيح وسائل الراحة الصالحة:')} ${KNOWN_AMENITIES.join(', ')}`;
+}
+
+export function buildEnhancePrompt(request: EnhanceRequest, locale: Locale): BuiltPrompt {
+  const parts: string[] = [];
+
+  parts.push(metadataString(request.metadata, locale));
+  parts.push('');
+  parts.push(fieldBlock(request.fieldType, locale));
+  parts.push(instructionBlock(request.action, locale));
+  const custom = customInstructionBlock(request.customInstruction, locale);
+  if (custom) parts.push(custom);
+  const tone = toneBlock(request.tone, locale);
+  if (tone) parts.push(tone);
+  const constraints = constraintBlock(request.constraints, locale);
+  if (constraints) parts.push(constraints);
+  parts.push(guardBlock(request.metadata, locale));
+  const hint = amenitiesHint(request.fieldType, locale);
+  if (hint) parts.push(hint);
+  parts.push('');
+  parts.push(contentBlock(request.currentValue, locale));
+
+  const info = getTemplateInfo('enhance', locale, request.promptVersion);
 
   return {
     system: systemForLocale(locale),
-    user: userParts.join('\n'),
+    user: parts.join('\n'),
+    templateId: info.templateId,
+    templateVersion: info.templateVersion,
+    sections: info.sections,
   };
 }
 
 export function buildTranslationPrompt(
-  locale: 'en' | 'ar',
-  targetLocale: 'en' | 'ar',
+  locale: Locale,
+  targetLocale: Locale,
   sourceFields: TranslationFields,
   metadata: PropertyMetadata,
+  promptVersion?: string,
 ): BuiltPrompt {
-  const baseSystem = systemForLocale(locale);
   const sourceLang = locale === 'en' ? 'English' : 'Arabic';
   const targetLang = targetLocale === 'ar' ? 'Arabic' : 'English';
+
   const systemExt =
     targetLocale === 'ar'
       ? `\nأنت تترجم قائمة عقارات من ${sourceLang} إلى ${targetLang}. حافظ على جميع المعلومات، وكيّف المراجع الثقافية.`
       : `\nYou are translating a property listing from ${sourceLang} to ${targetLang}. Preserve all facts, adapt cultural references.`;
 
-  const userParts = [
-    `Translate this property listing from ${locale} to ${targetLocale}.`,
-    '',
-    `Property: ${metadata.propertyType}, ${metadata.rooms}BR/${metadata.bathrooms}BA`,
-    `Location: ${metadata.city}${metadata.area ? `, ${metadata.area}` : ''}`,
-    `Amenities: ${metadata.amenities.join(', ')}`,
-    '',
-    `Title: ${sourceFields.title}`,
-    `Summary: ${sourceFields.summary || '(empty)'}`,
-    `Description: ${sourceFields.description}`,
-    `City: ${sourceFields.city}`,
-    `Area/Neighborhood: ${sourceFields.area || '(empty)'}`,
-    `Country: ${sourceFields.country}`,
-    '',
-    'Output a JSON object with keys: title, summary, description, city, area, country.',
-    'Keep title under 120 chars, summary under 300 chars.',
-    `REMINDER: Do NOT change rooms (${metadata.rooms}), bathrooms (${metadata.bathrooms}), or price (${metadata.price}).`,
+  const parts: string[] = [];
+
+  parts.push(metadataString(metadata, locale));
+  parts.push('');
+  parts.push(`--- ${t(locale, 'TEXT TO TRANSLATE', 'النص المراد ترجمته')} ---`);
+  parts.push(`${t(locale, 'Title:', 'العنوان:')} ${sourceFields.title}`);
+  parts.push(
+    `${t(locale, 'Summary:', 'الملخص:')} ${sourceFields.summary || t(locale, '(empty)', '(فارغ)')}`,
+  );
+  parts.push(`${t(locale, 'Description:', 'الوصف:')} ${sourceFields.description}`);
+  parts.push(`${t(locale, 'City:', 'المدينة:')} ${sourceFields.city}`);
+  parts.push(
+    `${t(locale, 'Area/Neighborhood:', 'المنطقة/الحي:')} ${sourceFields.area || t(locale, '(empty)', '(فارغ)')}`,
+  );
+  parts.push(`${t(locale, 'Country:', 'البلد:')} ${sourceFields.country}`);
+  parts.push('');
+  parts.push(
+    t(
+      locale,
+      'Output a JSON object with keys: title, summary, description, city, area, country.',
+      'أخرج كائن JSON بالمفاتيح: title, summary, description, city, area, country.',
+    ),
+  );
+  parts.push(
+    t(
+      locale,
+      'Keep title under 120 chars, summary under 300 chars.',
+      'اجعل العنوان أقل من 120 حرفاً والملخص أقل من 300 حرف.',
+    ),
+  );
+
+  const unchangedParts: string[] = [
+    `rooms (${metadata.rooms})`,
+    `bathrooms (${metadata.bathrooms})`,
+    `price (${metadata.price})`,
+    `currency (${metadata.currency})`,
+    `price unit (${metadata.priceUnit})`,
   ];
+  if (metadata.areaSqm) unchangedParts.push(`area (${metadata.areaSqm}m²)`);
+
+  parts.push(
+    t(
+      locale,
+      `Do NOT change: ${unchangedParts.join(', ')}.`,
+      `لا تغير: ${unchangedParts.join(', ')}.`,
+    ),
+  );
+
+  const info = getTemplateInfo('enhance', locale, promptVersion);
 
   return {
-    system: baseSystem + systemExt,
-    user: userParts.join('\n'),
+    system: systemForLocale(locale) + systemExt,
+    user: parts.join('\n'),
+    templateId: info.templateId,
+    templateVersion: info.templateVersion,
+    sections: info.sections,
   };
 }
 
-const REVIEW_SYSTEM_EN = `You are a professional real estate listing quality inspector for the Saudi/UAE market.
-Your job is to evaluate property listings and provide specific, actionable feedback.
+export function buildReviewPrompt(
+  propertyData: ReviewPropertyData,
+  locale: Locale,
+  promptVersion?: string,
+): BuiltPrompt {
+  const structuredLines: string[] = [
+    `${t(locale, 'Property Type:', 'نوع العقار:')} ${propertyData.propertyType}`,
+    `${t(locale, 'Bedrooms:', 'غرف النوم:')} ${propertyData.rooms}`,
+    `${t(locale, 'Bathrooms:', 'الحمامات:')} ${propertyData.bathrooms}`,
+    `${t(locale, 'City:', 'المدينة:')} ${propertyData.city}${propertyData.area ? `, ${propertyData.area}` : ''}`,
+    `${t(locale, 'Price:', 'السعر:')} ${propertyData.price}`,
+    `${t(locale, 'Amenities:', 'وسائل الراحة:')} ${propertyData.amenities.join(', ') || t(locale, '(none)', '(غير محدد)')}`,
+  ];
 
-EVALUATION CRITERIA (score 1-10):
+  const exampleCategories = ['consistency', 'content_quality', 'trust_accuracy'] as const;
+  const exampleParts: string[] = [];
+  for (const cat of exampleCategories) {
+    const examples = loadExamples(cat, locale);
+    if (examples.length > 0) {
+      exampleParts.push(`\n--- ${t(locale, 'EXAMPLES -', 'أمثلة -')} ${cat.toUpperCase()} ---`);
+      for (const ex of examples.slice(0, 2)) {
+        exampleParts.push(`${JSON.stringify(ex, null, 2)}`);
+      }
+    }
+  }
 
-1. TITLE (weight: high)
-   - Should be 5-12 words, one line, no period
-   - Must include property type and a key selling point or location
-   - Should NOT be generic like "Nice apartment" or "For rent"
-   - Best: "Modern 2BR Villa with Pool in Palm Jumeirah"
-   - Bad: "villa" or "شقة للايجار"
+  const parts: string[] = [
+    t(locale, 'Analyze this property listing for issues:', 'حلل إعلان العقار هذا بحثاً عن مشاكل:'),
+    '',
+    `--- ${t(locale, 'STRUCTURED DATA', 'البيانات المنظمة')} ---`,
+    structuredLines.join('\n'),
+    '',
+    `--- ${t(locale, 'TEXT FIELDS', 'الحقول النصية')} ---`,
+    `${t(locale, 'Title:', 'العنوان:')} ${propertyData.title}`,
+    `${t(locale, 'Summary:', 'الملخص:')} ${propertyData.summary || t(locale, '(empty)', '(فارغ)')}`,
+    `${t(locale, 'Description:', 'الوصف:')} ${propertyData.description}`,
+    '',
+    t(
+      locale,
+      'Output ONLY valid JSON with an issues array. No markdown, no explanations.',
+      'أخرج JSON صالحاً فقط مع مصفوفة issues. لا ماركداون ولا شروحات.',
+    ),
+  ];
 
-2. DESCRIPTION (weight: high)
-   - Should be 3-6 detailed sentences
-   - Must describe: layout, finishes, natural light, views, lifestyle benefits
-   - Should mention nearby landmarks, amenities (pools, gyms, parks)
-   - Should NOT be copy-paste generic text
-   - Best: Specific details about rooms, views, neighborhood, unique features
-   - Bad: "Nice place, good location, come see it"
+  if (exampleParts.length > 0) {
+    parts.push(...exampleParts);
+  }
 
-3. SUMMARY (weight: medium)
-   - 1-3 sentences capturing the best selling points
+  const info = getTemplateInfo('review', locale, promptVersion);
 
-4. AMENITIES (weight: medium)
-   - Should list at least 3-5 relevant amenities
-   - Must match property type (villas should have parking, pool; apartments need ac, kitchen)
-   - Should only include amenities from the valid list
-
-5. COMPLETENESS (weight: low)
-   - All required fields should be filled: city, price, bedrooms, bathrooms
-   - Missing or minimal fields reduce the score
-
-SCORING GUIDE:
-- 1-3: Critical issues — missing fields, empty descriptions, unusable title
-- 4-5: Below average — weak content, generic text, few amenities
-- 6-7: Average — adequate but not compelling, room for improvement
-- 8-9: Good — strong content with minor improvements possible
-- 10: Excellent — compelling, complete, market-ready
-
-SUGGESTION RULES:
-- field must match one of: "title", "summary", "description", "amenities", "price", "city", "completeness"
-- type must be "improvement", "missing", or "suggestion"
-- Include a concrete replacement suggestion when possible (suggestion field)
-- If suggesting amenities, only use: ${KNOWN_AMENITIES.join(', ')}
-- Do NOT suggest changing: property type, rooms count, bathrooms count, price amount
-- Be constructive and specific — tell them exactly what to change`;
-
-const REVIEW_SYSTEM_AR = `أنت مفتش جودة إعلانات عقارية محترف في السوق السعودي/الإماراتي.
-مهمتك تقييم إعلانات العقارات وتقديم ملاحظات محددة وقابلة للتنفيذ.
-
-معايير التقييم (من ١ إلى ١٠):
-
-١. العنوان (وزن: عالي)
-   - يجب أن يكون ٥-١٢ كلمة، سطر واحد، بدون نقطة
-   - يجب أن يشمل نوع العقار ونقطة بيع رئيسية أو موقع
-   - لا يجب أن يكون عاماً مثل "شقة جميلة" أو "للإيجار"
-   - ممتاز: "فيلا حديثة ٢ غرف نوم مع مسبح في نخلة جميرا"
-   - سيء: "فيلا" أو "villa"
-
-٢. الوصف (وزن: عالي)
-   - يجب أن يكون ٣-٦ جمل مفصلة
-   - يجب أن يصف: التوزيع، التشطيبات، الإضاءة الطبيعية، الإطلالات، مزايا نمط الحياة
-   - يجب ذكر المعالم القريبة، وسائل الراحة (مسابح، صالات رياضية، حدائق)
-   - لا يجب أن يكون نصاً عاماً منسوخاً
-   - ممتاز: تفاصيل محددة عن الغرف، الإطلالة، الحي، المميزات الفريدة
-   - سيء: "مكان جميل، موقع ممتاز، تعال وشوف"
-
-٣. الملخص (وزن: متوسط)
-   - ١-٣ جمل تلخص أفضل نقاط البيع
-
-٤. وسائل الراحة (وزن: متوسط)
-   - يجب ذكر ٣-٥ وسائل راحة على الأقل ذات صلة
-   - يجب أن تتناسب مع نوع العقار (الفيلات تحتاج مواقف، مسبح؛ الشقق تحتاج تكييف، مطبخ)
-   - يجب فقط استخدام وسائل الراحة من القائمة المعتمدة
-
-٥. الاكتمال (وزن: منخفض)
-   - يجب ملء جميع الحقول المطلوبة: المدينة، السعر، الغرف، الحمامات
-   - الحقول الناقصة أو الضعيفة تخفض الدرجة
-
-دليل التسجيل:
-- ١-٣: مشاكل حرجة — حقول مفقودة، وصف فارغ، عنوان غير قابل للاستخدام
-- ٤-٥: أقل من المتوسط — محتوى ضعيف، نص عام، وسائل راحة قليلة
-- ٦-٧: متوسط — مقبول لكنه غير مقنع، مجال للتحسين
-- ٨-٩: جيد — محتوى قوي مع تحسينات طفيفة ممكنة
-- ١٠: ممتاز — مقنع، كامل، جاهز للسوق
-
-قواعد الاقتراحات:
-- field يجب أن يكون أحد: "title", "summary", "description", "amenities", "price", "city", "completeness"
-- type يجب أن يكون "improvement" أو "missing" أو "suggestion"
-- قدم اقتراحاً ملموساً للتحسين عندما يكون ممكناً (حقل suggestion)
-- إذا اقترحت وسائل راحة، استخدم فقط: ${KNOWN_AMENITIES.join(', ')}
-- لا تقترح تغيير: نوع العقار، عدد الغرف، عدد الحمامات، مبلغ السعر
-- كن بناءً ومحدداً — أخبرهم بالضبط ماذا يغيرون
-- أخرج ALL المخرجات باللغة العربية`;
-
-export function buildReviewPrompt(propertyData: ReviewPropertyData, locale: string): BuiltPrompt {
-  const isAr = locale === 'ar';
   return {
-    system: isAr ? REVIEW_SYSTEM_AR : REVIEW_SYSTEM_EN,
-    user: [
-      'Property listing to evaluate:',
-      JSON.stringify(propertyData, null, 2),
-      '',
-      'Output ONLY valid JSON with score, maxScore, and suggestions array. No markdown, no explanations.',
-    ].join('\n'),
+    system: systemForLocale(locale, 'review'),
+    user: parts.join('\n'),
+    templateId: info.templateId,
+    templateVersion: info.templateVersion,
+    sections: info.sections,
   };
 }

@@ -1,0 +1,16 @@
+{
+  "category": "consistency",
+  "locale": "en",
+  "examples": [
+    {
+      "input": "Title: Cozy 1BR Apartment\nDescription: A beautiful 3-bedroom apartment with modern finishes.\nData: rooms=3, propertyType=APARTMENT",
+      "output": "Issues found: Title says \"1BR\" but data shows 3 rooms. Description correctly says \"3-bedroom\".",
+      "severity": "critical"
+    },
+    {
+      "input": "Title: Luxury Villa in Palm Jumeirah\nDescription: Stunning villa with private pool.\nData: propertyType=VILLA",
+      "output": "All consistent. Title and description correctly reflect VILLA property type.",
+      "severity": "suggestion"
+    }
+  ]
+}

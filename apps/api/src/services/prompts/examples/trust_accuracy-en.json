@@ -1,0 +1,16 @@
+{
+  "category": "trust_accuracy",
+  "locale": "en",
+  "examples": [
+    {
+      "input": "Description: This apartment is the best in all of Dubai. Nothing else compares.",
+      "output": "Issues found: Exaggerated claims ('best in all of Dubai') without evidence. Overly promotional language undermines trust.",
+      "severity": "major"
+    },
+    {
+      "input": "Description: Located just 5 minutes from the beach and 10 minutes from Dubai Mall. Features marble flooring and floor-to-ceiling windows.",
+      "output": "No issues. Claims are specific and verifiable. Language is factual and professional.",
+      "severity": "suggestion"
+    }
+  ]
+}

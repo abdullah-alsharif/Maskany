@@ -11,12 +11,16 @@ import { validateLocale } from './locale-validator.js';
 import { executeWithFallback, streamWithFallback } from './execute-with-fallback.js';
 import { logUsage, type UsageLogEntry } from './ai-usage-logger.js';
 import { extractAndParseJSON } from '../lib/extract-json.js';
+import { validateWithRetry } from './schema-validators.js';
 import type { EnhanceRequest } from '../validators/ai-validators.js';
 import type {
   PropertyMetadata,
   TranslationFields,
   ReviewPropertyData,
 } from './ai-prompt-builder.js';
+import type { ReviewIssue, ReviewResult } from './ai-review-types.js';
+import { computeQualityScore, generateIssueId, resetIssueCounter } from './ai-review-types.js';
+import { runDeterministicValidations } from './deterministic-validators.js';
 
 export interface AIResponse {
   text: string;
@@ -79,6 +83,8 @@ function buildUsageLog(params: {
   cached: boolean;
   success: boolean;
   errorCode?: string;
+  promptVersions?: Array<{ templateId: string; version: string }>;
+  sectionTokens?: Array<{ sectionId: string; tokenCount: number }>;
 }): UsageLogEntry {
   return {
     requestId: crypto.randomUUID(),
@@ -96,6 +102,8 @@ function buildUsageLog(params: {
     cached: params.cached,
     success: params.success,
     errorCode: params.errorCode,
+    promptVersions: params.promptVersions,
+    sectionTokens: params.sectionTokens,
   };
 }
 
@@ -119,16 +127,35 @@ export async function enhance(
   const startTime = Date.now();
   const promise = (async (): Promise<AIResponse> => {
     const allProviders = [primaryProvider, ...fallbackProviders].filter(Boolean);
-    const { system, user } = buildEnhancePrompt(safeRequest, safeRequest.locale);
+    const prompt = buildEnhancePrompt(safeRequest, safeRequest.locale);
     const config = TASK_CONFIG[safeRequest.action as TaskKind] ?? TASK_CONFIG.enhance;
 
-    try {
-      const result = await executeWithFallback(allProviders, system, user, config);
+    let resultData: { text: string; usage: TokenUsage; model: string; provider: string } | null =
+      null;
 
-      const validated = validateLocale(result.text, safeRequest.locale);
-      if (!validated) {
-        throw new Error(`Locale mismatch: expected ${safeRequest.locale}`);
+    try {
+      const result = await executeWithFallback(allProviders, prompt.system, prompt.user, config);
+      resultData = result;
+
+      const validation = validateWithRetry('enhance', result.text);
+      if (!validation.success) {
+        console.warn(
+          `[ai-service] Enhance validation failed, using raw response: ${validation.error}`,
+        );
       }
+
+      const localeValid = validateLocale(result.text, safeRequest.locale);
+      if (!localeValid) {
+        console.warn(`[ai-service] Locale mismatch: expected ${safeRequest.locale}`);
+      }
+
+      const promptVersions = prompt.templateId
+        ? [{ templateId: prompt.templateId, version: prompt.templateVersion ?? 'v1' }]
+        : undefined;
+      const sectionTokens = prompt.sections?.map((s) => ({
+        sectionId: s.id,
+        tokenCount: s.tokenCount,
+      }));
 
       logUsage(
         buildUsageLog({
@@ -143,27 +170,34 @@ export async function enhance(
           totalTokens: result.usage.totalTokens,
           durationMs: Date.now() - startTime,
           cached: false,
-          success: true,
+          success: localeValid,
+          promptVersions,
+          sectionTokens,
         }),
       ).catch(() => {});
 
       return { text: result.text, usage: result.usage, cached: false, model: result.model };
     } catch (error) {
+      const promptVersions = prompt.templateId
+        ? [{ templateId: prompt.templateId, version: prompt.templateVersion ?? 'v1' }]
+        : undefined;
+
       logUsage(
         buildUsageLog({
           userId,
-          provider: 'unknown',
-          model: 'unknown',
+          provider: resultData?.provider ?? 'unknown',
+          model: resultData?.model ?? 'unknown',
           action: safeRequest.action,
           locale: safeRequest.locale,
           fieldType: safeRequest.fieldType,
-          promptTokens: 0,
-          completionTokens: 0,
-          totalTokens: 0,
+          promptTokens: resultData?.usage?.promptTokens ?? 0,
+          completionTokens: resultData?.usage?.completionTokens ?? 0,
+          totalTokens: resultData?.usage?.totalTokens ?? 0,
           durationMs: Date.now() - startTime,
           cached: false,
           success: false,
           errorCode: error instanceof Error ? error.message.slice(0, 100) : 'Unknown',
+          promptVersions,
         }),
       ).catch(() => {});
       throw error;
@@ -243,6 +277,14 @@ export async function translateAll(
   const prompt = buildTranslationPrompt(locale, targetLocale, scrubbedFields, metadata);
   const allProviders = [primaryProvider, ...fallbackProviders].filter(Boolean);
 
+  const promptVersions = prompt.templateId
+    ? [{ templateId: prompt.templateId, version: prompt.templateVersion ?? 'v1' }]
+    : undefined;
+  const sectionTokens = prompt.sections?.map((s) => ({
+    sectionId: s.id,
+    tokenCount: s.tokenCount,
+  }));
+
   try {
     const result = await executeWithFallback(
       allProviders,
@@ -267,6 +309,8 @@ export async function translateAll(
         durationMs: Date.now() - startTime,
         cached: false,
         success: true,
+        promptVersions,
+        sectionTokens,
       }),
     ).catch(() => {});
 
@@ -287,6 +331,8 @@ export async function translateAll(
         cached: false,
         success: false,
         errorCode: error instanceof Error ? error.message.slice(0, 100) : 'Unknown',
+        promptVersions,
+        sectionTokens,
       }),
     ).catch(() => {});
     throw error;
@@ -294,13 +340,14 @@ export async function translateAll(
 }
 
 export async function reviewListing(
-  locale: string,
+  locale: 'en' | 'ar',
   propertyData: ReviewPropertyData,
   primaryProvider: AIProvider,
   fallbackProviders: AIProvider[] = [],
   userId: string = 'anon',
-): Promise<{ score: number; maxScore: number; suggestions: unknown[]; usage: TokenUsage }> {
+): Promise<ReviewResult> {
   const startTime = Date.now();
+  resetIssueCounter();
 
   const scrubbedData = {
     ...propertyData,
@@ -309,22 +356,54 @@ export async function reviewListing(
     description: scrubPii(propertyData.description),
   };
 
-  const { system, user } = buildReviewPrompt(scrubbedData, locale);
+  const deterministicIssues = runDeterministicValidations(scrubbedData);
+
+  const prompt = buildReviewPrompt(scrubbedData, locale);
   const allProviders = [primaryProvider, ...fallbackProviders].filter(Boolean);
+
+  const promptVersions = prompt.templateId
+    ? [{ templateId: prompt.templateId, version: prompt.templateVersion ?? 'v1' }]
+    : undefined;
+  const sectionTokens = prompt.sections?.map((s) => ({
+    sectionId: s.id,
+    tokenCount: s.tokenCount,
+  }));
+
+  let aiIssues: ReviewIssue[] = [];
 
   try {
     const result = await executeWithFallback(
       allProviders,
-      system,
-      user + '\n\nOutput ONLY valid JSON. No markdown, no explanations.',
+      prompt.system,
+      prompt.user + '\n\nOutput ONLY valid JSON. No markdown, no explanations.',
       TASK_CONFIG.review,
     );
 
-    const parsed = extractAndParseJSON(result.text) as {
-      score: number;
-      maxScore: number;
-      suggestions: unknown[];
-    };
+    const validation = validateWithRetry('review', result.text);
+    if (validation.success) {
+      const data = validation as {
+        success: true;
+        data: { issues: Array<Record<string, unknown>> };
+      };
+      aiIssues = (data.data.issues ?? []).map((issue) => ({
+        ...issue,
+        id: generateIssueId(),
+      })) as ReviewIssue[];
+    } else {
+      console.warn(`[ai-service] Review validation failed: ${validation.error}`);
+      const parsed = extractAndParseJSON(result.text) as {
+        issues?: ReviewIssue[];
+      };
+      if (parsed?.issues && Array.isArray(parsed.issues)) {
+        aiIssues = parsed.issues.map((issue) => ({
+          ...issue,
+          id: generateIssueId(),
+        }));
+      }
+    }
+
+    const allIssues = [...deterministicIssues, ...aiIssues];
+    const qualityScore = computeQualityScore(allIssues);
 
     logUsage(
       buildUsageLog({
@@ -339,11 +418,16 @@ export async function reviewListing(
         durationMs: Date.now() - startTime,
         cached: false,
         success: true,
+        promptVersions,
+        sectionTokens,
       }),
     ).catch(() => {});
 
-    return { ...parsed, usage: result.usage };
+    return { issues: allIssues, qualityScore, usage: result.usage };
   } catch (error) {
+    const fallbackIssues = [...deterministicIssues];
+    const qualityScore = computeQualityScore(fallbackIssues);
+
     logUsage(
       buildUsageLog({
         userId,
@@ -358,9 +442,16 @@ export async function reviewListing(
         cached: false,
         success: false,
         errorCode: error instanceof Error ? error.message.slice(0, 100) : 'Unknown',
+        promptVersions,
+        sectionTokens,
       }),
     ).catch(() => {});
-    throw error;
+
+    return {
+      issues: fallbackIssues,
+      qualityScore,
+      usage: { promptTokens: 0, completionTokens: 0, totalTokens: 0 },
+    };
   }
 }
 

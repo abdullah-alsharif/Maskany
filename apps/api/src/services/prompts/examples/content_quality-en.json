@@ -1,0 +1,16 @@
+{
+  "category": "content_quality",
+  "locale": "en",
+  "examples": [
+    {
+      "input": "Title: Nice apartment\nDescription: It is a nice place to live. Good location.",
+      "output": "Issues found: Title is generic and lacks key selling points. Description is too short and lacks detail about layout, finishes, or lifestyle benefits.",
+      "severity": "major"
+    },
+    {
+      "input": "Title: Stunning 3BR Villa with Pool in Arabian Ranches\nDescription: This exquisite villa features a private pool, modern open-plan living, and landscaped garden. Located in the prestigious Arabian Ranches community with 24/7 security and proximity to top schools.",
+      "output": "No issues. Title is specific and compelling. Description is detailed and well-structured.",
+      "severity": "suggestion"
+    }
+  ]
+}

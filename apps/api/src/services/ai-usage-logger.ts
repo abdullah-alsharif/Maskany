@@ -17,6 +17,46 @@ export interface UsageLogEntry {
   cached: boolean;
   success: boolean;
   errorCode?: string;
+  promptVersions?: Array<{ templateId: string; version: string }>;
+  sectionTokens?: Array<{ sectionId: string; tokenCount: number }>;
+}
+
+export function buildUsageLog(params: {
+  userId: string;
+  provider: string;
+  model: string;
+  action: string;
+  locale?: string;
+  fieldType?: string;
+  promptTokens: number;
+  completionTokens: number;
+  totalTokens: number;
+  durationMs: number;
+  cached: boolean;
+  success: boolean;
+  errorCode?: string;
+  promptVersions?: Array<{ templateId: string; version: string }>;
+  sectionTokens?: Array<{ sectionId: string; tokenCount: number }>;
+}): UsageLogEntry {
+  return {
+    requestId: crypto.randomUUID?.() ?? `${Date.now()}-${Math.random().toString(36).slice(2)}`,
+    userId: params.userId,
+    provider: params.provider,
+    model: params.model,
+    action: params.action,
+    locale: params.locale,
+    fieldType: params.fieldType,
+    promptTokens: params.promptTokens,
+    completionTokens: params.completionTokens,
+    totalTokens: params.totalTokens,
+    cost: 0,
+    durationMs: params.durationMs,
+    cached: params.cached,
+    success: params.success,
+    errorCode: params.errorCode,
+    promptVersions: params.promptVersions,
+    sectionTokens: params.sectionTokens,
+  };
 }
 
 export async function logUsage(entry: UsageLogEntry): Promise<void> {

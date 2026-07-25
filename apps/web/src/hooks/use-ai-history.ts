@@ -50,9 +50,5 @@ export function useAiHistory() {
     return entries;
   }, [history]);
 
-  const clearHistory = useCallback(() => {
-    setHistory([]);
-  }, []);
-
-  return { history, addEntry, revertEntry, revertAll, clearHistory };
+  return { history, addEntry, revertEntry, revertAll };
 }

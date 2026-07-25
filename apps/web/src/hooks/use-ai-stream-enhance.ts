@@ -9,6 +9,7 @@ export type UseAiStreamEnhanceOptions = {
   action?: string;
   metadata: PropertyMetadata;
   locale: string;
+  customInstruction?: string;
 };
 
 export type UseAiStreamEnhanceReturn = {
@@ -48,6 +49,7 @@ export function useAiStreamEnhance(options: UseAiStreamEnhanceOptions): UseAiStr
             fieldType: options.fieldType,
             action: options.action ?? 'enhance',
             currentValue,
+            customInstruction: options.customInstruction,
             metadata: options.metadata,
             requestNonce: nonce,
           },
@@ -77,7 +79,14 @@ export function useAiStreamEnhance(options: UseAiStreamEnhanceOptions): UseAiStr
         throw err;
       }
     },
-    [options.locale, options.fieldType, options.action, options.metadata, t],
+    [
+      options.locale,
+      options.fieldType,
+      options.action,
+      options.customInstruction,
+      options.metadata,
+      t,
+    ],
   );
 
   const reset = useCallback(() => {

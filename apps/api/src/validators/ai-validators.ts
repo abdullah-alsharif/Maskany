@@ -60,6 +60,7 @@ export const enhanceRequestSchema = z.object({
   fieldType: fieldTypeEnum,
   action: actionEnum,
   currentValue: z.string().max(5000),
+  customInstruction: z.string().max(1000).optional(),
   tone: z.enum(['professional', 'luxury', 'friendly', 'warm']).optional(),
   metadata: metadataSchema,
   constraints: z
@@ -69,6 +70,7 @@ export const enhanceRequestSchema = z.object({
     })
     .optional(),
   requestNonce: z.number().int().optional(),
+  promptVersion: z.string().optional(),
 });
 
 export const enhanceBulkRequestSchema = z.object({
@@ -128,6 +130,7 @@ export const reviewRequestSchema = z.object({
       z.array(z.string()),
     ),
   }),
+  promptVersion: z.string().optional(),
 });
 
 export const generateRequestSchema = z.object({

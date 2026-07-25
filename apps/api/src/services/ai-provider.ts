@@ -6,9 +6,7 @@ export type TaskKind =
   | 'fix_grammar'
   | 'generate'
   | 'review'
-  | 'translate'
-  | 'score'
-  | 'suggest_amenities';
+  | 'translate';
 
 export interface AIProviderConfig {
   maxTokens: number;
@@ -44,8 +42,6 @@ export const TASK_CONFIG: Record<TaskKind, AIProviderConfig> = {
   expand: { maxTokens: 1536, temperature: 0.4 },
   fix_grammar: { maxTokens: 1024, temperature: 0.1 },
   generate: { maxTokens: 512, temperature: 0.6 },
-  review: { maxTokens: 1024, temperature: 0.3 },
+  review: { maxTokens: 2048, temperature: 0.3 },
   translate: { maxTokens: 2048, temperature: 0.2 },
-  score: { maxTokens: 256, temperature: 0.2 },
-  suggest_amenities: { maxTokens: 256, temperature: 0.3 },
 };

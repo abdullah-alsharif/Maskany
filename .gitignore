@@ -49,3 +49,4 @@ specs/
 .specify/templates/
 .specify/workflows/
 # END coding-harness-managed
+__pycache__/
