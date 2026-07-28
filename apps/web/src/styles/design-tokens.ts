@@ -114,9 +114,6 @@ export const radii = {
   full: '9999px',
 } as const;
 
-/** Minimum touch target for mobile (44×44 CSS px) */
-export const MIN_TOUCH_TARGET = 44;
-
 /** Property type visual config */
 export const propertyTypeConfig = {
   APARTMENT: {
@@ -153,11 +150,3 @@ export const amenityConfig: Record<string, { label: string; icon: string }> = {
   garden: { label: 'Garden', icon: 'Flower2' },
   laundry: { label: 'Laundry', icon: 'WashingMachine' },
 };
-
-/** Price unit display labels */
-export const priceUnitLabels = {
-  per_night: '/night',
-  per_month: '/month',
-  per_year: '/year',
-  total: '',
-} as const;

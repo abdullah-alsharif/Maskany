@@ -23,6 +23,7 @@ import type { ExpressionBuilder, ExpressionWrapper, RawBuilder, SqlBool } from '
 import { sql } from 'kysely';
 import type { Database, PropertiesTable } from '../lib/db-types.js';
 import { ErrorCode, HttpError } from '../lib/http-error.js';
+import type { CursorPayload } from '../lib/shared-codec.js';
 import { escapeLikePattern } from './search-service.js';
 
 export type PropertyType = PropertiesTable['property_type'];
@@ -57,13 +58,7 @@ export interface PropertyFilters {
   amenities?: string[];
 }
 
-/** Encoded payload the client round-trips to fetch the next page. */
-export interface CursorPayload {
-  /** The sort column's value on the last row of the previous page. */
-  v: string;
-  /** The id of the last row on the previous page. */
-  i: string;
-}
+export type { CursorPayload } from '../lib/shared-codec.js';
 
 /**
  * Parse a comma-separated `type` query parameter into an array of
@@ -175,31 +170,8 @@ function buildAmenitiesContains(
   return eb.and([sql<SqlBool>`${eb.ref('amenities')} @> ARRAY[${literals}]::text[]`]);
 }
 
-/** Column a sort option orders by — also doubles as the cursor column. */
-const SORT_COLUMN: Record<SortOption, 'created_at' | 'price' | 'average_rating'> = {
-  newest: 'created_at',
-  price_asc: 'price',
-  price_desc: 'price',
-  rating_desc: 'average_rating',
-};
-
-/** Direction of the primary sort column for each sort option. */
-const SORT_DIRECTION: Record<SortOption, 'asc' | 'desc'> = {
-  newest: 'desc',
-  price_asc: 'asc',
-  price_desc: 'desc',
-  rating_desc: 'desc',
-};
-
-/** Return the column the given sort orders by — used for cursor encoding. */
-export function getSortColumn(sort: SortOption): 'created_at' | 'price' | 'average_rating' {
-  return SORT_COLUMN[sort];
-}
-
-/** Return the direction of the primary sort column. */
-export function getSortDirection(sort: SortOption): 'asc' | 'desc' {
-  return SORT_DIRECTION[sort];
-}
+import { getSortColumn, getSortDirection } from '../lib/shared-codec.js';
+export { getSortColumn, getSortDirection };
 
 /**
  * Extract the sort-column value from a property row so it can be placed
@@ -228,43 +200,12 @@ export function getSortValueFromRow(
  * must be less. Row id is the deterministic ascending tiebreaker.
  */
 export function buildCursorWhere(sort: SortOption, cursor: CursorPayload): RawBuilder<SqlBool> {
-  const column = sql.ref(SORT_COLUMN[sort]);
+  const column = sql.ref(getSortColumn(sort));
   const idRef = sql.ref('id');
   const value = sort === 'newest' ? sql`${sql.val(cursor.v)}::timestamptz` : sql.val(cursor.v);
   const idValue = sql.val(cursor.i);
-  const primaryOp = SORT_DIRECTION[sort] === 'asc' ? sql`>` : sql`<`;
+  const primaryOp = getSortDirection(sort) === 'asc' ? sql`>` : sql`<`;
   return sql<SqlBool>`(${column} ${primaryOp} ${value}) OR (${column} = ${value} AND ${idRef} > ${idValue})`;
 }
 
-/**
- * Encode a cursor payload as a URL-safe base64 string. The payload only
- * contains data the server already returned to the client — it carries no
- * authentication meaning and does not need to be signed.
- */
-export function encodeCursor(sortValue: string, id: string): string {
-  const payload: CursorPayload = { v: sortValue, i: id };
-  return Buffer.from(JSON.stringify(payload), 'utf8').toString('base64url');
-}
-
-/**
- * Decode a previously-issued cursor, throwing a 400 VALIDATION_ERROR if the
- * string is not parseable or does not contain the expected fields.
- */
-export function decodeCursor(encoded: string): CursorPayload {
-  let decoded: unknown;
-  try {
-    const json = Buffer.from(encoded, 'base64url').toString('utf8');
-    decoded = JSON.parse(json);
-  } catch {
-    throw new HttpError(400, ErrorCode.VALIDATION_ERROR, 'Cursor is malformed.');
-  }
-  if (
-    typeof decoded !== 'object' ||
-    decoded === null ||
-    typeof (decoded as Partial<CursorPayload>).v !== 'string' ||
-    typeof (decoded as Partial<CursorPayload>).i !== 'string'
-  ) {
-    throw new HttpError(400, ErrorCode.VALIDATION_ERROR, 'Cursor payload is invalid.');
-  }
-  return decoded as CursorPayload;
-}
+export { encodeCursor, decodeCursor } from '../lib/shared-codec.js';

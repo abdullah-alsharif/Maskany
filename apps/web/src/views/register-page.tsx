@@ -6,7 +6,8 @@ import { useRouter } from 'next/navigation';
 import { useTranslation } from 'react-i18next';
 import { Button } from '../components/ui/button';
 import { registerUser } from '../services/auth-service';
-import { COUNTRY_CODES, DEFAULT_COUNTRY_CODE } from '../constants/country-codes';
+import { CountryCodeSelect, DEFAULT_COUNTRY_CODE } from '../components/ui/CountryCodeSelect';
+import { formatPhoneNumber } from '../utils/formatPhoneNumber';
 import { SeoHead } from '../components/seo-head';
 import type { UserType } from '../types/user';
 
@@ -37,19 +38,10 @@ export function RegisterPage() {
       return;
     }
 
-    const digits = raw.replace(/\D/g, '');
-    if (!digits) {
+    const identifier = formatPhoneNumber(raw, countryCode);
+    if (!identifier) {
       setError(t('register.errorPhone'));
       return;
-    }
-    let identifier: string;
-    if (raw.startsWith('+')) {
-      identifier = `+${digits}`;
-    } else {
-      const countryDigits = countryCode.replace(/\D/g, '');
-      identifier = digits.startsWith(countryDigits)
-        ? `${countryCode}${digits.slice(countryDigits.length)}`
-        : `${countryCode}${digits}`;
     }
     const trimmedEmail = email.trim();
 
@@ -101,23 +93,11 @@ export function RegisterPage() {
         </div>
 
         <div className="flex gap-2">
-          <div className="flex flex-col">
-            <label htmlFor="country-code" className="text-xs font-medium text-stone-500 mb-1">
-              {t('register.countryCode')}
-            </label>
-            <select
-              id="country-code"
-              value={countryCode}
-              onChange={(e) => setCountryCode(e.target.value)}
-              className="h-12 min-w-[88px] rounded-xl border border-stone-300 bg-white px-3 text-sm focus:outline-none focus:border-terracotta-400 focus:ring-2 focus:ring-terracotta-100 transition-shadow duration-200"
-            >
-              {COUNTRY_CODES.map((c) => (
-                <option key={c.code} value={c.code}>
-                  {c.flag} {c.code}
-                </option>
-              ))}
-            </select>
-          </div>
+          <CountryCodeSelect
+            value={countryCode}
+            onChange={setCountryCode}
+            label={t('register.countryCode')}
+          />
           <div className="flex-1 flex flex-col">
             <label htmlFor="phone" className="text-xs font-medium text-stone-500 mb-1">
               {t('register.phoneNumber')}

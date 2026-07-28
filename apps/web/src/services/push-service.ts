@@ -11,7 +11,6 @@
  */
 import { Capacitor } from '@capacitor/core';
 import { PushNotifications } from '@capacitor/push-notifications';
-import { logger } from '../lib/logger';
 import { apiClient } from './api';
 
 async function registerTokenWithApi(token: string): Promise<void> {
@@ -42,20 +41,30 @@ export async function initPushNotifications(): Promise<void> {
     try {
       await registerTokenWithApi(token.value);
     } catch (err) {
-      logger.warn('Failed to register token with API', {
-        component: 'push-service',
-        action: 'register-token',
-        error: String(err),
-      });
+      console.warn(
+        JSON.stringify({
+          level: 'warn',
+          message: 'Failed to register token with API',
+          component: 'push-service',
+          action: 'register-token',
+          error: String(err),
+          timestamp: new Date().toISOString(),
+        }),
+      );
     }
   });
 
   PushNotifications.addListener('registrationError', (err) => {
-    logger.warn('Registration error', {
-      component: 'push-service',
-      action: 'registration-error',
-      error: err.error,
-    });
+    console.warn(
+      JSON.stringify({
+        level: 'warn',
+        message: 'Registration error',
+        component: 'push-service',
+        action: 'registration-error',
+        error: err.error,
+        timestamp: new Date().toISOString(),
+      }),
+    );
   });
 
   await PushNotifications.register();
@@ -73,10 +82,15 @@ export async function unregisterPushToken(): Promise<void> {
   try {
     await apiClient.delete('/api/push/token');
   } catch (err) {
-    logger.warn('Failed to clear push token on logout', {
-      component: 'push-service',
-      action: 'unregister-token',
-      error: String(err),
-    });
+    console.warn(
+      JSON.stringify({
+        level: 'warn',
+        message: 'Failed to clear push token on logout',
+        component: 'push-service',
+        action: 'unregister-token',
+        error: String(err),
+        timestamp: new Date().toISOString(),
+      }),
+    );
   }
 }

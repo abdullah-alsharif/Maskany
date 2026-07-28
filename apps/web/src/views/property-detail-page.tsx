@@ -33,6 +33,7 @@ import { FavoriteButton } from '../components/property/favorite-button';
 import { WhatsAppFab } from '../components/property/whatsapp-button';
 import { SimilarProperties } from '../components/property/similar-properties';
 import { useProperty } from '../hooks/use-property';
+import { useTranslationContent } from '../hooks/useTranslationContent';
 import { useFavorites } from '../hooks/use-favorites';
 import { useAuth } from '../hooks/use-auth';
 import { apiClient } from '../services/api';
@@ -50,7 +51,7 @@ function isNotFoundError(error: unknown): boolean {
 }
 
 function PropertyBody({ property }: { property: Property }) {
-  const { t, i18n } = useTranslation();
+  const { t } = useTranslation();
   const [expanded, setExpanded] = useState(false);
   const { isFavorite, toggleFavorite } = useFavorites();
 
@@ -64,26 +65,14 @@ function PropertyBody({ property }: { property: Property }) {
   const { user } = useAuth();
   const reviewViewer = user ? { id: user.id, fullName: user.fullName } : null;
   const typeConfig = propertyTypeConfig[property.propertyType] ?? propertyTypeConfig.OTHER;
-  const userLocale = i18n.language.startsWith('ar') ? 'ar' : 'en';
-  const useTranslationContent = userLocale !== property.locale && property.translation;
-  const displayTitle =
-    useTranslationContent && property.translation ? property.translation.title : property.title;
-  const displaySummary =
-    useTranslationContent && property.translation ? property.translation.summary : property.summary;
-  const displayDescriptionRaw =
-    useTranslationContent && property.translation
-      ? property.translation.description
-      : property.description;
-  const displayCity =
-    useTranslationContent && property.translation ? property.translation.city : property.city;
-  const displayArea =
-    useTranslationContent && property.translation ? property.translation.area : property.area;
-  const _displayCountry =
-    useTranslationContent && property.translation ? property.translation.country : property.country;
-  const displayAmenities =
-    useTranslationContent && property.translation
-      ? property.translation.amenities
-      : property.amenities;
+  const translationContent = useTranslationContent(property);
+  const displayTitle = translationContent.title ?? property.title;
+  const displaySummary = translationContent.summary ?? property.summary;
+  const displayDescriptionRaw = translationContent.description ?? property.description;
+  const displayCity = translationContent.city ?? property.city;
+  const displayArea = translationContent.area ?? property.area;
+  const _displayCountry = translationContent.country ?? property.country;
+  const displayAmenities = translationContent.amenities ?? property.amenities;
   const isLong = (displayDescriptionRaw ?? '').length > DESCRIPTION_CLAMP;
   const displayDescription =
     isLong && !expanded
