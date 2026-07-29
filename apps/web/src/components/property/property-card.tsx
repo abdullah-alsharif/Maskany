@@ -42,7 +42,7 @@ export function PropertyCard({ property }: PropertyCardProps) {
   const formattedPrice = new Intl.NumberFormat('en-US', {
     style: 'decimal',
     maximumFractionDigits: 0,
-  }).format(property.price);
+  }).format(Number(property.price));
 
   return (
     <article
@@ -171,7 +171,7 @@ export function PropertyCard({ property }: PropertyCardProps) {
               </span>
             </>
           )}
-          {property.areaSqm !== null && property.areaSqm > 0 && (
+          {property.areaSqm !== null && Number(property.areaSqm) > 0 && (
             <>
               <span className="text-stone-200" aria-hidden="true">
                 |

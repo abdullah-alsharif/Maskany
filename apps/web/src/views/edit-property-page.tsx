@@ -93,8 +93,8 @@ export function EditPropertyPage() {
       }
       return {
         title: p.title,
-        summary: p.summary,
-        description: p.description,
+        summary: p.summary ?? '',
+        description: p.description ?? '',
         propertyType: p.propertyType,
         city: p.city,
         area: p.area ?? '',
@@ -127,7 +127,7 @@ export function EditPropertyPage() {
     return {
       title: property.title,
       summary: property.summary ?? undefined,
-      description: property.description,
+      description: property.description ?? '',
       city: property.city,
       area: property.area ?? undefined,
       country: property.country,

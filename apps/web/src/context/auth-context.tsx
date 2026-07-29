@@ -23,12 +23,14 @@ import {
   useRef,
   useState,
 } from 'react';
-import { apiClient } from '../services/api';
+import { apiClient, mergeFavorites } from '../services/api';
 import { installAuthInterceptors } from '../services/auth-interceptors';
 import { logoutSession } from '../services/auth-service';
 import { initPushNotifications, unregisterPushToken } from '../services/push-service';
 import { tokenStorage } from '../services/token-storage';
 import type { AuthResponse, User } from '../types/user';
+
+const FAVORITES_STORAGE_KEY = 'maskany_favorites';
 
 export interface AuthContextValue {
   user: User | null;
@@ -69,6 +71,23 @@ export function AuthProvider({ children }: PropsWithChildren) {
     tokenStorage.setSession(session);
     setUser(session.user);
     setAccessTokenState(session.accessToken);
+    void (async () => {
+      try {
+        const raw = localStorage.getItem(FAVORITES_STORAGE_KEY);
+        if (raw) {
+          const parsed: unknown = JSON.parse(raw);
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            const ids = parsed.filter((id): id is string => typeof id === 'string');
+            if (ids.length > 0) {
+              await mergeFavorites(ids);
+              localStorage.removeItem(FAVORITES_STORAGE_KEY);
+            }
+          }
+        }
+      } catch {
+        /* best-effort merge — never block login */
+      }
+    })();
   }, []);
 
   const logout = useCallback(async () => {

@@ -24,6 +24,7 @@ interface DashboardProperty {
   coverImage: { url: string; thumbnailUrl: string | null; altText: string | null } | null;
   viewCount30d: number;
   inquiryCount30d: number;
+  favoritedCount: number;
   healthScore: number;
   healthBreakdown: HealthBreakdown[];
 }
@@ -90,6 +91,7 @@ export async function getDashboard(userId: string): Promise<DashboardResponse> {
     aiLogs,
     analyticsRows,
     inquiryRows,
+    favoriteRows,
   ] = await Promise.all([
     db
       .selectFrom('property_media')
@@ -148,6 +150,15 @@ export async function getDashboard(userId: string): Promise<DashboardResponse> {
         `
       .execute(db)
       .then((r) => r.rows),
+
+    sql<{ property_id: string; total_favorites: number }>`
+          SELECT property_id, COUNT(*)::int AS total_favorites
+          FROM favorites
+          WHERE property_id = ANY(${propertyIds}::uuid[])
+          GROUP BY property_id
+        `
+      .execute(db)
+      .then((r) => r.rows),
   ]);
 
   const coverMap = new Map(
@@ -162,6 +173,7 @@ export async function getDashboard(userId: string): Promise<DashboardResponse> {
   const aiLogSet = new Set(aiLogs.map((r) => r.property_id));
   const viewMap = new Map(analyticsRows.map((r) => [r.property_id, r.total_views]));
   const inquiryMap = new Map(inquiryRows.map((r) => [r.property_id, r.total_inquiries]));
+  const favoriteMap = new Map(favoriteRows.map((r) => [r.property_id, r.total_favorites]));
 
   const properties: DashboardProperty[] = ownProps.map((p) => {
     const cover = coverMap.get(p.id) ?? null;
@@ -186,6 +198,7 @@ export async function getDashboard(userId: string): Promise<DashboardResponse> {
       coverImage: cover,
       viewCount30d: viewMap.get(p.id) ?? 0,
       inquiryCount30d: inquiryMap.get(p.id) ?? 0,
+      favoritedCount: favoriteMap.get(p.id) ?? 0,
       healthScore: score,
       healthBreakdown: breakdown,
     };

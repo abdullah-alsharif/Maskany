@@ -1,5 +1,6 @@
 import type { Request, RequestHandler, Response } from 'express';
 import rateLimit from 'express-rate-limit';
+import type { AuthenticatedRequest } from './auth-middleware.js';
 import { ErrorCode } from '../lib/http-error.js';
 
 const FIFTEEN_MINUTES_MS = 15 * 60 * 1000;
@@ -51,6 +52,21 @@ export function createAiRateLimiter(action: string): RequestHandler {
     legacyHeaders: false,
     keyGenerator: (req) =>
       `ai:${action}:${(req as Request & { user?: { userId: string } }).user?.userId ?? 'anon'}`,
+    handler: rateLimitHandler,
+  });
+}
+
+const FAVORITES_WINDOW_MS = 60 * 1000;
+const FAVORITES_DEFAULT_LIMIT = 60;
+
+export function createFavoritesRateLimiter(): RequestHandler {
+  const limit = Number(process.env.FAVORITES_RATE_LIMIT) || FAVORITES_DEFAULT_LIMIT;
+  return rateLimit({
+    windowMs: FAVORITES_WINDOW_MS,
+    limit,
+    standardHeaders: 'draft-7',
+    legacyHeaders: false,
+    keyGenerator: (req) => `favorites:${(req as AuthenticatedRequest).user?.userId ?? 'anon'}`,
     handler: rateLimitHandler,
   });
 }

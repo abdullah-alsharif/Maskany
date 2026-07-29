@@ -1,6 +1,17 @@
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { describe, it, expect, beforeEach } from 'vitest';
 import { renderHook, act } from '@testing-library/react';
+import type { ReactNode } from 'react';
 import { FAVORITES_STORAGE_KEY, useFavorites } from '../src/hooks/use-favorites';
+
+function createWrapper() {
+  const queryClient = new QueryClient({
+    defaultOptions: { queries: { retry: false } },
+  });
+  return function Wrapper({ children }: { children: ReactNode }) {
+    return <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>;
+  };
+}
 
 describe('useFavorites', () => {
   beforeEach(() => {
@@ -8,20 +19,20 @@ describe('useFavorites', () => {
   });
 
   it('returns an empty list when localStorage has no favorites', () => {
-    const { result } = renderHook(() => useFavorites());
+    const { result } = renderHook(() => useFavorites(), { wrapper: createWrapper() });
     expect(result.current.favorites).toEqual([]);
     expect(result.current.count).toBe(0);
   });
 
   it('hydrates favorites from localStorage on mount', () => {
     window.localStorage.setItem(FAVORITES_STORAGE_KEY, JSON.stringify(['alpha', 'beta']));
-    const { result } = renderHook(() => useFavorites());
+    const { result } = renderHook(() => useFavorites(), { wrapper: createWrapper() });
     expect(result.current.favorites).toEqual(['alpha', 'beta']);
     expect(result.current.count).toBe(2);
   });
 
   it('adds an id when toggleFavorite is called for the first time', () => {
-    const { result } = renderHook(() => useFavorites());
+    const { result } = renderHook(() => useFavorites(), { wrapper: createWrapper() });
     act(() => result.current.toggleFavorite('prop-1'));
     expect(result.current.isFavorite('prop-1')).toBe(true);
     expect(result.current.favorites).toContain('prop-1');
@@ -30,7 +41,7 @@ describe('useFavorites', () => {
   });
 
   it('removes an id when toggleFavorite is called twice', () => {
-    const { result } = renderHook(() => useFavorites());
+    const { result } = renderHook(() => useFavorites(), { wrapper: createWrapper() });
     act(() => result.current.toggleFavorite('prop-1'));
     act(() => result.current.toggleFavorite('prop-1'));
     expect(result.current.isFavorite('prop-1')).toBe(false);
@@ -40,19 +51,19 @@ describe('useFavorites', () => {
   });
 
   it('reports isFavorite=false for ids that were never saved', () => {
-    const { result } = renderHook(() => useFavorites());
+    const { result } = renderHook(() => useFavorites(), { wrapper: createWrapper() });
     expect(result.current.isFavorite('never-saved')).toBe(false);
   });
 
   it('falls back to an empty list when localStorage contains malformed JSON', () => {
     window.localStorage.setItem(FAVORITES_STORAGE_KEY, 'not-json-at-all');
-    const { result } = renderHook(() => useFavorites());
+    const { result } = renderHook(() => useFavorites(), { wrapper: createWrapper() });
     expect(result.current.favorites).toEqual([]);
   });
 
   it('ignores non-array values stored under the favorites key', () => {
     window.localStorage.setItem(FAVORITES_STORAGE_KEY, JSON.stringify({ malformed: true }));
-    const { result } = renderHook(() => useFavorites());
+    const { result } = renderHook(() => useFavorites(), { wrapper: createWrapper() });
     expect(result.current.favorites).toEqual([]);
   });
 
@@ -61,13 +72,14 @@ describe('useFavorites', () => {
       FAVORITES_STORAGE_KEY,
       JSON.stringify(['ok', 42, null, { id: 'bad' }]),
     );
-    const { result } = renderHook(() => useFavorites());
+    const { result } = renderHook(() => useFavorites(), { wrapper: createWrapper() });
     expect(result.current.favorites).toEqual(['ok']);
   });
 
   it('synchronises state across multiple hook instances in the same tab', () => {
-    const a = renderHook(() => useFavorites());
-    const b = renderHook(() => useFavorites());
+    const wrapper = createWrapper();
+    const a = renderHook(() => useFavorites(), { wrapper });
+    const b = renderHook(() => useFavorites(), { wrapper });
     act(() => a.result.current.toggleFavorite('shared-id'));
     expect(b.result.current.isFavorite('shared-id')).toBe(true);
     act(() => b.result.current.toggleFavorite('shared-id'));
@@ -75,7 +87,7 @@ describe('useFavorites', () => {
   });
 
   it('reacts to cross-tab storage events by re-reading localStorage', () => {
-    const { result } = renderHook(() => useFavorites());
+    const { result } = renderHook(() => useFavorites(), { wrapper: createWrapper() });
     expect(result.current.favorites).toEqual([]);
     act(() => {
       window.localStorage.setItem(FAVORITES_STORAGE_KEY, JSON.stringify(['x', 'y']));
@@ -86,7 +98,7 @@ describe('useFavorites', () => {
 
   it('keeps existing favorites when adding a new one (idempotent insert)', () => {
     window.localStorage.setItem(FAVORITES_STORAGE_KEY, JSON.stringify(['a']));
-    const { result } = renderHook(() => useFavorites());
+    const { result } = renderHook(() => useFavorites(), { wrapper: createWrapper() });
     act(() => result.current.toggleFavorite('b'));
     expect(result.current.favorites).toEqual(['a', 'b']);
   });

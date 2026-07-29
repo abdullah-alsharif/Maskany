@@ -175,6 +175,12 @@ export interface PropertyAnalyticsTable {
   updated_at: Timestamp;
 }
 
+export interface FavoritesTable {
+  user_id: string;
+  property_id: string;
+  created_at: Generated<Date>;
+}
+
 export interface InquiriesTable {
   id: Generated<string>;
   property_id: string;
@@ -198,4 +204,5 @@ export interface Database {
   ai_usage_logs: AiUsageLogsTable;
   property_analytics: PropertyAnalyticsTable;
   inquiries: InquiriesTable;
+  favorites: FavoritesTable;
 }

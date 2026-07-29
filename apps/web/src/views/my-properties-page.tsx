@@ -195,7 +195,7 @@ function PropertyRow({
                   style: 'currency',
                   currency: property.currency,
                   maximumFractionDigits: 0,
-                }).format(property.price)}
+                }).format(Number(property.price))}
               </span>
               <span className="text-stone-400 text-xs">
                 /{t(`priceUnit.${property.priceUnit}`)}

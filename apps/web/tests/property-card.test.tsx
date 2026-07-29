@@ -1,3 +1,4 @@
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { describe, it, expect } from 'vitest';
 import { render, screen, within } from '@testing-library/react';
 import { PropertyCard } from '../src/components/property/property-card';
@@ -63,8 +64,14 @@ const sampleProperty: Property = {
   updatedAt: '2025-01-01T00:00:00.000Z',
 };
 
-const renderCard = (property: Property = sampleProperty) =>
-  render(<PropertyCard property={property} />);
+const renderCard = (property: Property = sampleProperty) => {
+  const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  return render(
+    <QueryClientProvider client={queryClient}>
+      <PropertyCard property={property} />
+    </QueryClientProvider>,
+  );
+};
 
 describe('PropertyCard', () => {
   it('renders the title, location (city + area), and property-type badge', () => {

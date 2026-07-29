@@ -10,6 +10,7 @@ import {
   type AiGenerationCacheTable,
   type AiUsageLogsTable,
   type Database,
+  type FavoritesTable,
   type InquiriesTable,
   type OtpCodesTable,
   type PropertiesTable,
@@ -41,6 +42,7 @@ describe('db-types interfaces', () => {
       ai_usage_logs: null as unknown as AiUsageLogsTable,
       property_analytics: null as unknown as PropertyAnalyticsTable,
       inquiries: null as unknown as InquiriesTable,
+      favorites: null as unknown as FavoritesTable,
     } satisfies Database;
 
     expect(Object.keys(witness).sort()).toEqual(
@@ -49,6 +51,7 @@ describe('db-types interfaces', () => {
         'ai_usage_logs',
         'inquiries',
         'otp_codes',
+        'favorites',
         'property_analytics',
         'property_embeddings',
         'properties',

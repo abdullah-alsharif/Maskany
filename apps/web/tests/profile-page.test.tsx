@@ -1,6 +1,7 @@
 /**
  * T-026 — Profile page tests (logout + user info display).
  */
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import type { AxiosAdapter, AxiosRequestConfig, AxiosResponse } from 'axios';
@@ -52,10 +53,13 @@ function seedAuth() {
 }
 
 function renderPage() {
+  const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   return render(
-    <AuthProvider>
-      <ProfilePage />
-    </AuthProvider>,
+    <QueryClientProvider client={queryClient}>
+      <AuthProvider>
+        <ProfilePage />
+      </AuthProvider>
+    </QueryClientProvider>,
   );
 }
 

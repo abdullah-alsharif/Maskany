@@ -62,20 +62,20 @@ export type CoverImage = {
 export type Property = {
   id: string;
   title: string;
-  summary: string;
-  description: string;
+  summary: string | null;
+  description: string | null;
   propertyType: PropertyType;
   city: string;
   area: string | null;
   country: string;
   lat?: number | null;
   lng?: number | null;
-  price: number;
+  price: string;
   currency: string;
   priceUnit: PriceUnit;
   rooms: number;
   bathrooms: number;
-  areaSqm: number | null;
+  areaSqm: string | null;
   amenities: string[];
   coverImage: CoverImage | null;
   media?: PropertyMedia[];

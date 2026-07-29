@@ -176,7 +176,12 @@ describe('WhatsAppIconButton', () => {
 
 describe('WhatsApp button integration with PropertyCard', () => {
   it('renders a WhatsApp link on the property card with the correct deep link', () => {
-    render(<PropertyCard property={makeProperty()} />);
+    const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    render(
+      <QueryClientProvider client={queryClient}>
+        <PropertyCard property={makeProperty()} />
+      </QueryClientProvider>,
+    );
     const link = screen.getByRole('link', { name: /whatsapp/i });
     const expected = generateWhatsAppLink(
       '966501234567',

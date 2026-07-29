@@ -1,25 +1,11 @@
-/**
- * `useFavorites` — client-side favorites store backed by `localStorage`
- * (T-027, PRD §7.1).
- *
- * Favorites are a list of property ids persisted under
- * `maskany_favorites` as a JSON string array. The hook reads the stored
- * list on mount, exposes `toggleFavorite` / `isFavorite`, and keeps
- * every mounted instance (and other browser tabs) in sync through:
- *
- *   - a `storage` event listener (browser-native cross-tab sync)
- *   - a `maskany:favorites:updated` custom event dispatched on writes
- *     so other hook instances in the same tab update immediately
- *
- * Writes are defensive: malformed or non-array JSON is ignored and the
- * list is replaced with the validated value. On toggle the hook fires a
- * best-effort light haptic impact via `@capacitor/haptics` when the
- * Capacitor runtime is present, silently no-oping on the web.
- */
-import { useCallback, useEffect, useState } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useCallback, useContext, useEffect, useRef, useState } from 'react';
+import { addFavorite, getFavorites, removeFavorite } from '../services/api';
+import { AuthContext } from '../context/auth-context';
 
 export const FAVORITES_STORAGE_KEY = 'maskany_favorites';
 const FAVORITES_UPDATED_EVENT = 'maskany:favorites:updated';
+export const FAVORITES_QUERY_KEY = ['favorites'] as const;
 
 function readFavorites(): string[] {
   if (typeof window === 'undefined') return [];
@@ -43,9 +29,7 @@ function writeFavorites(ids: string[]): void {
 function triggerHaptic(): void {
   void import('@capacitor/haptics')
     .then(({ Haptics, ImpactStyle }) => Haptics.impact({ style: ImpactStyle.Light }))
-    .catch(() => {
-      /* haptics unavailable — running on the web without Capacitor */
-    });
+    .catch(() => {});
 }
 
 export type UseFavoritesResult = {
@@ -56,10 +40,24 @@ export type UseFavoritesResult = {
 };
 
 export function useFavorites(): UseFavoritesResult {
-  const [favorites, setFavorites] = useState<string[]>(() => readFavorites());
+  const ctx = useContext(AuthContext);
+  const isAuthenticated = ctx?.isAuthenticated ?? false;
+  const queryClient = useQueryClient();
+
+  const [localFavorites, setLocalFavorites] = useState<string[]>(() => readFavorites());
+
+  const serverQuery = useQuery({
+    queryKey: FAVORITES_QUERY_KEY,
+    queryFn: async () => {
+      const items = await getFavorites();
+      return items.map((f) => f.propertyId);
+    },
+    enabled: isAuthenticated,
+    staleTime: 30_000,
+  });
 
   useEffect(() => {
-    const sync = () => setFavorites(readFavorites());
+    const sync = () => setLocalFavorites(readFavorites());
     window.addEventListener(FAVORITES_UPDATED_EVENT, sync);
     window.addEventListener('storage', sync);
     return () => {
@@ -68,15 +66,43 @@ export function useFavorites(): UseFavoritesResult {
     };
   }, []);
 
-  const toggleFavorite = useCallback((id: string) => {
-    const current = readFavorites();
-    const next = current.includes(id)
-      ? current.filter((existing) => existing !== id)
-      : [...current, id];
-    writeFavorites(next);
-    setFavorites(next);
-    triggerHaptic();
-  }, []);
+  const serverIds = serverQuery.data ?? [];
+  const favorites = isAuthenticated ? serverIds : localFavorites;
+
+  const snapshotRef = useRef(serverIds);
+  snapshotRef.current = serverIds;
+
+  const toggleFavorite = useCallback(
+    (id: string) => {
+      if (isAuthenticated) {
+        const snapshot = snapshotRef.current;
+        const isCurrentlyFavorited = snapshot.includes(id);
+        const next = isCurrentlyFavorited
+          ? snapshot.filter((existing) => existing !== id)
+          : [...snapshot, id];
+
+        queryClient.setQueryData(FAVORITES_QUERY_KEY, next);
+
+        const apiCall = isCurrentlyFavorited ? removeFavorite(id) : addFavorite(id);
+        apiCall
+          .then(() => {
+            void queryClient.invalidateQueries({ queryKey: FAVORITES_QUERY_KEY });
+          })
+          .catch(() => {
+            queryClient.setQueryData(FAVORITES_QUERY_KEY, snapshot);
+          });
+      } else {
+        const current = readFavorites();
+        const next = current.includes(id)
+          ? current.filter((existing) => existing !== id)
+          : [...current, id];
+        writeFavorites(next);
+        setLocalFavorites(next);
+      }
+      triggerHaptic();
+    },
+    [isAuthenticated, queryClient],
+  );
 
   const isFavorite = useCallback((id: string) => favorites.includes(id), [favorites]);
 
