@@ -27,7 +27,7 @@ function makeProperty(id: string): Property {
     city: 'Riyadh',
     area: 'Olaya',
     country: 'SA',
-    price: 1000,
+    price: '1000',
     currency: 'SAR',
     priceUnit: 'per_month',
     rooms: 2,

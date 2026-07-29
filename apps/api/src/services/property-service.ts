@@ -130,7 +130,7 @@ export type CoverImage = { url: string; thumbnailUrl: string | null; altText: st
 export function toSummary(
   row: PropertyRow,
   cover: CoverImage | null,
-  translation?: { title: string; city: string; area: string | null; country: string } | null,
+  translation?: PropertyTranslation | null,
   media?: PropertyImage[],
 ): PropertySummary {
   return {
@@ -208,21 +208,38 @@ async function fetchAllMedia(propertyIds: string[]): Promise<Map<string, Propert
   return map;
 }
 
-async function fetchTranslationMap(
+export async function fetchTranslationMap(
   propertyIds: string[],
   targetLocale: 'en' | 'ar',
-): Promise<Map<string, { title: string; city: string; area: string | null; country: string }>> {
+): Promise<Map<string, PropertyTranslation>> {
   if (propertyIds.length === 0 || !targetLocale) return new Map();
   const rows = await db
     .selectFrom('property_translations')
-    .select(['property_id', 'title', 'city', 'area', 'country'])
+    .select([
+      'property_id',
+      'title',
+      'summary',
+      'description',
+      'city',
+      'area',
+      'country',
+      'amenities',
+    ])
     .where('property_id', 'in', propertyIds)
     .where('locale', '=', targetLocale)
     .execute();
   return new Map(
     rows.map((r) => [
       r.property_id,
-      { title: r.title, city: r.city, area: r.area, country: r.country },
+      {
+        title: r.title,
+        summary: r.summary,
+        description: r.description,
+        city: r.city,
+        area: r.area,
+        country: r.country,
+        amenities: r.amenities,
+      },
     ]),
   );
 }

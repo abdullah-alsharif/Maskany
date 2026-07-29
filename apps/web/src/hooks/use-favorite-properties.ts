@@ -31,6 +31,5 @@ export function useFavoriteProperties(favoriteIds: string[]) {
   return {
     properties: isAuthenticated ? (serverQuery.data ?? []) : (guestQuery.data ?? []),
     isLoading: isAuthenticated ? serverQuery.isLoading : guestQuery.isLoading,
-    queries: [],
   };
 }

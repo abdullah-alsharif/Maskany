@@ -1,8 +1,21 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { renderHook, act } from '@testing-library/react';
 import type { ReactNode } from 'react';
 import { FAVORITES_STORAGE_KEY, useFavorites } from '../src/hooks/use-favorites';
+import { AuthContext } from '../src/context/auth-context';
+import type { AuthContextValue } from '../src/context/auth-context';
+
+const { mockApi } = vi.hoisted(() => ({
+  mockApi: {
+    getFavorites: vi.fn<() => Promise<{ propertyId: string }[]>>().mockResolvedValue([]),
+    addFavorite: vi.fn<() => Promise<void>>().mockResolvedValue(undefined),
+    removeFavorite: vi.fn<() => Promise<void>>().mockResolvedValue(undefined),
+    mergeFavorites: vi.fn<() => Promise<void>>().mockResolvedValue(undefined),
+  },
+}));
+
+vi.mock('../src/services/api', () => mockApi);
 
 function createWrapper() {
   const queryClient = new QueryClient({
@@ -101,5 +114,107 @@ describe('useFavorites', () => {
     const { result } = renderHook(() => useFavorites(), { wrapper: createWrapper() });
     act(() => result.current.toggleFavorite('b'));
     expect(result.current.favorites).toEqual(['a', 'b']);
+  });
+
+  describe('authenticated (useMutation)', () => {
+    function createAuthWrapper(isAuthenticated = true) {
+      const queryClient = new QueryClient({
+        defaultOptions: { queries: { retry: false } },
+      });
+      if (isAuthenticated) {
+        queryClient.setQueryData(['favorites'], []);
+      }
+      const authValue: AuthContextValue = {
+        user: {
+          id: 'user-1',
+          fullName: 'A',
+          phone: '123',
+          email: 'a@b.com',
+          userType: 'BROWSER',
+          createdAt: '2025-01-01',
+        },
+        accessToken: 'token',
+        isAuthenticated,
+        isLoading: false,
+        hydrated: true,
+        login: vi.fn(),
+        logout: vi.fn(),
+        setAccessToken: vi.fn(),
+      };
+      return {
+        wrapper: function Wrapper({ children }: { children: ReactNode }) {
+          return (
+            <AuthContext.Provider value={authValue}>
+              <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
+            </AuthContext.Provider>
+          );
+        },
+        queryClient,
+      };
+    }
+
+    it('exposes toggleError as null initially', () => {
+      const { wrapper } = createAuthWrapper();
+      const { result } = renderHook(() => useFavorites(), { wrapper });
+      expect(result.current.toggleError).toBeNull();
+    });
+
+    it('exposes toggleError on mutation failure', async () => {
+      mockApi.addFavorite.mockRejectedValueOnce(new Error('Network error'));
+      const { wrapper } = createAuthWrapper();
+      const { result } = renderHook(() => useFavorites(), { wrapper });
+      await act(async () => {
+        result.current.toggleFavorite('prop-1');
+        await vi.waitFor(() => expect(result.current.toggleError).not.toBeNull());
+      });
+      expect(result.current.toggleError).toBeInstanceOf(Error);
+    });
+
+    it('clears toggleError on successful mutation after a failure', async () => {
+      mockApi.addFavorite.mockRejectedValueOnce(new Error('Network error'));
+      const { wrapper } = createAuthWrapper();
+      const { result } = renderHook(() => useFavorites(), { wrapper });
+      await act(async () => {
+        result.current.toggleFavorite('prop-1');
+        await vi.waitFor(() => expect(result.current.toggleError).not.toBeNull());
+      });
+      mockApi.addFavorite.mockResolvedValue(undefined);
+      await act(async () => {
+        result.current.toggleFavorite('prop-2');
+        await vi.waitFor(() => expect(result.current.toggleError).toBeNull());
+      });
+    });
+
+    it('rolls back optimistic update on failure', async () => {
+      mockApi.addFavorite.mockRejectedValueOnce(new Error('fail'));
+      const { wrapper, queryClient } = createAuthWrapper();
+      queryClient.setQueryData(['favorites'], []);
+      const { result } = renderHook(() => useFavorites(), { wrapper });
+      await act(async () => {
+        result.current.toggleFavorite('prop-1');
+        await vi.waitFor(() => expect(result.current.toggleError).not.toBeNull());
+      });
+      expect(result.current.favorites).not.toContain('prop-1');
+    });
+
+    it('calls removeFavorite for already-favorited properties', async () => {
+      const { wrapper, queryClient } = createAuthWrapper();
+      queryClient.setQueryData(['favorites'], ['prop-1']);
+      const { result } = renderHook(() => useFavorites(), { wrapper });
+      await act(async () => {
+        result.current.toggleFavorite('prop-1');
+      });
+      await vi.waitFor(() => expect(mockApi.removeFavorite).toHaveBeenCalledWith('prop-1'));
+    });
+
+    it('calls addFavorite for non-favorited properties', async () => {
+      const { wrapper, queryClient } = createAuthWrapper();
+      queryClient.setQueryData(['favorites'], []);
+      const { result } = renderHook(() => useFavorites(), { wrapper });
+      await act(async () => {
+        result.current.toggleFavorite('prop-1');
+      });
+      await vi.waitFor(() => expect(mockApi.addFavorite).toHaveBeenCalledWith('prop-1'));
+    });
   });
 });

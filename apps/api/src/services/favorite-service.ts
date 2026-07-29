@@ -1,5 +1,7 @@
 import { sql } from 'kysely';
 import { db } from '../lib/db.js';
+import { fetchTranslationMap } from './property-service.js';
+import type { PropertyTranslation } from './property-service.js';
 
 export interface FavoritePropertyRow {
   propertyId: string;
@@ -25,6 +27,7 @@ export interface FavoritePropertyRow {
       thumbnailUrl: string | null;
       altText: string | null;
     } | null;
+    translation: PropertyTranslation | null;
   };
 }
 
@@ -50,7 +53,10 @@ interface FavoriteListRow {
   cover_alt: string | null;
 }
 
-function toFavoritePropertyDto(row: FavoriteListRow): FavoritePropertyRow {
+function toFavoritePropertyDto(
+  row: FavoriteListRow,
+  translation: PropertyTranslation | null,
+): FavoritePropertyRow {
   return {
     propertyId: row.id,
     favoritedAt: row.favorited_at.toISOString(),
@@ -73,6 +79,7 @@ function toFavoritePropertyDto(row: FavoriteListRow): FavoritePropertyRow {
       coverImage: row.cover_url
         ? { url: row.cover_url, thumbnailUrl: row.cover_thumbnail, altText: row.cover_alt }
         : null,
+      translation,
     },
   };
 }
@@ -138,18 +145,25 @@ export async function listFavorites(userId: string): Promise<FavoritePropertyRow
     .orderBy('favorites.created_at', 'desc')
     .execute();
 
-  return rows.map(toFavoritePropertyDto);
-}
+  const enProps = rows.filter((r) => r.locale === 'en');
+  const arProps = rows.filter((r) => r.locale === 'ar');
+  const [enTranslations, arTranslations] = await Promise.all([
+    enProps.length > 0
+      ? fetchTranslationMap(
+          enProps.map((r) => r.id),
+          'ar',
+        )
+      : Promise.resolve(new Map()),
+    arProps.length > 0
+      ? fetchTranslationMap(
+          arProps.map((r) => r.id),
+          'en',
+        )
+      : Promise.resolve(new Map()),
+  ]);
+  const allTranslations = new Map([...enTranslations, ...arTranslations]);
 
-export async function isFavorited(userId: string, propertyId: string): Promise<boolean> {
-  const row = await db
-    .selectFrom('favorites')
-    .select(sql<number>`1`.as('exists'))
-    .where('user_id', '=', userId)
-    .where('property_id', '=', propertyId)
-    .executeTakeFirst();
-
-  return row !== undefined;
+  return rows.map((row) => toFavoritePropertyDto(row, allTranslations.get(row.id) ?? null));
 }
 
 export async function mergeFavorites(userId: string, propertyIds: string[]): Promise<void> {

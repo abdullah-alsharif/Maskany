@@ -2,7 +2,6 @@ import { afterAll, beforeEach, describe, expect, it } from 'vitest';
 import { db, destroy } from '../src/lib/db.js';
 import {
   addFavorite,
-  isFavorited,
   listFavorites,
   mergeFavorites,
   removeFavorite,
@@ -72,15 +71,16 @@ describe('favorite service', () => {
   describe('addFavorite', () => {
     it('inserts a favorite row', async () => {
       await addFavorite(userId, propertyId);
-      const favorited = await isFavorited(userId, propertyId);
-      expect(favorited).toBe(true);
+      const result = await listFavorites(userId);
+      expect(result.map((r) => r.propertyId)).toContain(propertyId);
     });
 
     it('is idempotent', async () => {
       await addFavorite(userId, propertyId);
       await addFavorite(userId, propertyId);
-      const favorited = await isFavorited(userId, propertyId);
-      expect(favorited).toBe(true);
+      const result = await listFavorites(userId);
+      const ids = result.map((r) => r.propertyId);
+      expect(ids.filter((id) => id === propertyId)).toHaveLength(1);
     });
   });
 
@@ -88,8 +88,8 @@ describe('favorite service', () => {
     it('deletes a favorite row', async () => {
       await addFavorite(userId, propertyId);
       await removeFavorite(userId, propertyId);
-      const favorited = await isFavorited(userId, propertyId);
-      expect(favorited).toBe(false);
+      const result = await listFavorites(userId);
+      expect(result.map((r) => r.propertyId)).not.toContain(propertyId);
     });
 
     it('does not throw when favorite does not exist', async () => {
@@ -144,17 +144,6 @@ describe('favorite service', () => {
       const result = await listFavorites(userId);
       expect(result).toHaveLength(1);
       expect(result[0].propertyId).toBe(propertyId);
-    });
-  });
-
-  describe('isFavorited', () => {
-    it('returns true for favorited property', async () => {
-      await addFavorite(userId, propertyId);
-      expect(await isFavorited(userId, propertyId)).toBe(true);
-    });
-
-    it('returns false for non-favorited property', async () => {
-      expect(await isFavorited(userId, propertyId)).toBe(false);
     });
   });
 

@@ -1,5 +1,5 @@
-import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { useCallback, useContext, useEffect, useRef, useState } from 'react';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useCallback, useContext, useEffect, useState } from 'react';
 import { addFavorite, getFavorites, removeFavorite } from '../services/api';
 import { AuthContext } from '../context/auth-context';
 
@@ -37,6 +37,7 @@ export type UseFavoritesResult = {
   count: number;
   isFavorite: (id: string) => boolean;
   toggleFavorite: (id: string) => void;
+  toggleError: Error | null;
 };
 
 export function useFavorites(): UseFavoritesResult {
@@ -69,28 +70,38 @@ export function useFavorites(): UseFavoritesResult {
   const serverIds = serverQuery.data ?? [];
   const favorites = isAuthenticated ? serverIds : localFavorites;
 
-  const snapshotRef = useRef(serverIds);
-  snapshotRef.current = serverIds;
+  const toggleMutation = useMutation({
+    mutationFn: async ({ id, wasFavorited }: { id: string; wasFavorited: boolean }) => {
+      if (wasFavorited) {
+        await removeFavorite(id);
+      } else {
+        await addFavorite(id);
+      }
+    },
+    onMutate: async ({ id, wasFavorited }) => {
+      await queryClient.cancelQueries({ queryKey: FAVORITES_QUERY_KEY });
+      const snapshot = queryClient.getQueryData<string[]>(FAVORITES_QUERY_KEY) ?? [];
+      const next = wasFavorited
+        ? snapshot.filter((existing) => existing !== id)
+        : [...snapshot, id];
+      queryClient.setQueryData(FAVORITES_QUERY_KEY, next);
+      return { snapshot };
+    },
+    onError: (_err, _variables, context) => {
+      if (context?.snapshot) {
+        queryClient.setQueryData(FAVORITES_QUERY_KEY, context.snapshot);
+      }
+    },
+    onSettled: () => {
+      void queryClient.invalidateQueries({ queryKey: FAVORITES_QUERY_KEY });
+    },
+  });
 
   const toggleFavorite = useCallback(
     (id: string) => {
       if (isAuthenticated) {
-        const snapshot = snapshotRef.current;
-        const isCurrentlyFavorited = snapshot.includes(id);
-        const next = isCurrentlyFavorited
-          ? snapshot.filter((existing) => existing !== id)
-          : [...snapshot, id];
-
-        queryClient.setQueryData(FAVORITES_QUERY_KEY, next);
-
-        const apiCall = isCurrentlyFavorited ? removeFavorite(id) : addFavorite(id);
-        apiCall
-          .then(() => {
-            void queryClient.invalidateQueries({ queryKey: FAVORITES_QUERY_KEY });
-          })
-          .catch(() => {
-            queryClient.setQueryData(FAVORITES_QUERY_KEY, snapshot);
-          });
+        const wasFavorited = favorites.includes(id);
+        toggleMutation.mutate({ id, wasFavorited });
       } else {
         const current = readFavorites();
         const next = current.includes(id)
@@ -101,7 +112,7 @@ export function useFavorites(): UseFavoritesResult {
       }
       triggerHaptic();
     },
-    [isAuthenticated, queryClient],
+    [isAuthenticated, toggleMutation, favorites],
   );
 
   const isFavorite = useCallback((id: string) => favorites.includes(id), [favorites]);
@@ -111,5 +122,6 @@ export function useFavorites(): UseFavoritesResult {
     count: favorites.length,
     isFavorite,
     toggleFavorite,
+    toggleError: toggleMutation.error,
   };
 }

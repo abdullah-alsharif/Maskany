@@ -16,15 +16,17 @@ const makeProperty = (id: string, title: string): Property => ({
   city: 'Riyadh',
   area: 'Olaya',
   country: 'SA',
-  price: 1000,
+  price: '1000',
   currency: 'SAR',
   priceUnit: 'per_month',
+  locale: 'en',
   rooms: 1,
   bathrooms: 1,
   areaSqm: 50,
   amenities: [],
   media: [],
   images: [],
+  coverImage: null,
   whatsappNumber: '966500000000',
   ownerId: 'owner-1',
   status: 'ACTIVE',
@@ -109,10 +111,8 @@ describe('FavoritesPage', () => {
 
   it('skips favorites whose property data failed to load (e.g. deleted listings)', () => {
     const a = makeProperty('a', 'Garden Villa');
-    // "b" is in favorites but only "a" is in the bulk response (simulating a missing/deleted listing).
     renderPage(['a', 'b'], [a]);
     expect(screen.getByRole('heading', { level: 3, name: /garden villa/i })).toBeInTheDocument();
-    // Only one card renders; no broken "undefined" placeholder.
     expect(screen.queryByText(/undefined/i)).not.toBeInTheDocument();
   });
 

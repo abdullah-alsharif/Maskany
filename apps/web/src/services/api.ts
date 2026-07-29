@@ -1,4 +1,5 @@
 import axios from 'axios';
+import type { PropertyTranslation } from '../types/property';
 
 const envBaseUrl = (process.env['NEXT_PUBLIC_API_URL'] ?? '').trim();
 const baseURL = envBaseUrl.length > 0 ? envBaseUrl : '/api';
@@ -34,6 +35,7 @@ export interface FavoriteProperty {
       thumbnailUrl: string | null;
       altText: string | null;
     } | null;
+    translation: PropertyTranslation | null;
   };
 }
 
