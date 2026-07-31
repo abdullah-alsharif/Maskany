@@ -13,6 +13,8 @@ import { logUsage, type UsageLogEntry } from './ai-usage-logger.js';
 import { extractAndParseJSON } from '../lib/extract-json.js';
 import { validateWithRetry } from './schema-validators.js';
 import type { EnhanceRequest } from '../validators/ai-validators.js';
+import { getCachedResult, setCachedResult } from './ai-cache.js';
+import { TranslationResponseSchema } from './schema-validators.js';
 import type {
   PropertyMetadata,
   TranslationFields,
@@ -124,6 +126,15 @@ export async function enhance(
   const existing = inflight.get(key);
   if (existing) return existing;
 
+  const cached = await getCachedResult(key);
+  if (cached)
+    return {
+      text: cached,
+      usage: { promptTokens: 0, completionTokens: 0, totalTokens: 0 },
+      cached: true,
+      model: 'cache',
+    };
+
   const startTime = Date.now();
   const promise = (async (): Promise<AIResponse> => {
     const allProviders = [primaryProvider, ...fallbackProviders].filter(Boolean);
@@ -175,6 +186,8 @@ export async function enhance(
           sectionTokens,
         }),
       ).catch(() => {});
+
+      setCachedResult(key, result.text).catch(() => {});
 
       return { text: result.text, usage: result.usage, cached: false, model: result.model };
     } catch (error) {
@@ -294,6 +307,10 @@ export async function translateAll(
     );
 
     const parsed = extractAndParseJSON(result.text) as Record<string, string>;
+    const translationParsed = TranslationResponseSchema.safeParse(parsed);
+    if (!translationParsed.success) {
+      throw new Error(`Translation validation failed: ${translationParsed.error.message}`);
+    }
 
     logUsage(
       buildUsageLog({
@@ -314,7 +331,7 @@ export async function translateAll(
       }),
     ).catch(() => {});
 
-    return { data: parsed, usage: result.usage };
+    return { data: translationParsed.data as Record<string, string>, usage: result.usage };
   } catch (error) {
     logUsage(
       buildUsageLog({

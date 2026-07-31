@@ -18,7 +18,9 @@ import { TASK_CONFIG } from '../services/ai-provider.js';
 import { executeWithFallback } from '../services/execute-with-fallback.js';
 import { extractAndParseJSON } from '../lib/extract-json.js';
 import { mapCategoryToI18n } from '../services/ai-review-types.js';
+import { scrubPii } from '../services/pii-scrubber.js';
 import type { AIProvider } from '../services/ai-provider.js';
+import type { EnhanceRequest } from '../validators/ai-validators.js';
 import {
   enhanceRequestSchema,
   translateAllSchema,
@@ -186,6 +188,13 @@ export function createAiRouter(): Router {
     }),
   );
 
+  const FIELD_TO_GENERATE_ACTION: Record<string, string> = {
+    title: 'generate_title',
+    summary: 'generate_summary',
+    area: 'generate_neighborhood',
+    highlights: 'generate_highlights',
+  };
+
   router.post(
     '/generate',
     requireAuth,
@@ -194,11 +203,13 @@ export function createAiRouter(): Router {
     asyncHandler(async (req: AuthenticatedRequest, res) => {
       const body = parseOrThrow(generateRequestSchema, req.body);
 
+      const scrubbedKeywords = body.keywords ? scrubPii(body.keywords) : '';
+
       const cacheKey = buildCacheKey({
         locale: body.locale,
         fieldType: body.fieldType,
         action: 'generate',
-        currentValue: body.keywords ?? '',
+        currentValue: scrubbedKeywords,
         metadata: body.metadata,
       });
 
@@ -212,13 +223,25 @@ export function createAiRouter(): Router {
       }
 
       const provider = getPrimaryProvider();
-      const system = buildEnhancePrompt(
-        { ...body, currentValue: body.keywords ?? '', action: 'enhance' },
+      const generateAction = FIELD_TO_GENERATE_ACTION[body.fieldType] ?? 'enhance';
+      const prompt = buildEnhancePrompt(
+        {
+          locale: body.locale,
+          fieldType: body.fieldType,
+          action: generateAction as EnhanceRequest['action'],
+          currentValue: scrubbedKeywords || '',
+          metadata: body.metadata,
+          requestNonce: body.requestNonce,
+        },
         body.locale,
-      ).system;
-      const user = `${body.fieldType === 'title' ? 'Generate a SHORT, catchy title (max 120 chars, one line, no period). It must be a title, not a sentence or paragraph.' : `Generate a ${body.fieldType} for this property`} based on: ${body.keywords ?? 'the property data'}.\n\nMetadata:\n${JSON.stringify(body.metadata, null, 2)}\n\nOutput only the generated text — no labels, no quotes.`;
+      );
 
-      const result = await executeWithFallback([provider], system, user, TASK_CONFIG.generate);
+      const result = await executeWithFallback(
+        [provider],
+        prompt.system,
+        prompt.user,
+        TASK_CONFIG.generate,
+      );
 
       await setCachedResult(cacheKey, result.text);
       res.status(200).json({ result: result.text, usage: result.usage });
@@ -234,12 +257,18 @@ export function createAiRouter(): Router {
       const body = parseOrThrow(suggestAmenitiesSchema, req.body);
 
       const system =
-        'You are a real estate amenity recommendation assistant. Return only a JSON array of amenity strings. No explanation.';
-      const user = `Suggest amenities for a ${body.propertyType} with ${body.rooms} bedroom(s) in ${body.city}. Existing amenities: ${body.existingAmenities.join(', ') || 'none'}. Valid amenity keys: ${KNOWN_AMENITIES.join(', ')}. Only return amenities from this list. Return a JSON array of recommended amenity strings.`;
+        'You are a real estate amenity recommendation assistant. Return only a JSON array of amenity strings from the provided valid list. No explanation, no markdown.';
+      const user = `Suggest matching amenities for a ${scrubPii(body.propertyType)} with ${body.rooms} bedroom(s) in ${scrubPii(body.city)}. Existing amenities: ${body.existingAmenities.join(', ') || 'none'}. Valid amenity keys: ${KNOWN_AMENITIES.join(', ')}. Only return amenities from this list. Return a JSON array of recommended amenity strings.`;
 
       const provider = getPrimaryProvider();
       const result = await executeWithFallback([provider], system, user, TASK_CONFIG.generate);
-      const amenities = extractAndParseJSON(result.text) as string[];
+      const raw = extractAndParseJSON(result.text);
+      const validAmenities = KNOWN_AMENITIES as readonly string[];
+      const amenities = Array.isArray(raw)
+        ? (raw as unknown[]).filter(
+            (a): a is string => typeof a === 'string' && validAmenities.includes(a),
+          )
+        : [];
 
       res.status(200).json({ amenities, usage: result.usage });
     }),

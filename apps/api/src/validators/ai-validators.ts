@@ -144,6 +144,7 @@ export const generateRequestSchema = z.object({
 
 export const suggestAmenitiesSchema = z.object({
   idempotencyKey: idempotencyKeySchema,
+  locale: z.enum(['en', 'ar']),
   propertyType: z.string(),
   rooms: z.number().int().min(0),
   city: z.string(),

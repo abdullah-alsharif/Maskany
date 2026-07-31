@@ -11,8 +11,5 @@ export function createNvidiaProvider(apiKey: string): AIProvider {
     apiKey,
     id: 'nvidia',
     enableJsonMode: 'auto',
-    onResponse: (text) => {
-      console.error(`[nvidia] raw response text: ${text.slice(0, 300)}`);
-    },
   });
 }

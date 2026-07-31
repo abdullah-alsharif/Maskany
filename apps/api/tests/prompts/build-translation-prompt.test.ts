@@ -38,14 +38,14 @@ describe('buildTranslationPrompt via registry', () => {
   it('[T013] delegates to PromptTemplateRegistry.render() with enhance kind', () => {
     const result = buildTranslationPrompt('ar', 'en', sourceFields, metadata);
     expect(result.system).toBeTruthy();
-    expect(result.system).toContain('translating');
+    expect(result.system).toContain('translator');
   });
 
   it('[T013] includes source and target locale instructions', () => {
     const result = buildTranslationPrompt('ar', 'en', sourceFields, metadata);
     expect(result.system).toContain('Arabic');
     expect(result.system).toContain('English');
-    expect(result.system).toContain('cultural');
+    expect(result.system).toContain('facts');
   });
 
   it('[T013] includes the text to translate in the user prompt', () => {

@@ -1,5 +1,7 @@
 import type { AIProvider, AIStreamResult, TokenUsage } from '../ai-provider.js';
 
+const DEFAULT_TIMEOUT_MS = 30_000;
+
 export interface AIProviderOptions {
   baseUrl: string;
   model: string;
@@ -9,6 +11,7 @@ export interface AIProviderOptions {
   enableJsonMode?: boolean | 'auto';
   safetyInterceptCheck?: (text: string, data: unknown) => boolean;
   onResponse?: (text: string) => void;
+  timeoutMs?: number;
 }
 
 function buildHeaders(apiKey: string, extra?: Record<string, string>): Record<string, string> {
@@ -39,7 +42,15 @@ export function createAIProvider(options: AIProviderOptions): AIProvider {
     enableJsonMode,
     safetyInterceptCheck,
     onResponse,
+    timeoutMs = DEFAULT_TIMEOUT_MS,
   } = options;
+
+  const fetchOpts = (body: Record<string, unknown>, stream?: boolean): RequestInit => ({
+    method: 'POST',
+    headers: buildHeaders(apiKey, extraHeaders),
+    body: JSON.stringify({ ...body, stream }),
+    signal: AbortSignal.timeout(timeoutMs),
+  });
 
   return {
     id,
@@ -62,15 +73,10 @@ export function createAIProvider(options: AIProviderOptions): AIProvider {
         body.response_format = { type: 'json_object' };
       }
 
-      const response = await fetch(baseUrl, {
-        method: 'POST',
-        headers: buildHeaders(apiKey, extraHeaders),
-        body: JSON.stringify(body),
-      });
-
+      const response = await fetch(baseUrl, fetchOpts(body));
       const raw = await response.text();
       if (!response.ok) {
-        throw new Error(`${id} API error: ${response.status} ${raw}`);
+        throw new Error(`${id} API error: ${response.status} ${raw.slice(0, 500)}`);
       }
 
       const data = JSON.parse(raw);
@@ -91,23 +97,26 @@ export function createAIProvider(options: AIProviderOptions): AIProvider {
     },
 
     async stream(system, user, config) {
-      const response = await fetch(baseUrl, {
-        method: 'POST',
-        headers: buildHeaders(apiKey, extraHeaders),
-        body: JSON.stringify({
-          model,
-          messages: [
-            { role: 'system', content: system },
-            { role: 'user', content: user },
-          ],
-          max_tokens: config.maxTokens,
-          temperature: config.temperature,
-          stream: true,
-        }),
-      });
+      const response = await fetch(
+        baseUrl,
+        fetchOpts(
+          {
+            model,
+            messages: [
+              { role: 'system', content: system },
+              { role: 'user', content: user },
+            ],
+            max_tokens: config.maxTokens,
+            temperature: config.temperature,
+          },
+          true,
+        ),
+      );
 
       if (!response.ok) {
-        throw new Error(`${id} stream error: ${response.status} ${await response.text()}`);
+        throw new Error(
+          `${id} stream error: ${response.status} ${(await response.text()).slice(0, 500)}`,
+        );
       }
 
       const reader = response.body?.getReader();

@@ -62,16 +62,31 @@ export const ReviewResponseSchema = z.object({
   issues: z.array(ReviewIssueSchema),
 });
 
+export const TranslationResponseSchema = z.object({
+  title: z.string().min(1),
+  summary: z.string().optional(),
+  description: z.string().min(1),
+  city: z.string().min(1),
+  area: z.string().optional(),
+  country: z.string().min(1),
+});
+
 export type EnhanceValidationResult =
   { success: true; data: string } | { success: false; error: string };
 
 export type ReviewValidationResult =
   { success: true; data: z.infer<typeof ReviewResponseSchema> } | { success: false; error: string };
 
-export type SchemaValidationResult = EnhanceValidationResult | ReviewValidationResult;
+export type TranslationValidationResult =
+  | { success: true; data: z.infer<typeof TranslationResponseSchema> }
+  | { success: false; error: string };
+
+export type SchemaValidationResult =
+  EnhanceValidationResult | ReviewValidationResult | TranslationValidationResult;
 
 export function validateAIResponse(kind: 'enhance', raw: string): EnhanceValidationResult;
 export function validateAIResponse(kind: 'review', raw: string): ReviewValidationResult;
+export function validateAIResponse(kind: 'translate', raw: string): TranslationValidationResult;
 export function validateAIResponse(kind: string, raw: string): SchemaValidationResult {
   if (kind === 'enhance') {
     const result = EnhanceResponseSchema.safeParse(raw);
@@ -95,7 +110,27 @@ export function validateAIResponse(kind: string, raw: string): SchemaValidationR
     return { success: false, error: result.error.errors.map((e) => e.message).join('; ') };
   }
 
+  if (kind === 'translate') {
+    let parsed: unknown;
+    try {
+      parsed = extractAndParseJSON(raw);
+    } catch {
+      return { success: false, error: 'Failed to parse JSON from response' };
+    }
+    const result = TranslationResponseSchema.safeParse(parsed);
+    if (result.success) {
+      return { success: true, data: result.data };
+    }
+    return { success: false, error: result.error.errors.map((e) => e.message).join('; ') };
+  }
+
   return { success: false, error: `Unknown validation kind: ${kind}` };
+}
+
+function validateWithKind(kind: 'enhance' | 'review', raw: string): SchemaValidationResult {
+  return kind === 'enhance'
+    ? validateAIResponse('enhance', raw)
+    : validateAIResponse('review', raw);
 }
 
 export function validateWithRetry(
@@ -104,7 +139,7 @@ export function validateWithRetry(
   maxRetries: number = 2,
 ): SchemaValidationResult {
   for (let attempt = 0; attempt <= maxRetries; attempt++) {
-    const result = validateAIResponse(kind as 'enhance', raw);
+    const result = validateWithKind(kind, raw);
     if (result.success) return result;
     if (attempt < maxRetries) {
       try {
@@ -119,5 +154,5 @@ export function validateWithRetry(
       }
     }
   }
-  return validateAIResponse(kind as 'enhance', raw);
+  return validateWithKind(kind, raw);
 }

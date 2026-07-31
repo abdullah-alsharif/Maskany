@@ -191,34 +191,21 @@ export async function findSimilarEmbeddings(
 ): Promise<{ property_id: string; locale: string; distance: number }[]> {
   const vectorLiteral = `[${queryEmbedding.join(',')}]`;
 
-  let query = sql<{
-    property_id: string;
-    locale: string;
-    distance: number;
-  }>`
-    SELECT
-      pe.property_id,
-      pe.locale,
-      (pe.embedding <-> ${vectorLiteral}::vector) AS distance
-    FROM property_embeddings pe
-  `;
+  let queryBuilder = db
+    .selectFrom('property_embeddings')
+    .select(['property_id', 'locale'])
+    .select(sql<number>`(embedding <-> ${vectorLiteral}::vector)`.as('distance'))
+    .orderBy(sql`embedding <-> ${vectorLiteral}::vector`)
+    .limit(limit);
 
-  const conditions: string[] = [];
   if (extraWhere?.excludePropertyId) {
-    conditions.push(`pe.property_id != '${extraWhere.excludePropertyId.replace(/'/g, "''")}'`);
+    queryBuilder = queryBuilder.where('property_id', '!=', extraWhere.excludePropertyId);
   }
   if (extraWhere?.locale) {
-    conditions.push(`pe.locale = '${extraWhere.locale.replace(/'/g, "''")}'`);
+    queryBuilder = queryBuilder.where('locale', '=', extraWhere.locale as 'en' | 'ar');
   }
 
-  if (conditions.length > 0) {
-    query = sql`${query} WHERE ${sql.raw(conditions.join(' AND '))}`;
-  }
-
-  query = sql`${query} ORDER BY pe.embedding <-> ${vectorLiteral}::vector LIMIT ${sql.raw(String(limit))}`;
-
-  const result = await query.execute(db);
-  return result.rows ?? [];
+  return await queryBuilder.execute();
 }
 
 export async function getPropertyEmbedding(

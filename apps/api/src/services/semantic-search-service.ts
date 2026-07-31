@@ -35,10 +35,6 @@ export async function isSemanticSearchAvailable(): Promise<boolean> {
   }
 }
 
-function escapePgLiteral(val: string): string {
-  return val.replace(/'/g, "''");
-}
-
 export async function searchBySemantic(
   params: SemanticSearchParams,
 ): Promise<{ results: SemanticSearchResult[]; nextCursor: string | null }> {
@@ -46,41 +42,38 @@ export async function searchBySemantic(
   const vectorLiteral = `[${queryEmbedding.join(',')}]`;
   const pageSize = params.limit;
 
-  const conditions: string[] = [];
+  let queryBuilder = db
+    .selectFrom('property_embeddings')
+    .select(['property_id'])
+    .select(sql<number>`(embedding <-> ${vectorLiteral}::vector)`.as('distance'))
+    .orderBy(sql`embedding <-> ${vectorLiteral}::vector`)
+    .orderBy('property_id', 'asc')
+    .limit(pageSize + 1);
+
   if (params.excludePropertyId) {
-    conditions.push(`pe.property_id != '${escapePgLiteral(params.excludePropertyId)}'`);
+    queryBuilder = queryBuilder.where('property_id', '!=', params.excludePropertyId);
   }
+
   if (params.cursor) {
     const cursor = decodeSemanticCursor(params.cursor);
-    conditions.push(
-      `(pe.embedding <-> '${vectorLiteral}'::vector) < ${cursor.distance} OR ((pe.embedding <-> '${vectorLiteral}'::vector) = ${cursor.distance} AND pe.property_id > '${escapePgLiteral(cursor.propertyId)}')`,
+    queryBuilder = queryBuilder.where(
+      sql`(embedding <-> ${vectorLiteral}::vector)`,
+      '<',
+      cursor.distance,
     );
   }
 
-  const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
-  const sqlQuery = `
-    SELECT
-      pe.property_id,
-      (pe.embedding <-> '${vectorLiteral}'::vector) AS distance
-    FROM property_embeddings pe
-    ${whereClause}
-    ORDER BY pe.embedding <-> '${vectorLiteral}'::vector, pe.property_id ASC
-    LIMIT ${pageSize + 1}
-  `;
-
-  const result = await sql.raw(sqlQuery).execute(db);
-  const rows = result.rows as { property_id: string; distance: number }[];
-
+  const rows = await queryBuilder.execute();
   const hasMore = rows.length > pageSize;
   const page = hasMore ? rows.slice(0, pageSize) : rows;
   const lastRow = page[page.length - 1];
   const nextCursor =
-    hasMore && lastRow ? encodeSemanticCursor(lastRow.distance, lastRow.property_id) : null;
+    hasMore && lastRow ? encodeSemanticCursor(Number(lastRow.distance), lastRow.property_id) : null;
 
   return {
     results: page.map((r) => ({
       propertyId: r.property_id,
-      distance: r.distance,
+      distance: Number(r.distance),
     })),
     nextCursor,
   };
