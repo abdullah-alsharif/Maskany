@@ -136,7 +136,7 @@ export function PropertyCard({ property }: PropertyCardProps) {
         {/* Price + Rating */}
         <div className="flex items-center justify-between pt-0.5">
           <div className="flex items-baseline gap-0.5">
-            <span className="text-lg font-bold text-stone-950">
+            <span className="text-lg font-bold text-stone-950" data-testid="property-price">
               {property.currency} {formattedPrice}
             </span>
             <span className="text-xs text-stone-400 font-medium">

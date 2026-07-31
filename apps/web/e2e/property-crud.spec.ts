@@ -10,7 +10,7 @@
  * confirm on detail page → return to My Properties → delete it.
  */
 import { expect, test } from '@playwright/test';
-import { loginAsUser } from './test-helpers';
+import { loginAsUser, acceptAiConsent } from './test-helpers';
 
 const OWNER_COUNTRY = '+966';
 const OWNER_PHONE = '500009002'; // dev-owner
@@ -33,6 +33,7 @@ test('full property CRUD flow', async ({ page }) => {
   await page.getByRole('link', { name: 'New listing' }).click();
   await expect(page).toHaveURL(/\/properties\/create$/);
   await expect(page.getByText('Create listing')).toBeVisible();
+  await acceptAiConsent(page);
 
   // --- Step 1: Basics ---
   await page.getByLabel('Title').fill(PROPERTY_TITLE);
@@ -75,7 +76,7 @@ test('full property CRUD flow', async ({ page }) => {
     timeout: 10_000,
   });
 
-  const deleteButton = page.getByRole('button', { name: `Delete ${PROPERTY_TITLE}` });
+  const deleteButton = page.getByRole('button', { name: `Delete ${PROPERTY_TITLE}`, exact: true });
   await expect(deleteButton).toBeVisible();
   await deleteButton.click();
 
@@ -83,7 +84,7 @@ test('full property CRUD flow', async ({ page }) => {
   await page.getByRole('button', { name: 'Yes, delete listing' }).click();
 
   // Hard-delete removes the property from the list entirely.
-  await expect(page.getByRole('heading', { name: PROPERTY_TITLE })).not.toBeVisible({
+  await expect(page.getByRole('heading', { name: PROPERTY_TITLE, exact: true })).not.toBeVisible({
     timeout: 10_000,
   });
 });

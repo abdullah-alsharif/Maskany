@@ -2,7 +2,7 @@
  * Playwright globalSetup (T-033, PRD §8.3).
  *
  * Re-seeds the test PostgreSQL database with the canonical fixture set
- * (5 users, 16 properties, ~24 reviews) before any spec runs so the
+ * (16 users, 24 properties, ~36 reviews) before any spec runs so the
  * specs can rely on stable IDs/titles. We shell out to the existing
  * `seed-cli.ts` entry — the same script the integration suite exercises
  * — with `DATABASE_URL` overridden to point at port 5433.

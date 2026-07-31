@@ -1,4 +1,4 @@
-import { useEffect, useState, type ChangeEvent } from 'react';
+import { useState, type ChangeEvent } from 'react';
 import { Star } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { Button } from './ui/button';
@@ -64,10 +64,6 @@ type FilterPanelProps = {
 export function FilterPanel({ value, onApply, onClear, filterCounts }: FilterPanelProps) {
   const { t } = useTranslation();
   const [draft, setDraft] = useState<Filters>(value);
-
-  useEffect(() => {
-    setDraft(value);
-  }, [value]);
 
   const toggleType = (type: PropertyType) => {
     setDraft((d) => ({ ...d, types: toggleInArray(d.types, type) }));

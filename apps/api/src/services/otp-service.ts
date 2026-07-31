@@ -25,7 +25,7 @@ import { ErrorCode, HttpError } from '../lib/http-error.js';
 export const OTP_TTL_MS = 5 * 60 * 1000;
 
 /** Minimum interval in ms between OTP generations for the same identifier+type. */
-const OTP_COOLDOWN_MS = 30_000;
+const OTP_COOLDOWN_MS = Number(process.env.OTP_COOLDOWN_MS ?? 30_000);
 
 export type OtpType = 'SMS' | 'EMAIL';
 

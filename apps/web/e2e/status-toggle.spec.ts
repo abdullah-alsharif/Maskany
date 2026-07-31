@@ -5,7 +5,7 @@
  * and that deactivated properties are excluded from the public listing.
  */
 import { expect, test } from '@playwright/test';
-import { loginAsUser } from './test-helpers';
+import { loginAsUser, acceptAiConsent } from './test-helpers';
 
 const OWNER_COUNTRY = '+966';
 const OWNER_PHONE = '500009002'; // dev-owner
@@ -17,6 +17,7 @@ test('deactivate and reactivate property', async ({ page }) => {
 
   await page.goto('/my-properties');
   await page.getByRole('link', { name: 'New listing' }).click();
+  await acceptAiConsent(page);
 
   const testTitle = 'E2E Status Toggle Test';
 
@@ -52,13 +53,14 @@ test('deactivate and reactivate property', async ({ page }) => {
 
   // Go to my-properties and verify Active status.
   await page.goto('/my-properties');
-  await expect(page.getByText('Active')).toBeVisible({ timeout: 10_000 });
+  const testCard = page.locator('article').filter({ hasText: testTitle });
+  await expect(testCard.getByText('Active')).toBeVisible({ timeout: 10_000 });
 
   // Deactivate.
   await page.getByRole('button', { name: `Deactivate ${testTitle}` }).click();
 
   // Status should change to Inactive.
-  await expect(page.getByText('Inactive')).toBeVisible({ timeout: 10_000 });
+  await expect(testCard.getByText('Inactive')).toBeVisible({ timeout: 10_000 });
 
   // Property should NOT appear in public listing.
   await page.goto('/');
@@ -73,7 +75,7 @@ test('deactivate and reactivate property', async ({ page }) => {
   await page.getByRole('button', { name: `Activate ${testTitle}` }).click();
 
   // Status should change back to Active.
-  await expect(page.getByText('Active')).toBeVisible({ timeout: 10_000 });
+  await expect(testCard.getByText('Active')).toBeVisible({ timeout: 10_000 });
 
   // Property should reappear in public listing.
   await page.goto('/');

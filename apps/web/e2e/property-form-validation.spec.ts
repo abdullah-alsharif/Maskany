@@ -1,0 +1,87 @@
+import { expect, test } from '@playwright/test';
+import { loginAsUser, acceptAiConsent } from './test-helpers';
+
+const OWNER_COUNTRY = '+966';
+const OWNER_PHONE = '501111001';
+
+test.describe('Property form step validation', () => {
+  test.beforeEach(async ({ page }) => {
+    await loginAsUser(page, OWNER_COUNTRY, OWNER_PHONE);
+    await expect(page.getByTestId('property-grid')).toBeVisible({ timeout: 15_000 });
+    await page.goto('/properties/create');
+    await expect(page).toHaveURL(/\/properties\/create$/);
+    await acceptAiConsent(page);
+  });
+
+  test('step 1: empty title shows validation error', async ({ page }) => {
+    await page.getByLabel('Description').fill('Some description.');
+    await page.getByRole('button', { name: 'Next', exact: true }).click();
+    await expect(page.getByText('Title is required.')).toBeVisible({ timeout: 5_000 });
+  });
+
+  test('step 2: empty price shows validation error', async ({ page }) => {
+    await page.getByLabel('Title').fill('Test Property');
+    await page.getByLabel('Description').fill('Test description.');
+    await page.getByRole('button', { name: 'Next', exact: true }).click();
+
+    await page.getByRole('button', { name: 'Next', exact: true }).click();
+    await expect(page.getByText('Price must be a positive number.')).toBeVisible({
+      timeout: 5_000,
+    });
+  });
+
+  test('step 2: negative bedrooms shows validation error', async ({ page }) => {
+    await page.getByLabel('Title').fill('Test Property');
+    await page.getByLabel('Description').fill('Test description.');
+    await page.getByRole('button', { name: 'Next', exact: true }).click();
+
+    await page.getByLabel('Price').fill('5000');
+    await page.getByLabel('Bedrooms').fill('-1');
+    await page.getByRole('button', { name: 'Next', exact: true }).click();
+    await expect(page.getByText('Bedrooms cannot be negative.')).toBeVisible({
+      timeout: 5_000,
+    });
+  });
+
+  test('step 3: empty city shows validation error', async ({ page }) => {
+    await page.getByLabel('Title').fill('Test Property');
+    await page.getByLabel('Description').fill('Test description.');
+    await page.getByRole('button', { name: 'Next', exact: true }).click();
+
+    await page.getByLabel('Price').fill('5000');
+    await page.getByLabel('Bedrooms').fill('2');
+    await page.getByLabel('Bathrooms').fill('1');
+    await page.getByLabel('Area (m²)').fill('80');
+    await page.getByLabel('Currency').fill('SAR');
+    await page.getByRole('button', { name: 'Next', exact: true }).click();
+
+    await page.getByRole('button', { name: 'Next', exact: true }).click();
+    await expect(page.getByText('City is required.')).toBeVisible({ timeout: 5_000 });
+  });
+
+  test('step 5: invalid whatsapp format shows validation error', async ({ page }) => {
+    await page.getByLabel('Title').fill('Test Property');
+    await page.getByLabel('Description').fill('Test description.');
+    await page.getByRole('button', { name: 'Next', exact: true }).click();
+
+    await page.getByLabel('Price').fill('5000');
+    await page.getByLabel('Bedrooms').fill('2');
+    await page.getByLabel('Bathrooms').fill('1');
+    await page.getByLabel('Area (m²)').fill('80');
+    await page.getByLabel('Currency').fill('SAR');
+    await page.getByRole('button', { name: 'Next', exact: true }).click();
+
+    await page.getByLabel('City').fill('Riyadh');
+    await page.getByLabel('Area / neighborhood').fill('Al Olaya');
+    await page.getByLabel('Country').fill('SA');
+    await page.getByRole('button', { name: 'Next', exact: true }).click();
+
+    await page.getByRole('button', { name: 'Next', exact: true }).click();
+
+    await page.getByLabel('WhatsApp number').fill('invalid');
+    await page.getByRole('button', { name: 'Next', exact: true }).click();
+    await expect(
+      page.getByText('WhatsApp number must be in E.164 format'),
+    ).toBeVisible({ timeout: 5_000 });
+  });
+});

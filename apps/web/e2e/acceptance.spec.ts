@@ -8,7 +8,7 @@
  * 375x812 viewport, 120s timeout (set via test.setTimeout).
  */
 import { expect, test, type Page } from '@playwright/test';
-import { getLatestOtpCode } from './test-helpers';
+import { getLatestOtpCode, acceptAiConsent } from './test-helpers';
 
 const USER1_NAME = 'E2E Acceptance Browser';
 const USER1_COUNTRY = '+966';
@@ -213,6 +213,7 @@ test('[AC-42] Complete acceptance workflow (E2E smoke test)', async ({ page }) =
 
   await page.getByRole('link', { name: 'New listing' }).click();
   await expect(page).toHaveURL(/\/properties\/create$/);
+  await acceptAiConsent(page);
 
   // Step 1: Basics
   await page.getByLabel('Title').fill(PROPERTY_TITLE);

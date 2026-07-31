@@ -1,25 +1,26 @@
 /**
  * E2E — Pagination (US3).
  *
- * The seed dataset has 16 properties (under the 20/page threshold).
- * This spec verifies that all properties load on the initial page and
- * that the pagination boundary behaves correctly.
+ * The seed dataset has 24 properties (above the 20/page threshold).
+ * This spec verifies the first page fetches the correct page size and
+ * the API response structure is well-formed.
  */
 import { expect, test } from '@playwright/test';
 
 test.describe('Pagination', () => {
-  test('home page shows all 16 seeded properties', async ({ page }) => {
+  test('home page shows first page of properties', async ({ page }) => {
     await page.goto('/');
 
     const grid = page.getByTestId('property-grid');
     await expect(grid).toBeVisible({ timeout: 15_000 });
 
-    // Wait for all articles to render.
-    await expect.poll(async () => grid.locator('article').count(), { timeout: 15_000 }).toBe(16);
+    // Page size is 20 — first page should show 20 properties.
+    await expect
+      .poll(async () => grid.locator('article').count(), { timeout: 15_000 })
+      .toBe(20);
   });
 
-  test('pagination API returns correct structure', async ({ page }) => {
-    // Intercept the properties API to inspect the response.
+  test('pagination API returns correct structure with cursor', async ({ page }) => {
     const responsePromise = page.waitForResponse(
       (res) => res.url().includes('/api/properties') && res.status() === 200,
     );
@@ -30,9 +31,11 @@ test.describe('Pagination', () => {
     const response = await responsePromise;
     const body = await response.json();
 
-    // API should return properties array.
     expect(body).toHaveProperty('properties');
     expect(Array.isArray(body.properties)).toBe(true);
-    expect(body.properties.length).toBe(16);
+    // First page should have exactly 20 properties.
+    expect(body.properties.length).toBe(20);
+    // Should have a cursor for infinite scroll.
+    expect(body).toHaveProperty('nextCursor');
   });
 });

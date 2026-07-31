@@ -8,7 +8,7 @@
 import { expect, test } from '@playwright/test';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import { loginAsUser } from './test-helpers';
+import { loginAsUser, acceptAiConsent } from './test-helpers';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -25,6 +25,7 @@ test('uploading images during creation shows them on detail page', async ({ page
   await page.goto('/my-properties');
   await page.getByRole('link', { name: 'New listing' }).click();
   await expect(page).toHaveURL(/\/properties\/create$/);
+  await acceptAiConsent(page);
 
   // Step 1: Basics.
   await page.getByLabel('Title').fill(PROPERTY_TITLE);

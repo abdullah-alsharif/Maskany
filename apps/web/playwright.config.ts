@@ -76,6 +76,7 @@ export default defineConfig({
         SMTP_FROM: 'test@maskany.com',
         AUTH_RATE_LIMIT: '200',
         FAVORITES_RATE_LIMIT: '300',
+        OTP_COOLDOWN_MS: '0',
       },
     },
     {

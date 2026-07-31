@@ -36,7 +36,7 @@ export function SimilarProperties({ propertyId }: SimilarPropertiesProps) {
   }
 
   return (
-    <section className="mt-8">
+    <section className="mt-8" data-testid="similar-properties">
       <div className="flex items-center justify-between mb-4">
         <h2 className="text-lg font-semibold text-stone-800">
           {t('similarProperties.title', 'Similar Properties')}

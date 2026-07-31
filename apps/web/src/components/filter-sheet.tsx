@@ -28,7 +28,7 @@ export function FilterSheet({ open, onClose, value, onApply, onClear }: FilterSh
 
   return (
     <BottomSheet open={open} onClose={onClose} title={t('filter.filters')}>
-      <FilterPanel value={value} onApply={handleApply} onClear={onClear} />
+      <FilterPanel key={open ? 'open' : 'closed'} value={value} onApply={handleApply} onClear={onClear} />
     </BottomSheet>
   );
 }

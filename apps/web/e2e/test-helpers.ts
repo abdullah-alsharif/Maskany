@@ -62,6 +62,23 @@ export async function closeTestHelperPool(): Promise<void> {
 }
 
 /**
+ * Dismiss the AI writing-assistant consent dialog if it is open.
+ *
+ * The create/edit property pages auto-open the dialog on first visit when
+ * `localStorage['ai-consent']` is absent. Fresh E2E contexts never have it,
+ * so tests that drive the multi-step property form must accept (or decline)
+ * consent once per test — localStorage then persists for later navigations.
+ */
+export async function acceptAiConsent(page: Page): Promise<void> {
+  try {
+    await page.getByRole('heading', { name: 'AI Writing Assistant' }).waitFor({ timeout: 5_000 });
+    await page.getByRole('button', { name: 'Accept' }).click();
+  } catch {
+    // Dialog not present — proceed.
+  }
+}
+
+/**
  * Log in as an existing seeded user via the OTP flow.
  * Navigates to /login, submits the phone number, reads the OTP from the DB,
  * types it into the verify-otp page, and waits for redirect to the home page.
