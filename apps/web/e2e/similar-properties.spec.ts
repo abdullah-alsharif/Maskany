@@ -1,14 +1,20 @@
+import { goto } from './test-helpers';
 import { expect, test } from '@playwright/test';
+import { SEED_PROPERTY_TITLES } from './test-fixtures';
 
 test.describe('Similar properties', () => {
   test('property detail page shows similar properties section', async ({ page }) => {
-    await page.goto('/');
+    await goto(page, '/');
 
     const grid = page.getByTestId('property-grid');
     await expect(grid).toBeVisible({ timeout: 15_000 });
 
-    const firstCard = grid.locator('article').first();
-    await firstCard.locator('a').first().click();
+    await grid
+      .locator('article')
+      .filter({ hasText: SEED_PROPERTY_TITLES[0] })
+      .locator('a')
+      .first()
+      .click();
     await expect(page).toHaveURL(/\/properties\/[0-9a-f-]{36}$/);
 
     const similarSection = page.getByRole('heading', { name: /similar properties/i });
@@ -24,13 +30,17 @@ test.describe('Similar properties', () => {
   });
 
   test('clicking a similar property navigates to its detail page', async ({ page }) => {
-    await page.goto('/');
+    await goto(page, '/');
 
     const grid = page.getByTestId('property-grid');
     await expect(grid).toBeVisible({ timeout: 15_000 });
 
-    const firstCard = grid.locator('article').first();
-    await firstCard.locator('a').first().click();
+    await grid
+      .locator('article')
+      .filter({ hasText: SEED_PROPERTY_TITLES[0] })
+      .locator('a')
+      .first()
+      .click();
     await expect(page).toHaveURL(/\/properties\/[0-9a-f-]{36}$/);
     const propertyUrl = page.url();
 

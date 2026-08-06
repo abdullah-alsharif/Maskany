@@ -4,33 +4,28 @@
  * Guest flow:   heart toggle → localStorage → favorites tab → remove → empty state
  * Auth flow:    login → heart toggle → server-persisted → survives refresh
  * Merge flow:   guest favorites survive login (POST /api/favorites/merge)
- * Owner flow:   owner dashboard (/insights) loads with property data
+ *
+ * Every authenticated scenario uses a fresh per-test user, so parallel runs
+ * never share server-side favorite state. (The owner-dashboard scenario is
+ * covered by insights-dashboard.spec.ts with the seeded owner.)
  */
-import { expect, test } from '@playwright/test';
-import { loginAsUser } from './test-helpers';
-
-/* ---------- helpers ---------- */
-
-const KHALID_COUNTRY = '+966';
-const KHALID_PHONE = '501111004';
-
-const LAYLA_COUNTRY = '+966';
-const LAYLA_PHONE = '501111001';
-
-const FATIMA_COUNTRY = '+966';
-const FATIMA_PHONE = '501111002';
+import { expect, test } from './test-fixtures';
+import { goto, loginAsTestUser } from './test-helpers';
 
 test.describe('Favorites — guest flow', () => {
   test('toggling the heart adds to the favorites tab and toggling again removes it', async ({
     page,
+    seedProperties,
   }) => {
-    await page.goto('/');
+    await goto(page, '/');
 
     const grid = page.getByTestId('property-grid');
     await expect(grid).toBeVisible({ timeout: 15_000 });
 
-    const firstCard = grid.locator('article').first();
-    const expectedTitle = (await firstCard.locator('h3').innerText()).trim();
+    // Use a seeded property — the first grid card can be a fixture property
+    // owned by a parallel test and deleted mid-run.
+    const expectedTitle = seedProperties[0].title;
+    const firstCard = grid.locator('article').filter({ hasText: expectedTitle });
 
     const addButton = firstCard.getByRole('button', { name: 'Add to favorites' });
     await expect(addButton).toBeVisible();
@@ -62,18 +57,22 @@ test.describe('Favorites — guest flow', () => {
   });
 });
 
-test.describe.serial('Favorites — authenticated flow', () => {
-  test('login, add favorite, verify it persists server-side across refresh', async ({ page }) => {
-    await page.goto('/');
+test.describe('Favorites — authenticated flow', () => {
+  test('login, add favorite, verify it persists server-side across refresh', async ({
+    page,
+    browserUser,
+    seedProperties,
+  }) => {
+    await goto(page, '/');
     await page.evaluate(() => localStorage.clear());
     await page.context().clearCookies();
-    await loginAsUser(page, KHALID_COUNTRY, KHALID_PHONE);
+    await loginAsTestUser(page, browserUser.phone);
 
     const grid = page.getByTestId('property-grid');
     await expect(grid).toBeVisible({ timeout: 15_000 });
 
-    const firstCard = grid.locator('article').first();
-    const expectedTitle = (await firstCard.locator('h3').innerText()).trim();
+    const expectedTitle = seedProperties[0].title;
+    const firstCard = grid.locator('article').filter({ hasText: expectedTitle });
 
     await firstCard.getByRole('button', { name: 'Add to favorites' }).click();
     await expect(firstCard.getByRole('button', { name: 'Remove from favorites' })).toBeVisible();
@@ -102,11 +101,13 @@ test.describe.serial('Favorites — authenticated flow', () => {
   });
 });
 
-test.describe.serial('Favorites — guest-to-auth merge', () => {
+test.describe('Favorites — guest-to-auth merge', () => {
   test('guest favorites survive login and appear in the authenticated favorites list', async ({
     page,
+    browserUser,
+    seedProperties,
   }) => {
-    await page.goto('/');
+    await goto(page, '/');
     await page.evaluate(() => localStorage.clear());
     await page.context().clearCookies();
     await page.reload();
@@ -114,14 +115,10 @@ test.describe.serial('Favorites — guest-to-auth merge', () => {
     const grid = page.getByTestId('property-grid');
     await expect(grid).toBeVisible({ timeout: 15_000 });
 
-    const cards = grid.locator('article');
-    const cardCount = await cards.count();
-    expect(cardCount).toBeGreaterThanOrEqual(2);
-
-    const titles: string[] = [];
-    for (let i = 0; i < 2; i++) {
-      const card = cards.nth(i);
-      titles.push((await card.locator('h3').innerText()).trim());
+    const titles = seedProperties.map((p) => p.title);
+    expect(titles.length).toBeGreaterThanOrEqual(2);
+    for (const title of titles) {
+      const card = grid.locator('article').filter({ hasText: title });
       await card.getByRole('button', { name: 'Add to favorites' }).click();
       await expect(card.getByRole('button', { name: 'Remove from favorites' })).toBeVisible();
     }
@@ -130,7 +127,7 @@ test.describe.serial('Favorites — guest-to-auth merge', () => {
     expect(JSON.parse(stored ?? '[]')).toHaveLength(2);
 
     // Log in — merge fires automatically via auth-context (async, best-effort)
-    await loginAsUser(page, FATIMA_COUNTRY, FATIMA_PHONE);
+    await loginAsTestUser(page, browserUser.phone);
     // The merge is fire-and-forget; wait for it to clear localStorage
     await expect
       .poll(async () => page.evaluate(() => window.localStorage.getItem('maskany_favorites')), {
@@ -152,19 +149,5 @@ test.describe.serial('Favorites — guest-to-auth merge', () => {
 
     const storedAfter = await page.evaluate(() => window.localStorage.getItem('maskany_favorites'));
     expect(storedAfter).toBeNull();
-  });
-});
-
-test.describe.serial('Favorites — owner dashboard', () => {
-  test('owner insights page loads with metric cards and top properties', async ({ page }) => {
-    await loginAsUser(page, LAYLA_COUNTRY, LAYLA_PHONE);
-
-    await page.goto('/insights');
-    await expect(page).toHaveURL(/\/insights$/);
-
-    await expect(page.getByText('Total listings')).toBeVisible({ timeout: 15_000 });
-    await expect(page.getByText('Active')).toBeVisible({ timeout: 5_000 });
-    await expect(page.getByText('Top Properties')).toBeVisible({ timeout: 10_000 });
-    await expect(page.getByText('Best performing listings')).toBeVisible({ timeout: 5_000 });
   });
 });

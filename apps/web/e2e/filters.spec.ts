@@ -5,11 +5,13 @@
  * the grid narrows, then clears filters and confirms the full list is
  * restored.
  */
+import { goto } from './test-helpers';
 import { expect, test } from '@playwright/test';
+import { FilterPanelPage } from './pages/filter-panel-page';
 
 test.describe('Filters', () => {
   test('applying filters narrows the grid and clearing restores it', async ({ page }) => {
-    await page.goto('/');
+    await goto(page, '/');
 
     const grid = page.getByTestId('property-grid');
     await expect(grid).toBeVisible({ timeout: 15_000 });
@@ -17,57 +19,56 @@ test.describe('Filters', () => {
     const initialCount = await grid.locator('article').count();
     expect(initialCount).toBeGreaterThan(1);
 
-    // Open the filter panel.
-    await page.getByRole('button', { name: 'Filters' }).click();
+    const filters = new FilterPanelPage(page);
 
-    // Select "Villa" property type.
-    await page.locator('#filter-city').selectOption('Riyadh');
+    // Open the filter panel.
+    await filters.open();
+
+    // Select "Riyadh" city.
+    await filters.selectCity('Riyadh');
 
     // Set min price to a high value to narrow results.
-    await page.locator('#filter-min-price').fill('5000');
+    await filters.fillMinPrice('5000');
 
     // Select sort: Price: High to Low.
-    await page.locator('#filter-sort').selectOption('price_desc');
+    await filters.selectSort('price_desc');
 
     // Apply filters.
-    await page.getByRole('button', { name: 'Apply Filters' }).click();
+    await filters.apply();
 
-    // Wait for the grid to refresh with filtered results.
+    // Wait for the grid to refresh with filtered results — non-empty and
+    // strictly narrower than the initial grid.
     await expect
-      .poll(
-        async () => {
-          const count = await grid.locator('article').count();
-          return count;
-        },
-        { timeout: 15_000 },
-      )
+      .poll(async () => grid.locator('article').count(), { timeout: 15_000 })
       .toBeGreaterThan(0);
-
-    const filteredCount = await grid.locator('article').count();
-    expect(filteredCount).toBeLessThanOrEqual(initialCount);
+    await expect
+      .poll(async () => grid.locator('article').count(), { timeout: 15_000 })
+      .toBeLessThan(initialCount);
 
     // Re-open filter panel and clear all filters.
-    await page.getByRole('button', { name: /Filters/ }).click();
-    await page.getByRole('button', { name: 'Clear All' }).click();
+    await filters.open();
+    await filters.clearAll();
 
     // Wait for the full grid to be restored.
     await expect
       .poll(async () => grid.locator('article').count(), { timeout: 15_000 })
-      .toBe(initialCount);
+      .toBeGreaterThanOrEqual(initialCount);
   });
 
   test('[AC-22] filters serialize to URL query params (shareable URLs)', async ({ page }) => {
     // Open home page
-    await page.goto('/');
+    await goto(page, '/');
 
     const grid = page.getByTestId('property-grid');
     await expect(grid).toBeVisible({ timeout: 15_000 });
 
+    const filters = new FilterPanelPage(page);
+
     // Open filter panel and apply type=VILLA, minPrice=1000
-    await page.getByRole('button', { name: 'Filters' }).click();
-    await page.getByRole('button', { name: 'Villa', pressed: false }).click();
-    await page.locator('#filter-min-price').fill('1000');
-    await page.getByRole('button', { name: 'Apply Filters' }).click();
+    await filters.open();
+    await filters.selectType('Villa');
+    await filters.fillMinPrice('1000');
+    await filters.apply();
 
     // Assert URL contains ?type=VILLA&minPrice=1000
     await expect(page).toHaveURL(/type=VILLA/);
@@ -79,11 +80,11 @@ test.describe('Filters', () => {
       .toBeGreaterThan(0);
 
     // Reload page with those query params directly
-    await page.goto('/?type=VILLA&minPrice=1000');
+    await goto(page, '/?type=VILLA&minPrice=1000');
     await expect(grid).toBeVisible({ timeout: 15_000 });
 
     // Open filter panel and assert it reflects the loaded params
-    await page.getByRole('button', { name: 'Filters' }).click();
+    await filters.open();
     await expect(page.getByRole('button', { name: 'Villa', pressed: true })).toBeVisible();
     await expect(page.locator('#filter-min-price')).toHaveValue('1000');
 

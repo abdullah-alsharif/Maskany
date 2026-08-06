@@ -3,20 +3,20 @@
  *
  * Registers a fresh browser-type user with a unique phone number, enters
  * the OTP from the database, and confirms the profile page shows the
- * newly-created account details.
+ * newly-created account details. The phone number is derived from the
+ * test id so parallel runs (and reruns) never collide, and the created
+ * account is deleted afterwards to keep the database baseline clean.
  */
-import { expect, test } from '@playwright/test';
-import { getLatestOtpCode } from './test-helpers';
+import { expect, test } from './test-fixtures';
+import { goto, getLatestOtpCode } from './test-helpers';
+import { deleteTestUserByPhone } from './test-data';
 
-const FULL_NAME = 'Test Register User';
-const COUNTRY_CODE = '+966';
-const PHONE_LOCAL = '502000001';
-const FULL_PHONE = `${COUNTRY_CODE}${PHONE_LOCAL}`;
-const EMAIL = 'testregister@example.com';
+test.describe('Registration', () => {
+  test('register a new browser user via the create-account flow', async ({ page, uniqueData }) => {
+    const fullName = `${uniqueData.fullName} Registered`;
+    const fullPhone = uniqueData.phone;
 
-test.describe.serial('Registration', () => {
-  test('register a new browser user via the create-account flow', async ({ page }) => {
-    await page.goto('/profile');
+    await goto(page, '/profile');
 
     // Unauthenticated profile shows a "Sign in" link → navigate to /login.
     await expect(page.getByRole('heading', { level: 1, name: 'Profile' })).toBeVisible();
@@ -33,10 +33,10 @@ test.describe.serial('Registration', () => {
 
     // Fill the registration form.
     await expect(page.getByRole('heading', { level: 1, name: 'Create account' })).toBeVisible();
-    await page.getByLabel('Full name').fill(FULL_NAME);
-    await page.getByLabel('Country code').selectOption(COUNTRY_CODE);
-    await page.getByLabel('Phone number').fill(PHONE_LOCAL);
-    await page.getByLabel('Email (optional)').fill(EMAIL);
+    await page.getByLabel('Full name').fill(fullName);
+    await page.getByLabel('Country code').selectOption(uniqueData.countryCode);
+    await page.getByLabel('Phone number').fill(uniqueData.phoneLocal);
+    await page.getByLabel('Email (optional)').fill(uniqueData.email);
 
     // Default user type is BROWSER — keep it selected.
     await page.getByRole('button', { name: 'Create account' }).click();
@@ -49,7 +49,7 @@ test.describe.serial('Registration', () => {
     await expect
       .poll(
         async () => {
-          code = await getLatestOtpCode(FULL_PHONE);
+          code = await getLatestOtpCode(fullPhone);
           return code !== null;
         },
         { timeout: 10_000 },
@@ -65,7 +65,10 @@ test.describe.serial('Registration', () => {
     await expect(page).toHaveURL(/\/$/, { timeout: 15_000 });
 
     // Visit profile and confirm the registered user's name is shown.
-    await page.goto('/profile');
-    await expect(page.getByText(FULL_NAME)).toBeVisible({ timeout: 10_000 });
+    await goto(page, '/profile');
+    await expect(page.getByText(fullName)).toBeVisible({ timeout: 10_000 });
+
+    // Clean up the account so the next run starts from the baseline seed.
+    await deleteTestUserByPhone(fullPhone);
   });
 });

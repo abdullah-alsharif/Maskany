@@ -6,13 +6,14 @@
  * (e.g. only Riyadh listings contain "Riyadh"), giving us a deterministic
  * way to assert filtering.
  */
+import { goto } from './test-helpers';
 import { expect, test } from '@playwright/test';
 
 const RIYADH_QUERY = 'Riyadh';
 
 test.describe('Search', () => {
   test('typing in the search bar filters results and clearing restores them', async ({ page }) => {
-    await page.goto('/');
+    await goto(page, '/');
 
     const grid = page.getByTestId('property-grid');
     await expect(grid).toBeVisible({ timeout: 15_000 });
@@ -44,6 +45,6 @@ test.describe('Search', () => {
 
     await expect
       .poll(async () => grid.locator('article').count(), { timeout: 15_000 })
-      .toBe(initialCount);
+      .toBeGreaterThanOrEqual(initialCount);
   });
 });

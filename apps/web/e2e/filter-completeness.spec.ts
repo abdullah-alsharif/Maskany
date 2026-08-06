@@ -4,23 +4,26 @@
  * The existing filter test covers only city, minPrice, and sort. This spec
  * validates property type multi-select, maxPrice, rooms, and amenity filters.
  */
+import { goto } from './test-helpers';
 import { expect, test } from '@playwright/test';
+import { FilterPanelPage } from './pages/filter-panel-page';
 
 test.describe('Filter Completeness', () => {
   test.beforeEach(async ({ page }) => {
-    await page.goto('/');
+    await goto(page, '/');
     const grid = page.getByTestId('property-grid');
     await expect(grid).toBeVisible({ timeout: 15_000 });
   });
 
   test('property type multi-select filters correctly', async ({ page }) => {
     const grid = page.getByTestId('property-grid');
+    const filters = new FilterPanelPage(page);
 
     // Open filter and select Villa + Apartment.
-    await page.getByRole('button', { name: 'Filters' }).click();
-    await page.getByRole('button', { name: 'Villa', pressed: false }).click();
-    await page.getByRole('button', { name: 'Apartment', pressed: false }).click();
-    await page.getByRole('button', { name: 'Apply Filters' }).click();
+    await filters.open();
+    await filters.selectType('Villa');
+    await filters.selectType('Apartment');
+    await filters.apply();
 
     await expect(page).toHaveURL(/type=(VILLA|APARTMENT)/);
 
@@ -41,13 +44,20 @@ test.describe('Filter Completeness', () => {
   test('maxPrice filter narrows results', async ({ page }) => {
     const grid = page.getByTestId('property-grid');
     const initialCount = await grid.locator('article').count();
+    const filters = new FilterPanelPage(page);
 
-    await page.getByRole('button', { name: 'Filters' }).click();
-    await page.locator('#filter-max-price').fill('3000');
-    await page.getByRole('button', { name: 'Apply Filters' }).click();
+    await filters.open();
+    await filters.fillMaxPrice('3000');
+    await filters.apply();
 
     await expect(page).toHaveURL(/maxPrice=3000/);
 
+    // Non-empty and strictly narrower than the unfiltered grid (the
+    // refetch flashes through a skeleton, so "count === 0" alone would
+    // pass vacuously).
+    await expect
+      .poll(async () => grid.locator('article').count(), { timeout: 15_000 })
+      .toBeGreaterThan(0);
     await expect
       .poll(async () => grid.locator('article').count(), { timeout: 15_000 })
       .toBeLessThan(initialCount);
@@ -56,13 +66,17 @@ test.describe('Filter Completeness', () => {
   test('rooms filter narrows results', async ({ page }) => {
     const grid = page.getByTestId('property-grid');
     const initialCount = await grid.locator('article').count();
+    const filters = new FilterPanelPage(page);
 
-    await page.getByRole('button', { name: 'Filters' }).click();
-    await page.locator('#filter-rooms').selectOption('3');
-    await page.getByRole('button', { name: 'Apply Filters' }).click();
+    await filters.open();
+    await filters.selectRooms('3');
+    await filters.apply();
 
     await expect(page).toHaveURL(/rooms=3/);
 
+    await expect
+      .poll(async () => grid.locator('article').count(), { timeout: 15_000 })
+      .toBeGreaterThan(0);
     await expect
       .poll(async () => grid.locator('article').count(), { timeout: 15_000 })
       .toBeLessThan(initialCount);
@@ -71,28 +85,48 @@ test.describe('Filter Completeness', () => {
   test('amenity filter narrows results', async ({ page }) => {
     const grid = page.getByTestId('property-grid');
     const initialCount = await grid.locator('article').count();
+    const filters = new FilterPanelPage(page);
 
-    await page.getByRole('button', { name: 'Filters' }).click();
+    await filters.open();
     // Select "Pool" amenity — not all properties have a pool.
-    await page.getByRole('button', { name: 'Pool', pressed: false }).click();
-    await page.getByRole('button', { name: 'Apply Filters' }).click();
+    await filters.selectAmenity('Pool');
+    await filters.apply();
 
     await expect
       .poll(async () => grid.locator('article').count(), { timeout: 15_000 })
-      .toBeLessThanOrEqual(initialCount);
+      .toBeGreaterThan(0);
+    await expect
+      .poll(async () => grid.locator('article').count(), { timeout: 15_000 })
+      .toBeLessThan(initialCount);
   });
 
   test('rating filter narrows results', async ({ page }) => {
     const grid = page.getByTestId('property-grid');
+    const filters = new FilterPanelPage(page);
 
-    await page.getByRole('button', { name: 'Filters' }).click();
+    await filters.open();
     // Select minimum 4 stars.
-    await page.getByRole('button', { name: '4 stars' }).click();
-    await page.getByRole('button', { name: 'Apply Filters' }).click();
+    await filters.selectRating('4 stars');
+    await filters.apply();
 
-    // Results should be filtered (possibly zero).
-    await page.waitForTimeout(1000);
-    const count = await grid.locator('article').count();
-    expect(count).toBeGreaterThanOrEqual(0);
+    // Seeded properties (e.g. the Al Olaya apartment, 4.3) satisfy the
+    // filter, so results are non-empty — and every card must show a
+    // rating badge of at least 4.0. Poll on the badges themselves: the
+    // grid flashes through a skeleton state during the refetch, so a
+    // simple "count > 0" poll can pass on stale pre-filter cards.
+    await expect
+      .poll(
+        async () => {
+          const ratings = await grid.locator('[data-testid="property-rating"]').allInnerTexts();
+          const cardCount = await grid.locator('article').count();
+          return (
+            ratings.length > 0 &&
+            ratings.length === cardCount &&
+            ratings.every((rating) => parseFloat(rating) >= 4)
+          );
+        },
+        { timeout: 15_000 },
+      )
+      .toBe(true);
   });
 });

@@ -1,8 +1,9 @@
+import { goto } from './test-helpers';
 import { test, expect } from '@playwright/test';
 
 test.describe('PWA offline support', () => {
   test('offline banner appears when network is disabled', async ({ page, context }) => {
-    await page.goto('/');
+    await goto(page, '/');
     await expect(page.getByTestId('offline-banner')).not.toBeVisible();
 
     await context.setOffline(true);
@@ -13,7 +14,7 @@ test.describe('PWA offline support', () => {
   });
 
   test('offline banner disappears when network is restored', async ({ page, context }) => {
-    await page.goto('/');
+    await goto(page, '/');
     await context.setOffline(true);
     await page.waitForTimeout(500);
     await expect(page.getByTestId('offline-banner')).toBeVisible();
@@ -27,7 +28,7 @@ test.describe('PWA offline support', () => {
   // so the service worker cannot serve cached HTML after going offline.
   // Tested manually against production builds (`next build && next start`).
   test.skip('app shell loads from cache after going offline', async ({ page, context }) => {
-    await page.goto('/');
+    await goto(page, '/');
     await page.waitForLoadState('networkidle');
 
     await context.setOffline(true);

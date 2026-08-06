@@ -5,11 +5,12 @@
  * Houses, Studios, Other). This spec validates that each tab filters
  * the property grid correctly.
  */
+import { goto } from './test-helpers';
 import { expect, test } from '@playwright/test';
 
 test.describe('Category Tabs', () => {
   test.beforeEach(async ({ page }) => {
-    await page.goto('/');
+    await goto(page, '/');
     const grid = page.getByTestId('property-grid');
     await expect(grid).toBeVisible({ timeout: 15_000 });
   });
@@ -89,11 +90,24 @@ test.describe('Category Tabs', () => {
   test('Other tab shows only other types or is empty', async ({ page }) => {
     const grid = page.getByTestId('property-grid');
 
+    // Wait for the category fetch so we never assert on a stale grid.
+    const otherFetch = page.waitForResponse(
+      (r) => r.url().includes('/api/properties') && r.url().includes('type=OTHER'),
+    );
     await page.getByRole('tab', { name: 'Other' }).click();
+    await otherFetch;
 
-    // May be empty if no OTHER-type properties are seeded.
-    await page.waitForTimeout(1000);
-    const count = await grid.locator('article').count();
-    expect(count).toBeGreaterThanOrEqual(0);
+    // No OTHER-type properties are seeded and fixture-created properties
+    // are APARTMENT, so the tab is expected to be empty — but tolerate
+    // OTHER cards (e.g. added by external tooling) by asserting every
+    // visible card carries the "Other" badge.
+    const cardCount = await grid.locator('article').count();
+    if (cardCount > 0) {
+      const badges = grid
+        .locator('article')
+        .locator('span')
+        .filter({ hasText: /^Other$/ });
+      expect(await badges.count()).toBe(cardCount);
+    }
   });
 });

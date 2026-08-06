@@ -4,18 +4,24 @@
  * Validates that property detail pages display owner name and
  * member-since date as required by PRD §3.4.
  */
+import { goto } from './test-helpers';
 import { expect, test } from '@playwright/test';
+import { SEED_PROPERTY_TITLES } from './test-fixtures';
 
 test.describe('Owner Info', () => {
   test('property detail shows owner name', async ({ page }) => {
-    await page.goto('/');
+    await goto(page, '/');
 
     const grid = page.getByTestId('property-grid');
     await expect(grid).toBeVisible({ timeout: 15_000 });
 
-    // Click the first property card.
-    const firstCard = grid.locator('article').first();
-    await firstCard.locator('a').first().click();
+    // Click a seeded card (never deleted mid-run).
+    await grid
+      .locator('article')
+      .filter({ hasText: SEED_PROPERTY_TITLES[0] })
+      .locator('a')
+      .first()
+      .click();
     await expect(page).toHaveURL(/\/properties\/[0-9a-f-]{36}$/);
 
     // Owner section should be visible.
@@ -29,13 +35,17 @@ test.describe('Owner Info', () => {
   });
 
   test('property detail shows member since date', async ({ page }) => {
-    await page.goto('/');
+    await goto(page, '/');
 
     const grid = page.getByTestId('property-grid');
     await expect(grid).toBeVisible({ timeout: 15_000 });
 
-    const firstCard = grid.locator('article').first();
-    await firstCard.locator('a').first().click();
+    await grid
+      .locator('article')
+      .filter({ hasText: SEED_PROPERTY_TITLES[0] })
+      .locator('a')
+      .first()
+      .click();
     await expect(page).toHaveURL(/\/properties\/[0-9a-f-]{36}$/);
 
     // "Member since" text should be visible.

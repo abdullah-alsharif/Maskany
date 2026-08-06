@@ -1,23 +1,24 @@
-import { expect, test } from '@playwright/test';
-import { loginAsUser, acceptAiConsent } from './test-helpers';
-
-const OWNER_COUNTRY = '+966';
-const OWNER_PHONE = '501111001';
-const OWNER_PROPERTY_TITLE = 'Modern 2BR Apartment in Al Olaya';
+/**
+ * E2E — Property security and access control.
+ *
+ * Every scenario runs as a fresh per-test user, so parallel runs never
+ * share sessions or OTP cooldowns.
+ */
+import { expect, test } from './test-fixtures';
+import { goto, loginAsTestUser, acceptAiConsent } from './test-helpers';
 
 test.describe('Self-review block', () => {
-  test('owner visiting their own property sees they cannot review it', async ({ page }) => {
-    await loginAsUser(page, OWNER_COUNTRY, OWNER_PHONE);
+  test('owner visiting their own property sees they cannot review it', async ({
+    page,
+    ownerWithProperty,
+  }) => {
+    const { property } = ownerWithProperty;
+    await loginAsTestUser(page, ownerWithProperty.owner.phone);
     await expect(page.getByTestId('property-grid')).toBeVisible({ timeout: 15_000 });
 
-    await page.goto('/');
-    const grid = page.getByTestId('property-grid');
-    await expect(grid).toBeVisible({ timeout: 15_000 });
-
-    const ownerPropertyLink = grid.locator('article').filter({ hasText: OWNER_PROPERTY_TITLE }).locator('a').first();
-    await ownerPropertyLink.click();
+    await goto(page, `/properties/${property.id}`);
     await expect(page).toHaveURL(/\/properties\/[0-9a-f-]{36}$/);
-    await expect(page.getByRole('heading', { level: 1, name: OWNER_PROPERTY_TITLE })).toBeVisible({
+    await expect(page.getByRole('heading', { level: 1, name: property.title })).toBeVisible({
       timeout: 15_000,
     });
 
@@ -30,11 +31,11 @@ test.describe('Self-review block', () => {
 });
 
 test.describe('Property creation validation', () => {
-  test('submitting step 1 with empty title shows validation error', async ({ page }) => {
-    await loginAsUser(page, OWNER_COUNTRY, OWNER_PHONE);
+  test('submitting step 1 with empty title shows validation error', async ({ page, ownerUser }) => {
+    await loginAsTestUser(page, ownerUser.phone);
     await expect(page.getByTestId('property-grid')).toBeVisible({ timeout: 15_000 });
 
-    await page.goto('/properties/create');
+    await goto(page, '/properties/create');
     await expect(page).toHaveURL(/\/properties\/create$/);
     await acceptAiConsent(page);
 
@@ -45,11 +46,11 @@ test.describe('Property creation validation', () => {
   });
 });
 
-test.describe.serial('Browser user restrictions', () => {
-  test('browser-type user cannot access create-property page', async ({ page }) => {
-    await loginAsUser(page, '+966', '501111004');
+test.describe('Browser user restrictions', () => {
+  test('browser-type user cannot access create-property page', async ({ page, browserUser }) => {
+    await loginAsTestUser(page, browserUser.phone);
 
-    await page.goto('/properties/create');
+    await goto(page, '/properties/create');
     await expect(page).not.toHaveURL(/\/properties\/create$/);
   });
 });

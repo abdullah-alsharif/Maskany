@@ -147,7 +147,7 @@ export function PropertyCard({ property }: PropertyCardProps) {
           {property.averageRating > 0 && (
             <div className="flex items-center gap-1 bg-stone-50 px-1.5 py-0.5 rounded-md border border-stone-200/50">
               <Star size={12} fill="#f5b731" stroke="#f5b731" />
-              <span className="text-[12px] font-bold text-stone-800">
+              <span className="text-[12px] font-bold text-stone-800" data-testid="property-rating">
                 {property.averageRating.toFixed(1)}
               </span>
               <span className="text-[10px] text-stone-400">({property.reviewCount})</span>

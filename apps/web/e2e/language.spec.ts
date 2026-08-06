@@ -5,11 +5,12 @@
  * Clicking it switches the UI language and the button's aria-label updates
  * to reflect the opposite direction.
  */
+import { goto } from './test-helpers';
 import { expect, test } from '@playwright/test';
 
 test.describe('Language toggle', () => {
   test('toggling the language switcher flips between English and Arabic', async ({ page }) => {
-    await page.goto('/');
+    await goto(page, '/');
 
     // In the default English state the globe button's aria-label says
     // "التبديل إلى العربية" (Switch to Arabic).

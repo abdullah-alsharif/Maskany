@@ -11,6 +11,8 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:coverage": "vitest run --coverage",
+    "test:e2e:up": "docker compose -f ../../docker-compose.test.yml up -d --wait",
+    "test:e2e:down": "docker compose -f ../../docker-compose.test.yml down -v",
     "db:reset": "dotenv -e ../../.env -- tsx src/scripts/reset-db.ts",
     "db:migrate": "dotenv -e ../../.env -- tsx src/scripts/migrate.ts",
     "db:migrate:down": "dotenv -e ../../.env -- tsx src/scripts/migrate.ts down",

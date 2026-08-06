@@ -70,4 +70,15 @@ export default tseslint.config(
       'react/jsx-no-undef': 'off',
     },
   },
+  {
+    // Playwright specs and page objects are not React — the react-hooks
+    // plugin misfires on fixture functions (named like custom hooks) and
+    // empty dependency destructuring `({}, use)`.
+    files: ['apps/web/e2e/**/*.ts'],
+    rules: {
+      'react-hooks/rules-of-hooks': 'off',
+      'react-hooks/exhaustive-deps': 'off',
+      'no-empty-pattern': 'off',
+    },
+  },
 );

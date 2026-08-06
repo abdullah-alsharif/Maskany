@@ -1,14 +1,11 @@
-import { expect, test } from '@playwright/test';
-import { loginAsUser, acceptAiConsent } from './test-helpers';
-
-const OWNER_COUNTRY = '+966';
-const OWNER_PHONE = '501111001';
+import { expect, test } from './test-fixtures';
+import { goto, loginAsTestUser, acceptAiConsent } from './test-helpers';
 
 test.describe('Property form step validation', () => {
-  test.beforeEach(async ({ page }) => {
-    await loginAsUser(page, OWNER_COUNTRY, OWNER_PHONE);
+  test.beforeEach(async ({ page, ownerUser }) => {
+    await loginAsTestUser(page, ownerUser.phone);
     await expect(page.getByTestId('property-grid')).toBeVisible({ timeout: 15_000 });
-    await page.goto('/properties/create');
+    await goto(page, '/properties/create');
     await expect(page).toHaveURL(/\/properties\/create$/);
     await acceptAiConsent(page);
   });
@@ -80,8 +77,8 @@ test.describe('Property form step validation', () => {
 
     await page.getByLabel('WhatsApp number').fill('invalid');
     await page.getByRole('button', { name: 'Next', exact: true }).click();
-    await expect(
-      page.getByText('WhatsApp number must be in E.164 format'),
-    ).toBeVisible({ timeout: 5_000 });
+    await expect(page.getByText('WhatsApp number must be in E.164 format')).toBeVisible({
+      timeout: 5_000,
+    });
   });
 });

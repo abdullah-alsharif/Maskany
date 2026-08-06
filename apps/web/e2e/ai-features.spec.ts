@@ -10,29 +10,27 @@
  * verifies UI presence/loading states and accepts either success or
  * graceful error feedback.
  */
-import { expect, test } from '@playwright/test';
-import { loginAsUser } from './test-helpers';
+import { expect, test } from './test-fixtures';
+import { goto, loginAsTestUser } from './test-helpers';
 
-const OWNER_COUNTRY = '+966';
-const OWNER_PHONE = '501111001'; // owner-layla
-const PROPERTY_TITLE = 'Modern 2BR Apartment in Al Olaya';
-
-test('AI features on edit property page', async ({ page }) => {
+test('AI features on edit property page', async ({ page, ownerWithProperty }) => {
   test.setTimeout(180_000);
+
+  const { owner, property } = ownerWithProperty;
 
   // ====================================================================
   // Login as property owner and navigate to edit page
   // ====================================================================
-  await loginAsUser(page, OWNER_COUNTRY, OWNER_PHONE);
+  await loginAsTestUser(page, owner.phone);
   await expect(page.getByTestId('property-grid')).toBeVisible({ timeout: 15_000 });
 
-  await page.goto('/my-properties');
+  await goto(page, '/my-properties');
   await expect(page.getByRole('heading', { level: 1, name: 'My properties' })).toBeVisible({
     timeout: 10_000,
   });
 
-  await page.getByRole('link', { name: `Edit ${PROPERTY_TITLE}` }).click();
-  await expect(page).toHaveURL(/\/properties\/[0-9a-f-]{36}\/edit$/);
+  await page.getByRole('link', { name: `Edit ${property.title}` }).click();
+  await expect(page).toHaveURL(/\/properties\/[0-9a-f-]{36}\/edit$/, { timeout: 30_000 });
 
   // ====================================================================
   // AI consent dialog appears on first visit

@@ -1,8 +1,10 @@
+import { goto } from './test-helpers';
 import { expect, test } from '@playwright/test';
+import { FilterPanelPage } from './pages/filter-panel-page';
 
 test.describe('Search + Filters combined', () => {
   test('search query and property type filter work together', async ({ page }) => {
-    await page.goto('/');
+    await goto(page, '/');
 
     const grid = page.getByTestId('property-grid');
     await expect(grid).toBeVisible({ timeout: 15_000 });
@@ -22,9 +24,10 @@ test.describe('Search + Filters combined', () => {
 
     const riyadhCount = await grid.locator('article').count();
 
-    await page.getByRole('button', { name: 'Filters' }).click();
-    await page.getByRole('button', { name: 'Villa', pressed: false }).click();
-    await page.getByRole('button', { name: 'Apply Filters' }).click();
+    const filters = new FilterPanelPage(page);
+    await filters.open();
+    await filters.selectType('Villa');
+    await filters.apply();
 
     await expect(page).toHaveURL(/q=Riyadh/);
     await expect(page).toHaveURL(/type=VILLA/);
@@ -50,7 +53,7 @@ test.describe('Search + Filters combined', () => {
   });
 
   test('clearing search preserves active filters', async ({ page }) => {
-    await page.goto('/');
+    await goto(page, '/');
 
     const grid = page.getByTestId('property-grid');
     await expect(grid).toBeVisible({ timeout: 15_000 });
@@ -58,9 +61,10 @@ test.describe('Search + Filters combined', () => {
     await page.getByLabel('Search properties').first().fill('Riyadh');
     await expect(page).toHaveURL(/q=Riyadh/);
 
-    await page.getByRole('button', { name: 'Filters' }).click();
-    await page.locator('#filter-min-price').fill('1000');
-    await page.getByRole('button', { name: 'Apply Filters' }).click();
+    const filters = new FilterPanelPage(page);
+    await filters.open();
+    await filters.fillMinPrice('1000');
+    await filters.apply();
 
     await expect(page).toHaveURL(/q=Riyadh/);
     await expect(page).toHaveURL(/minPrice=1000/);
@@ -76,14 +80,15 @@ test.describe('Search + Filters combined', () => {
 
 test.describe('Sort order', () => {
   test('Price: Low to High sorts ascending', async ({ page }) => {
-    await page.goto('/');
+    await goto(page, '/');
 
     const grid = page.getByTestId('property-grid');
     await expect(grid).toBeVisible({ timeout: 15_000 });
 
-    await page.getByRole('button', { name: 'Filters' }).click();
-    await page.locator('#filter-sort').selectOption('price_asc');
-    await page.getByRole('button', { name: 'Apply Filters' }).click();
+    const filters = new FilterPanelPage(page);
+    await filters.open();
+    await filters.selectSort('price_asc');
+    await filters.apply();
 
     await expect(page).toHaveURL(/sort=price_asc/);
 
@@ -91,7 +96,10 @@ test.describe('Sort order', () => {
       .poll(async () => grid.locator('article').count(), { timeout: 15_000 })
       .toBeGreaterThan(1);
 
-    const prices = await grid.locator('article').locator('[data-testid="property-price"]').allInnerTexts();
+    const prices = await grid
+      .locator('article')
+      .locator('[data-testid="property-price"]')
+      .allInnerTexts();
     const numericPrices = prices.map((p) => parseInt(p.replace(/[^0-9]/g, ''), 10));
     for (let i = 1; i < numericPrices.length; i++) {
       expect(numericPrices[i]!).toBeGreaterThanOrEqual(numericPrices[i - 1]!);
@@ -99,14 +107,15 @@ test.describe('Sort order', () => {
   });
 
   test('Price: High to Low sorts descending', async ({ page }) => {
-    await page.goto('/');
+    await goto(page, '/');
 
     const grid = page.getByTestId('property-grid');
     await expect(grid).toBeVisible({ timeout: 15_000 });
 
-    await page.getByRole('button', { name: 'Filters' }).click();
-    await page.locator('#filter-sort').selectOption('price_desc');
-    await page.getByRole('button', { name: 'Apply Filters' }).click();
+    const filters = new FilterPanelPage(page);
+    await filters.open();
+    await filters.selectSort('price_desc');
+    await filters.apply();
 
     await expect(page).toHaveURL(/sort=price_desc/);
 
@@ -114,7 +123,10 @@ test.describe('Sort order', () => {
       .poll(async () => grid.locator('article').count(), { timeout: 15_000 })
       .toBeGreaterThan(1);
 
-    const prices = await grid.locator('article').locator('[data-testid="property-price"]').allInnerTexts();
+    const prices = await grid
+      .locator('article')
+      .locator('[data-testid="property-price"]')
+      .allInnerTexts();
     const numericPrices = prices.map((p) => parseInt(p.replace(/[^0-9]/g, ''), 10));
     for (let i = 1; i < numericPrices.length; i++) {
       expect(numericPrices[i]!).toBeLessThanOrEqual(numericPrices[i - 1]!);

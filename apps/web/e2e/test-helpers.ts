@@ -22,9 +22,14 @@ export const TEST_WEB_URL = `http://localhost:${TEST_WEB_PORT}`;
 
 let cachedPool: Pool | null = null;
 
-function getPool(): Pool {
+/**
+ * Shared PG Pool for the test database. Exported so the test-data layer
+ * (user/property/review creation) uses the same connection pool as the OTP
+ * helper — one pool per Playwright worker, closed in global teardown.
+ */
+export function getPool(): Pool {
   if (cachedPool === null) {
-    cachedPool = new Pool({ connectionString: TEST_DATABASE_URL, max: 2 });
+    cachedPool = new Pool({ connectionString: TEST_DATABASE_URL, max: 4 });
   }
   return cachedPool;
 }
@@ -97,11 +102,52 @@ export async function loginAsUser(
 
   await expect(page).toHaveURL(/\/verify-otp$/);
 
+  await submitOtpFromDb(page, fullPhone);
+  await dismissRecoveryPrompt(page);
+
+  await expect(page).toHaveURL(/\/$/, { timeout: 15_000 });
+}
+
+/**
+ * Log in through the email OTP channel (login page email mode).
+ */
+export async function loginByEmail(page: Page, email: string): Promise<void> {
+  await page.goto('/login');
+  await page.getByRole('button', { name: 'Use email' }).click();
+  await page.getByLabel('Email address').fill(email);
+  await page.getByRole('button', { name: 'Send code' }).click();
+
+  await expect(page).toHaveURL(/\/verify-otp$/);
+
+  await submitOtpFromDb(page, email);
+  await dismissRecoveryPrompt(page);
+
+  await expect(page).toHaveURL(/\/$/, { timeout: 15_000 });
+}
+
+/**
+ * Log in as a user that already exists (e.g. one created by the
+ * `browserUser` / `ownerUser` fixtures). Accepts the full E.164 phone and
+ * splits it into the country-code + local parts the login form expects.
+ * The API rejects logins for unknown identifiers, so callers must create
+ * the user first — the fixtures do this automatically.
+ */
+export async function loginAsTestUser(page: Page, fullPhone: string): Promise<void> {
+  const countryCode = fullPhone.slice(0, 4);
+  const phoneLocal = fullPhone.slice(4);
+  await loginAsUser(page, countryCode, phoneLocal);
+}
+
+/**
+ * Poll the test database for the latest live OTP for `identifier`, type it
+ * into the numbered digit inputs, and wait for verification to land.
+ */
+export async function submitOtpFromDb(page: Page, identifier: string): Promise<void> {
   let code: string | null = null;
   await expect
     .poll(
       async () => {
-        code = await getLatestOtpCode(fullPhone);
+        code = await getLatestOtpCode(identifier);
         return code !== null;
       },
       { timeout: 10_000 },
@@ -112,9 +158,13 @@ export async function loginAsUser(
   for (let i = 0; i < code!.length; i += 1) {
     await page.getByLabel(`Digit ${i + 1}`).type(code![i]!);
   }
+}
 
-  // After OTP verification the API may prompt the user to save recovery
-  // codes for first-time login. Dismiss it if present.
+/**
+ * Dismiss the recovery-codes prompt that appears on first-time logins, if
+ * it shows up at all.
+ */
+export async function dismissRecoveryPrompt(page: Page): Promise<void> {
   const recoveryButton = page.getByRole('button', { name: "I've saved these codes" });
   try {
     await recoveryButton.waitFor({ timeout: 5_000 });
@@ -122,6 +172,27 @@ export async function loginAsUser(
   } catch {
     // No recovery prompt — proceed.
   }
+}
 
-  await expect(page).toHaveURL(/\/$/, { timeout: 15_000 });
+/**
+ * Navigate to an app route with resilience to one-shot dev-server navigation
+ * races. Under `next dev` compilation/HMR storms the server can abort a
+ * `page.goto` (`net::ERR_ABORTED`) before it commits — a transient race that
+ * a plain `goto` never survives. Re-issue the navigation when that happens,
+ * up to 3 attempts. Any other navigation outcome (timeout, real HTTP error)
+ * is thrown to the caller immediately — this only masks the abort race.
+ */
+export async function goto(page: Page, url: string, options?: { timeout?: number }): Promise<void> {
+  const timeout = options?.timeout ?? 30_000;
+  for (let attempt = 1; ; attempt += 1) {
+    try {
+      await page.goto(url, { timeout });
+      return;
+    } catch (err) {
+      const message = String(err);
+      if (!message.includes('ERR_ABORTED')) throw err;
+      if (attempt >= 3) throw err;
+      await page.waitForTimeout(1_000 * attempt);
+    }
+  }
 }

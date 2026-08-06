@@ -4,36 +4,40 @@
  * Validates that property content (titles, descriptions) switches between
  * English and Arabic when the user toggles the language. The LanguageSwitcher
  * is on the profile page; the globe button is on the home page.
+ *
+ * The first test uses its own property with a DB-seeded Arabic translation,
+ * so it never depends on which card happens to render first in a parallel
+ * run. The second test uses the seeded owner's email channel (a unique
+ * identifier no other spec touches).
  */
-import { expect, test } from '@playwright/test';
-import { getLatestOtpCode } from './test-helpers';
+import { expect, test } from './test-fixtures';
+import { goto, loginByEmail } from './test-helpers';
+import { createTestPropertyArabicTranslation } from './test-data';
 
 test.describe('Language Content Switching', () => {
-  test('property detail content switches on language toggle', async ({ page }) => {
-    // Go to home and note the first property's English title.
-    await page.goto('/');
-    const grid = page.getByTestId('property-grid');
-    await expect(grid).toBeVisible({ timeout: 15_000 });
-
-    const firstCard = grid.locator('article').first();
-    const englishTitle = (await firstCard.locator('h3').innerText()).trim();
-    const detailHref = await firstCard.locator('a').first().getAttribute('href');
-    expect(detailHref).toBeTruthy();
+  test('property detail content switches on language toggle', async ({
+    page,
+    ownerWithProperty,
+  }) => {
+    const { property } = ownerWithProperty;
+    await createTestPropertyArabicTranslation({
+      propertyId: property.id,
+      englishTitle: property.title,
+    });
 
     // Navigate to detail page and verify English title.
-    await firstCard.locator('a').first().click();
-    await expect(page).toHaveURL(/\/properties\/[0-9a-f-]{36}$/);
-    await expect(page.getByRole('heading', { level: 1, name: englishTitle })).toBeVisible({
+    await goto(page, `/properties/${property.id}`);
+    await expect(page.getByRole('heading', { level: 1, name: property.title })).toBeVisible({
       timeout: 10_000,
     });
 
     // Switch to Arabic via home page globe button.
-    await page.goto('/');
-    await expect(grid).toBeVisible({ timeout: 15_000 });
+    await goto(page, '/');
+    await expect(page.getByTestId('property-grid')).toBeVisible({ timeout: 15_000 });
     await page.getByRole('button', { name: /التبديل/ }).click();
 
     // Navigate back to the same property detail.
-    await page.goto(detailHref!);
+    await goto(page, `/properties/${property.id}`);
 
     // Wait for content to update — the h1 should contain Arabic characters.
     await expect
@@ -48,18 +52,18 @@ test.describe('Language Content Switching', () => {
       .toBe(true);
 
     // Switch back to English via home page globe button.
-    await page.goto('/');
-    await expect(grid).toBeVisible({ timeout: 15_000 });
-    await page.getByRole('button', { name: /Switch to English/ }).click();
+    await goto(page, '/');
+    await expect(page.getByTestId('property-grid')).toBeVisible({ timeout: 15_000 });
+    await page.getByRole('button', { name: 'Switch to English' }).click();
 
     // Navigate back to the property and verify English title is restored.
-    await page.goto(detailHref!);
+    await goto(page, `/properties/${property.id}`);
     await expect
       .poll(
         async () => {
           const h1 = page.getByRole('heading', { level: 1 });
           const text = await h1.innerText();
-          return text === englishTitle;
+          return text === property.title;
         },
         { timeout: 15_000 },
       )
@@ -67,40 +71,12 @@ test.describe('Language Content Switching', () => {
   });
 
   test('my-properties page shows translated titles', async ({ page }) => {
-    // Use email login to avoid shared phone-based rate limiter.
-    await page.goto('/login');
-    await page.getByRole('button', { name: 'Use email' }).click();
-    await page.getByLabel('Email address').fill('layla@example.com');
-    await page.getByRole('button', { name: 'Send code' }).click();
-    await expect(page).toHaveURL(/\/verify-otp$/);
-
-    let code: string | null = null;
-    await expect
-      .poll(
-        async () => {
-          code = await getLatestOtpCode('layla@example.com');
-          return code !== null;
-        },
-        { timeout: 10_000 },
-      )
-      .toBe(true);
-
-    for (let i = 0; i < code!.length; i += 1) {
-      await page.getByLabel(`Digit ${i + 1}`).type(code![i]!);
-    }
-
-    const recoveryButton = page.getByRole('button', { name: "I've saved these codes" });
-    try {
-      await recoveryButton.waitFor({ timeout: 5_000 });
-      await recoveryButton.click();
-    } catch {
-      // No recovery prompt.
-    }
-
-    await expect(page).toHaveURL(/\/$/, { timeout: 15_000 });
+    // The seeded owner's email is unique to this spec — no parallel
+    // collisions on the OTP identifier.
+    await loginByEmail(page, 'layla@example.com');
 
     // Navigate to my-properties.
-    await page.goto('/my-properties');
+    await goto(page, '/my-properties');
     await expect(page.getByRole('heading', { level: 1 })).toBeVisible({ timeout: 10_000 });
 
     // Record an English title.
@@ -109,11 +85,11 @@ test.describe('Language Content Switching', () => {
     const englishTitle = (await firstTitle.innerText()).trim();
 
     // Switch to Arabic via home page globe button.
-    await page.goto('/');
+    await goto(page, '/');
     await page.getByRole('button', { name: /التبديل/ }).click();
 
     // Go back to my-properties.
-    await page.goto('/my-properties');
+    await goto(page, '/my-properties');
     await expect(page.getByRole('heading', { level: 1 })).toBeVisible({ timeout: 10_000 });
 
     // Wait for title to change to Arabic.
@@ -128,7 +104,7 @@ test.describe('Language Content Switching', () => {
       .toBe(true);
 
     // Switch back to English via home page globe button.
-    await page.goto('/');
-    await page.getByRole('button', { name: /Switch to English/ }).click();
+    await goto(page, '/');
+    await page.getByRole('button', { name: 'Switch to English' }).click();
   });
 });

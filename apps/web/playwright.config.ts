@@ -6,12 +6,12 @@
  *
  *   1. The Express API on :3099 wired to the test database (port 5433) with
  *      `NODE_ENV=test` so SMS/email transports log instead of calling Twilio
- *      and the OTP routes accept seeded phone numbers without a paid SMS run.
- *   2. The Vite dev server on :5199 with `VITE_API_URL` pointing at the test
- *      API so every fetch from the browser hits :3099.
+ *      and the OTP cooldown is disabled (`OTP_COOLDOWN_MS: '0'`).
+ *   2. The Next.js dev server on :5199 with `API_BASE_URL` pointing at the
+ *      test API so every fetch from the browser hits :3099.
  *
- * `globalSetup` re-seeds the test database before the run starts so the
- * fixture data (16 properties, 5 users) the specs rely on is always present.
+ * `globalSetup` re-seeds the test database and pre-compiles every route
+ * (warm-up) before the run starts.
  *
  * Mobile-first: 375x812 (iPhone 13) viewport mirrors the development target.
  */
@@ -30,31 +30,52 @@ const REPO_ROOT = path.resolve(__dirname, '../..');
 const API_PACKAGE_DIR = path.resolve(REPO_ROOT, 'apps/api');
 const API_SERVER_ENTRY = path.resolve(API_PACKAGE_DIR, 'dist/src/server.js');
 
+// Configurable timeouts — slow machines can raise them via env:
+// E2E_EXPECT_TIMEOUT E2E_ACTION_TIMEOUT E2E_WEBSERVER_TIMEOUT E2E_SKIP_BUILD
+const expectTimeout = Number(process.env.E2E_EXPECT_TIMEOUT) || 15_000;
+const actionTimeout = Number(process.env.E2E_ACTION_TIMEOUT) || 30_000;
+const webServerTimeout = Number(process.env.E2E_WEBSERVER_TIMEOUT) || 120_000;
+const skipApiBuild = process.env.E2E_SKIP_BUILD === 'true';
+// The webServer command owns the (fast) API TypeScript build so
+// `playwright test` works from a clean checkout without extra steps.
+const apiServerCommand = skipApiBuild
+  ? `node ${API_SERVER_ENTRY}`
+  : `pnpm exec tsc -p tsconfig.build.json && node ${API_SERVER_ENTRY}`;
+
 export default defineConfig({
   testDir: './e2e',
   testMatch: /.*\.spec\.ts$/,
-  fullyParallel: false,
-  workers: 1,
+  // Every spec owns its data through the fixtures layer (unique phone/email/
+  // titles per test), so the whole suite runs in parallel. E2E_SERIAL=1
+  // forces a single worker for debugging order-dependent failures.
+  fullyParallel: true,
+  workers: process.env.E2E_SERIAL === '1' ? 1 : '50%',
   retries: process.env.CI ? 1 : 0,
-  reporter: process.env.CI ? [['list'], ['html', { open: 'never' }]] : 'list',
+  forbidOnly: !!process.env.CI,
+  reporter: process.env.CI
+    ? [['list'], ['html', { open: 'never' }]]
+    : [['list'], ['html', { open: 'on-failure' }]],
   timeout: 60_000,
   expect: {
-    timeout: 10_000,
+    // Generous default: the webpack dev server compiles routes lazily, and
+    // under 50% worker parallelism cold compiles can take a few seconds.
+    timeout: expectTimeout,
   },
   use: {
     baseURL: `http://localhost:${TEST_WEB_PORT}`,
     viewport: { width: 375, height: 812 },
     trace: 'retain-on-failure',
     screenshot: 'only-on-failure',
+    actionTimeout,
   },
   globalSetup: path.resolve(__dirname, 'e2e/global-setup.ts'),
   globalTeardown: path.resolve(__dirname, 'e2e/global-teardown.ts'),
   webServer: [
     {
-      command: `node ${API_SERVER_ENTRY}`,
+      command: apiServerCommand,
       cwd: API_PACKAGE_DIR,
       reuseExistingServer: !process.env.CI,
-      timeout: 60_000,
+      timeout: webServerTimeout,
       stdout: 'pipe',
       stderr: 'pipe',
       env: {
@@ -84,7 +105,7 @@ export default defineConfig({
       cwd: __dirname,
       url: `http://localhost:${TEST_WEB_PORT}`,
       reuseExistingServer: !process.env.CI,
-      timeout: 120_000,
+      timeout: webServerTimeout,
       stdout: 'pipe',
       stderr: 'pipe',
       env: {

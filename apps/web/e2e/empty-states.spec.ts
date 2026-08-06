@@ -4,11 +4,13 @@
  * Validates the no-results empty state, filter-matching-nothing state,
  * and 404 pages for invalid property UUIDs and routes.
  */
+import { goto } from './test-helpers';
 import { expect, test } from '@playwright/test';
+import { FilterPanelPage } from './pages/filter-panel-page';
 
 test.describe('Empty States', () => {
   test('search for nonexistent term shows no-results state', async ({ page }) => {
-    await page.goto('/');
+    await goto(page, '/');
 
     const grid = page.getByTestId('property-grid');
     await expect(grid).toBeVisible({ timeout: 15_000 });
@@ -24,15 +26,16 @@ test.describe('Empty States', () => {
   });
 
   test('filters matching nothing show empty state', async ({ page }) => {
-    await page.goto('/');
+    await goto(page, '/');
 
     const grid = page.getByTestId('property-grid');
     await expect(grid).toBeVisible({ timeout: 15_000 });
 
     // Set maxPrice to 1 — no property costs 1.
-    await page.getByRole('button', { name: 'Filters' }).click();
-    await page.locator('#filter-max-price').fill('1');
-    await page.getByRole('button', { name: 'Apply Filters' }).click();
+    const filters = new FilterPanelPage(page);
+    await filters.open();
+    await filters.fillMaxPrice('1');
+    await filters.apply();
 
     await expect.poll(async () => grid.locator('article').count(), { timeout: 15_000 }).toBe(0);
 
@@ -42,7 +45,7 @@ test.describe('Empty States', () => {
 
 test.describe('404 Pages', () => {
   test('nonexistent property UUID shows not-found', async ({ page }) => {
-    await page.goto('/properties/00000000-0000-0000-0000-000000000000');
+    await goto(page, '/properties/00000000-0000-0000-0000-000000000000');
 
     await expect(page.getByText('Property not found')).toBeVisible({ timeout: 15_000 });
   });

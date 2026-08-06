@@ -1,80 +1,135 @@
 /**
  * E2E — Reviews (PRD §5).
  *
- * Combined into a single test because:
- * 1. Playwright resets the page to about:blank between serial tests
- * 2. The OTP service has a 30-second cooldown — using the same phone
- *    across separate tests would cause 429 errors.
- *
- * Flow: login as a seeded browser user → navigate to a property →
- * verify rating distribution chart → write a review → edit the
- * comment → confirm the update.
+ * Fully isolated: the test creates its own owner, property and browser
+ * user, then exercises the rating-distribution chart, review submission
+ * and review editing against that private property. No seeded records are
+ * touched, so the spec is safe to run in parallel with anything else.
  */
-import { expect, test } from '@playwright/test';
-import { loginAsUser } from './test-helpers';
+import { expect, test } from './test-fixtures';
+import { goto, loginAsTestUser } from './test-helpers';
+import { createTestReview } from './test-data';
 
-const BROWSER_COUNTRY = '+966';
-const BROWSER_PHONE = '500009001'; // dev-browser
 const REVIEW_COMMENT = 'Great place, highly recommend!';
 const UPDATED_COMMENT = 'Even better after staying longer.';
 
-test('[AC-29] rating distribution bar chart + full reviews flow', async ({ page }) => {
-  // --- Login and navigate to a property ---
-  await loginAsUser(page, BROWSER_COUNTRY, BROWSER_PHONE);
+test.describe('Reviews', () => {
+  test('[AC-29] rating distribution bar chart + full reviews flow', async ({
+    page,
+    ownerWithProperty,
+    browserUser,
+  }) => {
+    const { property } = ownerWithProperty;
+    const propertyUrl = `/properties/${property.id}`;
 
-  const grid = page.getByTestId('property-grid');
-  await expect(grid).toBeVisible({ timeout: 15_000 });
+    // --- Login as a fresh browser user and open the private property ---
+    await loginAsTestUser(page, browserUser.phone);
 
-  const firstCard = grid.locator('article').first();
-  const link = firstCard.locator('a').first();
-  const href = await link.getAttribute('href');
-  const propertyUrl = href ?? '/properties/seed';
+    await goto(page, propertyUrl);
+    await expect(page.getByRole('heading', { level: 1, name: property.title })).toBeVisible({
+      timeout: 15_000,
+    });
 
-  await link.click();
-  await expect(page).toHaveURL(/\/properties\/[0-9a-f-]{36}$/);
+    // --- [AC-29] Rating distribution bar chart ---
+    const distribution = page.getByRole('group', { name: /rating distribution/i });
+    await expect(distribution).toBeVisible({ timeout: 10_000 });
 
-  // --- [AC-29] Rating distribution bar chart ---
-  const distribution = page.getByRole('group', { name: /rating distribution/i });
-  await expect(distribution).toBeVisible({ timeout: 10_000 });
+    const bars = distribution.locator('[data-testid="distribution-fill"]');
+    const barCount = await bars.count();
+    expect(barCount).toBeGreaterThanOrEqual(1);
 
-  const bars = distribution.locator('[data-testid="distribution-fill"]');
-  const barCount = await bars.count();
-  expect(barCount).toBeGreaterThanOrEqual(1);
+    // Assert bar widths are valid percentage strings
+    for (let i = 0; i < barCount; i++) {
+      const style = await bars.nth(i).getAttribute('style');
+      expect(style).toMatch(/width:\s*\d+(\.\d+)?%/);
+    }
 
-  // Assert bar widths are valid percentage strings
-  for (let i = 0; i < barCount; i++) {
-    const style = await bars.nth(i).getAttribute('style');
-    expect(style).toMatch(/width:\s*\d+(\.\d+)?%/);
-  }
+    // Assert average rating and total review count displayed
+    const summary = page.getByRole('region', { name: /reviews summary/i });
+    await expect(summary).toBeVisible({ timeout: 5_000 });
+    await expect(summary.getByText(/\d+ review/i)).toBeVisible();
 
-  // Assert average rating and total review count displayed
-  const summary = page.getByRole('region', { name: /reviews summary/i });
-  await expect(summary).toBeVisible({ timeout: 5_000 });
-  await expect(summary.getByText(/\d+ review/i)).toBeVisible();
+    // --- Leave a review ---
+    const reviewsSection = page.getByRole('region', { name: 'Reviews', exact: true });
+    await reviewsSection.scrollIntoViewIfNeeded();
+    await expect(reviewsSection).toBeVisible({ timeout: 10_000 });
 
-  // --- Leave a review ---
-  const reviewsSection = page.getByRole('region', { name: 'Reviews', exact: true });
-  await reviewsSection.scrollIntoViewIfNeeded();
-  await expect(reviewsSection).toBeVisible({ timeout: 10_000 });
+    await page.getByRole('button', { name: 'Rate 5 stars' }).click();
+    await page.getByLabel('Comment').fill(REVIEW_COMMENT);
+    await page.getByRole('button', { name: 'Submit review' }).click();
 
-  await page.getByRole('button', { name: 'Rate 5 stars' }).click();
-  await page.getByLabel('Comment').fill(REVIEW_COMMENT);
-  await page.getByRole('button', { name: 'Submit review' }).click();
+    await expect(page.getByText(REVIEW_COMMENT)).toBeVisible({ timeout: 10_000 });
 
-  await expect(page.getByText(REVIEW_COMMENT)).toBeVisible({ timeout: 10_000 });
+    // --- Edit the review ---
+    await goto(page, propertyUrl);
 
-  // --- Edit the review ---
-  await page.goto(propertyUrl);
+    const editButton = page.getByRole('button', { name: 'Edit' });
+    await expect(editButton).toBeVisible({ timeout: 10_000 });
+    await editButton.click();
 
-  const editButton = page.getByRole('button', { name: 'Edit' });
-  await expect(editButton).toBeVisible({ timeout: 10_000 });
-  await editButton.click();
+    const commentInput = page.getByLabel('Comment');
+    await commentInput.clear();
+    await commentInput.fill(UPDATED_COMMENT);
 
-  const commentInput = page.getByLabel('Comment');
-  await commentInput.clear();
-  await commentInput.fill(UPDATED_COMMENT);
+    await page.getByRole('button', { name: 'Update review' }).click();
 
-  await page.getByRole('button', { name: 'Update review' }).click();
+    await expect(page.getByText(UPDATED_COMMENT)).toBeVisible({ timeout: 10_000 });
+    await expect(page.getByText(REVIEW_COMMENT)).not.toBeVisible();
+  });
 
-  await expect(page.getByText(UPDATED_COMMENT)).toBeVisible({ timeout: 10_000 });
+  test('submitting a review without a rating shows a validation error', async ({
+    page,
+    ownerWithProperty,
+    browserUser,
+  }) => {
+    const { property } = ownerWithProperty;
+    await loginAsTestUser(page, browserUser.phone);
+
+    await goto(page, `/properties/${property.id}`);
+    await expect(page.getByRole('heading', { level: 1, name: property.title })).toBeVisible({
+      timeout: 15_000,
+    });
+
+    const reviewsSection = page.getByRole('region', { name: 'Reviews', exact: true });
+    await reviewsSection.scrollIntoViewIfNeeded();
+
+    await page.getByLabel('Comment').fill('No rating selected.');
+    await page.getByRole('button', { name: 'Submit review' }).click();
+
+    await expect(page.locator('p[role="alert"]')).toBeVisible({ timeout: 5_000 });
+    await expect(page.locator('p[role="alert"]')).toContainText(/rate|rating/i);
+  });
+
+  test('1-star review is accepted and reflected in the summary', async ({
+    page,
+    ownerWithProperty,
+    browserUser,
+  }) => {
+    const { owner, property } = ownerWithProperty;
+    await loginAsTestUser(page, browserUser.phone);
+
+    // A seeded 5-star review from the property owner keeps the average > 1.
+    await createTestReview({
+      propertyId: property.id,
+      userId: owner.id,
+      rating: 5,
+      comment: 'Hosting a verified guest.',
+    });
+
+    await goto(page, `/properties/${property.id}`);
+    await expect(page.getByRole('heading', { level: 1, name: property.title })).toBeVisible({
+      timeout: 15_000,
+    });
+
+    const reviewsSection = page.getByRole('region', { name: 'Reviews', exact: true });
+    await reviewsSection.scrollIntoViewIfNeeded();
+
+    await page.getByRole('button', { name: 'Rate 1 star' }).click();
+    await page.getByLabel('Comment').fill('One star edge case.');
+    await page.getByRole('button', { name: 'Submit review' }).click();
+
+    await expect(page.getByText('One star edge case.')).toBeVisible({ timeout: 10_000 });
+    const summary = page.getByRole('region', { name: /reviews summary/i });
+    await expect(summary.getByText(/\d+ review/i)).toBeVisible();
+  });
 });

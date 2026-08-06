@@ -1,67 +1,85 @@
-import { expect, test } from '@playwright/test';
+/**
+ * E2E — Image upload validation during property creation.
+ *
+ * Valid uploads succeed and publish; non-image files are rejected with a
+ * validation alert. Each test logs in with a fresh per-test owner and uses
+ * a unique property title, so the delete step is unambiguous in parallel.
+ */
+import { expect, test } from './test-fixtures';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import { loginAsUser, acceptAiConsent } from './test-helpers';
+import { loginAsTestUser } from './test-helpers';
+import { MyPropertiesPage } from './pages/my-properties-page';
+import { PropertyWizardPage } from './pages/property-wizard-page';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-const OWNER_COUNTRY = '+966';
-const OWNER_PHONE = '500009002';
-const PROPERTY_TITLE = 'E2E Upload Validation Test';
-
 test.describe('Image upload validation', () => {
-  test.beforeEach(async ({ page }) => {
-    await loginAsUser(page, OWNER_COUNTRY, OWNER_PHONE);
-    await page.goto('/my-properties');
-    await page.getByRole('link', { name: 'New listing' }).click();
-    await expect(page).toHaveURL(/\/properties\/create$/);
-    await acceptAiConsent(page);
+  test('valid image upload succeeds', async ({ page, uniqueData, ownerUser }) => {
+    const propertyTitle = uniqueData.title('Upload Validation Property');
+    const wizard = new PropertyWizardPage(page);
+    const myProperties = new MyPropertiesPage(page);
 
-    await page.getByLabel('Title').fill(PROPERTY_TITLE);
-    await page.getByLabel('Description').fill('Testing image upload validation.');
-    await page.getByRole('button', { name: 'Next', exact: true }).click();
+    await loginAsTestUser(page, ownerUser.phone);
 
-    await page.getByLabel('Price').fill('5000');
-    await page.getByLabel('Bedrooms').fill('2');
-    await page.getByLabel('Bathrooms').fill('1');
-    await page.getByLabel('Area (m²)').fill('80');
-    await page.getByLabel('Currency').fill('SAR');
-    await page.getByRole('button', { name: 'Next', exact: true }).click();
+    await wizard.gotoCreate();
+    await wizard.fillBasics(propertyTitle, 'Testing image upload validation.');
+    await wizard.fillDetails({
+      price: '5000',
+      bedrooms: '2',
+      bathrooms: '1',
+      area: '80',
+      currency: 'SAR',
+    });
+    await wizard.fillLocation({ city: 'Riyadh', neighborhood: 'Test Area', country: 'SA' });
 
-    await page.getByLabel('City').fill('Riyadh');
-    await page.getByLabel('Area / neighborhood').fill('Test Area');
-    await page.getByLabel('Country').fill('SA');
-    await page.getByRole('button', { name: 'Next', exact: true }).click();
-  });
-
-  test('valid image upload succeeds', async ({ page }) => {
-    const fileInput = page.locator('input[type="file"]').first();
-    await fileInput.setInputFiles(path.resolve(__dirname, 'fixtures/test-image.png'));
-    await page.waitForTimeout(2000);
-
-    await page.getByRole('button', { name: 'Next', exact: true }).click();
-    await page.getByLabel('WhatsApp number').fill('+966500009002');
-    await page.getByRole('button', { name: 'Next', exact: true }).click();
-    await page.getByRole('button', { name: 'Publish listing' }).click();
-    await expect(page).toHaveURL(/\/properties\/[0-9a-f-]{36}$/, { timeout: 15_000 });
+    await wizard.uploadImages(path.resolve(__dirname, 'fixtures/test-image.png'));
+    await wizard.fillContact(uniqueData.phone);
+    await wizard.publish({ expectMediaUpload: true });
 
     const images = page.locator('img');
     await expect(images.first()).toBeVisible({ timeout: 10_000 });
 
-    await page.goto('/my-properties');
-    await page.getByRole('button', { name: `Delete ${PROPERTY_TITLE}` }).click();
-    await page.getByRole('button', { name: 'Yes, delete listing' }).click();
+    await myProperties.goto();
+    await myProperties.deleteProperty(propertyTitle);
   });
 
-  test('non-image file type is rejected', async ({ page }) => {
-    const fileInput = page.locator('input[type="file"]').first();
-    await fileInput.setInputFiles({
+  test('non-image file type is rejected', async ({ page, uniqueData, ownerUser }) => {
+    const propertyTitle = uniqueData.title('Rejected Upload Property');
+    const wizard = new PropertyWizardPage(page);
+    const myProperties = new MyPropertiesPage(page);
+
+    await loginAsTestUser(page, ownerUser.phone);
+
+    await wizard.gotoCreate();
+    await wizard.fillBasics(propertyTitle, 'Testing image upload validation.');
+    await wizard.fillDetails({
+      price: '5000',
+      bedrooms: '2',
+      bathrooms: '1',
+      area: '80',
+      currency: 'SAR',
+    });
+    await wizard.fillLocation({ city: 'Riyadh', neighborhood: 'Test Area', country: 'SA' });
+
+    // A non-image file still renders a local preview; the server rejects it
+    // on publish (400 INVALID_MIME_TYPE), and the create wizard swallows
+    // that failure — so the listing is published without any photo.
+    await wizard.uploadImages({
       name: 'test.txt',
       mimeType: 'text/plain',
       buffer: Buffer.from('not an image'),
     });
+    await wizard.fillContact(uniqueData.phone);
+    await wizard.publish();
 
-    await expect(page.getByRole('alert').first()).toBeVisible({ timeout: 5_000 });
+    // Assert the file never became a property image.
+    await expect(page.locator(`img[alt^="${propertyTitle}"]`)).toHaveCount(0);
+    await expect(page.locator('img[alt^="test.txt"]')).toHaveCount(0);
+
+    // Clean up.
+    await myProperties.goto();
+    await myProperties.deleteProperty(propertyTitle);
   });
 });

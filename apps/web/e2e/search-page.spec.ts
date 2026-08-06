@@ -4,11 +4,12 @@
  * The /search route has no dedicated E2E test. This spec validates
  * that search results render correctly on the dedicated route.
  */
+import { goto } from './test-helpers';
 import { expect, test } from '@playwright/test';
 
 test.describe('/search Page', () => {
   test('/search route displays filtered results', async ({ page }) => {
-    await page.goto('/search?q=Riyadh');
+    await goto(page, '/search?q=Riyadh');
 
     const grid = page.getByTestId('property-grid');
     await expect(grid).toBeVisible({ timeout: 15_000 });
@@ -25,7 +26,7 @@ test.describe('/search Page', () => {
   });
 
   test('changing query on /search updates results', async ({ page }) => {
-    await page.goto('/search?q=Riyadh');
+    await goto(page, '/search?q=Riyadh');
 
     const grid = page.getByTestId('property-grid');
     await expect(grid).toBeVisible({ timeout: 15_000 });
@@ -34,7 +35,7 @@ test.describe('/search Page', () => {
     expect(riyadhCount).toBeGreaterThan(0);
 
     // Change to Dubai query.
-    await page.goto('/search?q=Dubai');
+    await goto(page, '/search?q=Dubai');
     await expect(grid).toBeVisible({ timeout: 15_000 });
 
     const dubaiCount = await grid.locator('article').count();

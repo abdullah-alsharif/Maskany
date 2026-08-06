@@ -5,19 +5,18 @@
  * This spec verifies the first page fetches the correct page size and
  * the API response structure is well-formed.
  */
+import { goto } from './test-helpers';
 import { expect, test } from '@playwright/test';
 
 test.describe('Pagination', () => {
   test('home page shows first page of properties', async ({ page }) => {
-    await page.goto('/');
+    await goto(page, '/');
 
     const grid = page.getByTestId('property-grid');
     await expect(grid).toBeVisible({ timeout: 15_000 });
 
     // Page size is 20 — first page should show 20 properties.
-    await expect
-      .poll(async () => grid.locator('article').count(), { timeout: 15_000 })
-      .toBe(20);
+    await expect.poll(async () => grid.locator('article').count(), { timeout: 15_000 }).toBe(20);
   });
 
   test('pagination API returns correct structure with cursor', async ({ page }) => {
@@ -25,7 +24,7 @@ test.describe('Pagination', () => {
       (res) => res.url().includes('/api/properties') && res.status() === 200,
     );
 
-    await page.goto('/');
+    await goto(page, '/');
     await page.getByTestId('property-grid').waitFor({ timeout: 15_000 });
 
     const response = await responsePromise;
