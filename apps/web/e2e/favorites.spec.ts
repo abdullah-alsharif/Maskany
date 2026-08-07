@@ -1,19 +1,16 @@
 /**
  * E2E — Favorites (T-033, PRD §7.1, 027-US1, 027-US2, 027-US4).
  *
- * Guest flow:   heart toggle → localStorage → favorites tab → remove → empty state
- * Auth flow:    login → heart toggle → server-persisted → survives refresh
- * Merge flow:   guest favorites survive login (POST /api/favorites/merge)
- *
- * Every authenticated scenario uses a fresh per-test user, so parallel runs
- * never share server-side favorite state. (The owner-dashboard scenario is
- * covered by insights-dashboard.spec.ts with the seeded owner.)
+ * Guest favorites live in localStorage; authenticated ones are server-
+ * persisted; guest favorites merge on login (POST /api/favorites/merge).
+ * Fresh per-test users keep parallel runs from sharing favorite state.
  */
 import { expect, test } from './test-fixtures';
 import { goto, loginAsTestUser } from './test-helpers';
+import { createTestFavorite } from './test-data';
 
 test.describe('Favorites — guest flow', () => {
-  test('toggling the heart adds to the favorites tab and toggling again removes it', async ({
+  test('toggling the heart stores the favorite in localStorage and Favorites', async ({
     page,
     seedProperties,
   }) => {
@@ -22,10 +19,9 @@ test.describe('Favorites — guest flow', () => {
     const grid = page.getByTestId('property-grid');
     await expect(grid).toBeVisible({ timeout: 15_000 });
 
-    // Use a seeded property — the first grid card can be a fixture property
-    // owned by a parallel test and deleted mid-run.
+    // Seeded property — grid card 1 may be a fixture deleted mid-run.
     const expectedTitle = seedProperties[0].title;
-    const firstCard = grid.locator('article').filter({ hasText: expectedTitle });
+    const firstCard = grid.getByRole('article').filter({ hasText: expectedTitle });
 
     const addButton = firstCard.getByRole('button', { name: 'Add to favorites' });
     await expect(addButton).toBeVisible();
@@ -34,8 +30,8 @@ test.describe('Favorites — guest flow', () => {
     await expect(firstCard.getByRole('button', { name: 'Remove from favorites' })).toBeVisible();
 
     const stored = await page.evaluate(() => window.localStorage.getItem('maskany_favorites'));
-    expect(stored).not.toBeNull();
-    const parsed = JSON.parse(stored!) as unknown;
+    expect(typeof stored).toBe('string');
+    const parsed = JSON.parse(stored as string) as unknown;
     expect(Array.isArray(parsed)).toBe(true);
     expect((parsed as string[]).length).toBe(1);
 
@@ -45,8 +41,31 @@ test.describe('Favorites — guest flow', () => {
     const favoritesGrid = page.getByTestId('favorites-grid');
     await expect(favoritesGrid).toBeVisible({ timeout: 15_000 });
     await expect(favoritesGrid.getByText(expectedTitle, { exact: true })).toBeVisible();
+  });
 
-    await favoritesGrid.getByRole('button', { name: 'Remove from favorites' }).first().click();
+  test('removing a guest favorite empties the favorites list', async ({ page, seedProperties }) => {
+    await goto(page, '/');
+    await page.evaluate(
+      (value) => window.localStorage.setItem('maskany_favorites', value),
+      JSON.stringify([seedProperties[0].id]),
+    );
+    await page.reload();
+
+    const grid = page.getByTestId('property-grid');
+    await expect(grid).toBeVisible({ timeout: 15_000 });
+
+    await page.getByRole('link', { name: 'Favorites' }).click();
+    await expect(page).toHaveURL(/\/favorites$/);
+
+    const favoritesGrid = page.getByTestId('favorites-grid');
+    await expect(favoritesGrid).toBeVisible({ timeout: 15_000 });
+    await expect(favoritesGrid.getByText(seedProperties[0].title, { exact: true })).toBeVisible();
+
+    await favoritesGrid
+      .getByRole('article')
+      .filter({ hasText: seedProperties[0].title })
+      .getByRole('button', { name: 'Remove from favorites' })
+      .click();
 
     await expect(page.getByRole('heading', { name: 'No favorites yet' })).toBeVisible({
       timeout: 10_000,
@@ -58,7 +77,7 @@ test.describe('Favorites — guest flow', () => {
 });
 
 test.describe('Favorites — authenticated flow', () => {
-  test('login, add favorite, verify it persists server-side across refresh', async ({
+  test('adding a favorite persists server-side across refresh', async ({
     page,
     browserUser,
     seedProperties,
@@ -72,7 +91,7 @@ test.describe('Favorites — authenticated flow', () => {
     await expect(grid).toBeVisible({ timeout: 15_000 });
 
     const expectedTitle = seedProperties[0].title;
-    const firstCard = grid.locator('article').filter({ hasText: expectedTitle });
+    const firstCard = grid.getByRole('article').filter({ hasText: expectedTitle });
 
     await firstCard.getByRole('button', { name: 'Add to favorites' }).click();
     await expect(firstCard.getByRole('button', { name: 'Remove from favorites' })).toBeVisible();
@@ -84,15 +103,38 @@ test.describe('Favorites — authenticated flow', () => {
     await expect(favoritesGrid).toBeVisible({ timeout: 15_000 });
     await expect(favoritesGrid.getByText(expectedTitle, { exact: true })).toBeVisible();
 
-    // Refresh — favorite must persist on the server
     await page.reload();
     await expect(page).toHaveURL(/\/favorites$/);
     const gridAfterRefresh = page.getByTestId('favorites-grid');
     await expect(gridAfterRefresh).toBeVisible({ timeout: 15_000 });
     await expect(gridAfterRefresh.getByText(expectedTitle, { exact: true })).toBeVisible();
+  });
 
-    // Remove — reload to confirm the deletion persisted and we see empty state
-    await gridAfterRefresh.getByRole('button', { name: 'Remove from favorites' }).first().click();
+  test('removing a favorite persists server-side across refresh', async ({
+    page,
+    browserUser,
+    seedProperties,
+  }) => {
+    await goto(page, '/');
+    await page.evaluate(() => localStorage.clear());
+    await page.context().clearCookies();
+    await createTestFavorite({ userId: browserUser.id, propertyId: seedProperties[0].id });
+
+    await loginAsTestUser(page, browserUser.phone);
+
+    await page.getByRole('link', { name: 'Favorites' }).click();
+    await expect(page).toHaveURL(/\/favorites$/);
+
+    const favoritesGrid = page.getByTestId('favorites-grid');
+    await expect(favoritesGrid).toBeVisible({ timeout: 15_000 });
+    await expect(favoritesGrid.getByText(seedProperties[0].title, { exact: true })).toBeVisible();
+
+    await favoritesGrid
+      .getByRole('article')
+      .filter({ hasText: seedProperties[0].title })
+      .getByRole('button', { name: 'Remove from favorites' })
+      .click();
+
     await page.reload();
     await expect(page).toHaveURL(/\/favorites$/);
     await expect(page.getByRole('heading', { name: 'No favorites yet' })).toBeVisible({
@@ -118,7 +160,7 @@ test.describe('Favorites — guest-to-auth merge', () => {
     const titles = seedProperties.map((p) => p.title);
     expect(titles.length).toBeGreaterThanOrEqual(2);
     for (const title of titles) {
-      const card = grid.locator('article').filter({ hasText: title });
+      const card = grid.getByRole('article').filter({ hasText: title });
       await card.getByRole('button', { name: 'Add to favorites' }).click();
       await expect(card.getByRole('button', { name: 'Remove from favorites' })).toBeVisible();
     }

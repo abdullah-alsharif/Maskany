@@ -1,18 +1,8 @@
 /**
- * Test-data layer for the Playwright E2E suite.
- *
- * Every mutating spec creates — and owns — its own records through these
- * helpers instead of depending on the shared seed dataset. Records are
- * inserted straight into the test PostgreSQL database (the same `pg` Pool
- * the OTP helper uses) so setup is fast and needs no API round-trips.
- *
- * Isolation guarantees:
- *   - `createTestUser` is idempotent: it first deletes any leftover user
- *     with the same phone, so a retried test can never collide on the
- *     unique phone/email indexes.
- *   - All child tables (favorites, reviews, properties, refresh tokens,
- *     AI usage logs) cascade on `DELETE FROM users`, so `deleteTestUser`
- *     removes everything a test created — even after a mid-test failure.
+ * Test-data layer for the E2E suite: every mutating spec creates and owns its
+ * records here (inserted straight into the test PostgreSQL database) instead
+ * of depending on the shared seed. createTestUser is idempotent per
+ * phone/email, and all child tables cascade on DELETE FROM users.
  */
 import { getPool } from './test-helpers';
 
@@ -41,12 +31,15 @@ export interface TestUserInput {
 }
 
 /**
- * Create a user row for a test. Idempotent per phone: any previous row with
- * the same phone (e.g. from a failed/retried run) is deleted first.
+ * Create a user row. Idempotent per phone/email: a leftover row from a
+ * failed/retried run is deleted first, so the unique indexes never collide.
  */
 export async function createTestUser(input: TestUserInput): Promise<TestUser> {
   const pool = getPool();
-  await pool.query('DELETE FROM users WHERE phone = $1', [input.phone]);
+  await pool.query('DELETE FROM users WHERE phone = $1 OR email = $2', [
+    input.phone,
+    input.email ?? null,
+  ]);
   const result = await pool.query<{
     id: string;
     full_name: string;
@@ -70,19 +63,15 @@ export async function createTestUser(input: TestUserInput): Promise<TestUser> {
 }
 
 /**
- * Remove a user and every record that references them (cascades through
- * favorites, reviews, properties, refresh/push tokens and AI usage logs).
- * Safe to call for users that no longer exist.
+ * Delete a user; child rows (favorites, reviews, properties, tokens, AI
+ * usage logs) cascade. Safe for users that no longer exist.
  */
 export async function deleteTestUser(userId: string): Promise<void> {
   const pool = getPool();
   await pool.query('DELETE FROM users WHERE id = $1', [userId]);
 }
 
-/**
- * Remove a user by phone number. Used when the test itself registers the
- * user through the UI (so no user id is known until the flow completes).
- */
+/** Delete by phone — used when the test itself registered the user via the UI. */
 export async function deleteTestUserByPhone(phone: string): Promise<void> {
   const pool = getPool();
   await pool.query('DELETE FROM users WHERE phone = $1', [phone]);
@@ -108,10 +97,8 @@ export interface TestPropertyInput {
 }
 
 /**
- * Create a property row owned by `ownerId`. Mirrors the seed shape so UI
- * pages (detail, edit, my-properties, insights) render it identically —
- * including two media entries so gallery-dependent specs see a normal
- * property regardless of which card they land on.
+ * Create a property owned by `ownerId`, mirroring the seed shape — including
+ * two media entries so gallery-dependent specs see a normal property.
  */
 export async function createTestProperty(input: TestPropertyInput): Promise<TestProperty> {
   const pool = getPool();
@@ -144,7 +131,6 @@ export async function createTestProperty(input: TestPropertyInput): Promise<Test
   );
   const row = result.rows[0]!;
 
-  // Two media entries so the gallery UI behaves like a seeded property.
   await pool.query(
     `INSERT INTO property_media (property_id, media_type, url, thumbnail_url, alt_text, mime_type, sort_order)
      VALUES ($1, 'IMAGE', $2, $3, $4, 'image/jpeg', 0), ($1, 'IMAGE', $2, $3, $4, 'image/jpeg', 1)`,
@@ -160,9 +146,8 @@ export async function createTestProperty(input: TestPropertyInput): Promise<Test
 }
 
 /**
- * Create a review row. The (user_id, property_id) pair is unique, so each
- * review needs its own user — use `createTestReviewerBatch` when a spec
- * needs many reviews on one property.
+ * Create a review. The (user_id, property_id) pair is unique, so each review
+ * needs its own user — use createTestReviewBatch for many reviews.
  */
 export async function createTestReview(input: {
   propertyId: string;
@@ -181,24 +166,25 @@ export async function createTestReview(input: {
 }
 
 /**
- * Create `count` distinct reviewer users plus one review each on
- * `propertyId`, then recompute the property aggregates the way the API
- * would. Returns the created review ids.
+ * Create `count` reviewers with one review each and recompute the property's
+ * aggregates. Returns the users so callers delete them (cascading reviews).
  */
 export async function createTestReviewBatch(input: {
   propertyId: string;
   count: number;
   basePhone: string;
   baseName: string;
-}): Promise<TestReview[]> {
+}): Promise<{ reviews: TestReview[]; users: TestUser[] }> {
   const pool = getPool();
   const reviews: TestReview[] = [];
+  const users: TestUser[] = [];
   for (let i = 0; i < input.count; i += 1) {
     const user = await createTestUser({
       fullName: `${input.baseName} ${i + 1}`,
       phone: `${input.basePhone}${String(i).padStart(2, '0')}`,
       userType: 'BROWSER',
     });
+    users.push(user);
     const review = await createTestReview({
       propertyId: input.propertyId,
       userId: user.id,
@@ -216,12 +202,26 @@ export async function createTestReviewBatch(input: {
        WHERE p.id = agg.property_id`,
     [input.propertyId],
   );
-  return reviews;
+  return { reviews, users };
 }
 
 /**
- * Look up a property by its unique test title (for URL construction).
+ * Create a favorite row. The (user_id, property_id) pair is the primary key,
+ * so seeding cannot collide; it cascades away with the user's teardown.
  */
+export async function createTestFavorite(input: {
+  userId: string;
+  propertyId: string;
+}): Promise<void> {
+  const pool = getPool();
+  await pool.query(
+    `INSERT INTO favorites (user_id, property_id)
+     VALUES ($1, $2)
+     ON CONFLICT (user_id, property_id) DO NOTHING`,
+    [input.userId, input.propertyId],
+  );
+}
+
 export async function getTestPropertyByTitle(title: string): Promise<TestProperty | null> {
   const pool = getPool();
   const result = await pool.query<{ id: string; title: string }>(
@@ -232,10 +232,8 @@ export async function getTestPropertyByTitle(title: string): Promise<TestPropert
 }
 
 /**
- * Add an Arabic translation row for a test property, mirroring the seeded
- * dataset so the language-content spec can exercise locale switching on its
- * own private property instead of racing other specs on the first card.
- * Cascade-deleted together with the property.
+ * Add an Arabic translation so the locale spec switches languages on its own
+ * property instead of racing other specs on the first card.
  */
 export async function createTestPropertyArabicTranslation(input: {
   propertyId: string;

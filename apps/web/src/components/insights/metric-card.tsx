@@ -9,6 +9,7 @@ export function MetricCard({
   sublabel,
   delay,
   color = 'terracotta',
+  testId,
 }: {
   icon: LucideIcon;
   value: string | number;
@@ -16,6 +17,7 @@ export function MetricCard({
   sublabel?: string;
   delay: string;
   color?: 'terracotta' | 'olive' | 'stone' | 'amber';
+  testId?: string;
 }) {
   const colorMap: Record<string, string> = {
     terracotta: 'bg-terracotta-50 text-terracotta-600',
@@ -26,6 +28,7 @@ export function MetricCard({
 
   return (
     <div
+      data-testid={testId}
       className={`flex flex-col gap-1.5 rounded-2xl bg-white border border-stone-200 p-4 animate-slide-up ${delay}`}
     >
       <div className={`w-10 h-10 rounded-xl ${colorMap[color]} flex items-center justify-center`}>

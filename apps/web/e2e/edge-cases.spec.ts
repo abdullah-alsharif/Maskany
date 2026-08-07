@@ -1,14 +1,20 @@
 /**
  * E2E — Cross-cutting edge cases.
  *
- * Scenarios that don't fit a single feature spec but protect against
- * regression: state persistence, idempotent interactions, session
- * rejection, account lifecycle round-trips, and unauthenticated API
- * behavior. Every test is fully isolated via the fixtures layer.
+ * Regression guards that fit no single spec: persistence, idempotency,
+ * session rejection, account round-trips, and unauthenticated API behavior.
+ * Every test is fully isolated via the fixtures layer.
  */
 import { expect, test } from './test-fixtures';
-import { goto, loginAsTestUser, submitOtpFromDb, dismissRecoveryPrompt } from './test-helpers';
+import {
+  goto,
+  loginAsTestUser,
+  submitOtpFromDb,
+  dismissRecoveryPrompt,
+  TEST_API_URL,
+} from './test-helpers';
 import { deleteTestUserByPhone } from './test-data';
+import { SEED_PROPERTY_TITLES } from './test-fixtures';
 
 test.setTimeout(90_000);
 
@@ -20,7 +26,7 @@ test.describe('Guest state edge cases', () => {
     await expect(grid).toBeVisible({ timeout: 15_000 });
 
     const expectedTitle = seedProperties[0].title;
-    const firstCard = grid.locator('article').filter({ hasText: expectedTitle });
+    const firstCard = grid.getByRole('article').filter({ hasText: expectedTitle });
 
     await firstCard.getByRole('button', { name: 'Add to favorites' }).click();
     await expect(firstCard.getByRole('button', { name: 'Remove from favorites' })).toBeVisible();
@@ -42,27 +48,30 @@ test.describe('Guest state edge cases', () => {
     await loginAsTestUser(page, browserUser.phone);
     await expect(page.getByTestId('property-grid')).toBeVisible({ timeout: 15_000 });
 
-    const firstCard = page.getByTestId('property-grid').locator('article').first();
+    // Seeded card — fixture-created ones may be deleted mid-run by a
+    // parallel suite, and the property must survive the whole run.
+    const firstCard = page
+      .getByTestId('property-grid')
+      .getByRole('article')
+      .filter({ hasText: SEED_PROPERTY_TITLES[0] });
     const detailHref = await firstCard
       .getByRole('link', { name: /View details for/ })
       .getAttribute('href');
     const propertyId = detailHref!.split('/').pop();
     const addButton = firstCard.getByRole('button', { name: 'Add to favorites' });
 
-    // Fire two clicks back-to-back without waiting for the first to settle.
-    // Target the heart in whatever state it is in (add or remove) with a
-    // short action timeout, so the second click never blocks on a button
-    // that has already re-rendered to the opposite state.
+    // Back-to-back clicks; the second targets whatever state the heart is in
+    // (short timeout). Only timeouts are tolerated — real errors must fail.
     await addButton.click();
     await firstCard
       .getByRole('button', { name: /favorites/i })
       .click({ force: true, timeout: 3_000 })
-      .catch(() => {});
+      .catch((err: Error) => {
+        if (!String(err).includes('Timeout')) throw err;
+      });
 
-    // Authenticated favorites live on the server (the guest localStorage
-    // key `maskany_favorites` is not used). Whatever the outcome of the
-    // double click (added once, or added-then-removed), the invariant is
-    // that the server never stores the property more than once.
+    // Authenticated favorites live server-side (the localStorage key is
+    // unused); the invariant is the server never stores the property twice.
     await expect
       .poll(
         async () =>
@@ -110,32 +119,20 @@ test.describe('Session edge cases', () => {
 
     await goto(page, '/profile');
 
-    // The app must reject the invalid session: either it redirects to
-    // /login, or the profile renders the unauthenticated sign-in CTA.
-    await expect
-      .poll(
-        async () => {
-          const url = page.url();
-          if (url.endsWith('/login')) return true;
-          const signIn = page.getByRole('link', { name: 'Sign in' });
-          return (await signIn.count()) > 0 && (await signIn.isVisible());
-        },
-        { timeout: 20_000 },
-      )
-      .toBe(true);
+    // Hydration fails against the API, so the profile shows the sign-in
+    // CTA and no authenticated content may appear.
+    await expect(page.getByRole('link', { name: 'Sign in' })).toBeVisible({ timeout: 20_000 });
+    await expect(page.getByRole('button', { name: 'Log out' })).not.toBeVisible();
   });
 
   test('newly registered account can log out and log back in', async ({ page, uniqueData }) => {
     const fullName = `${uniqueData.fullName} Roundtrip`;
     const fullPhone = uniqueData.phone;
 
-    // The uniqueData phone is deterministic per test id, so a Playwright
-    // retry re-runs this exact block with the same phone. Delete any
-    // leftover user from a prior attempt first (the end-of-test cleanup
-    // never runs when a test fails midway), keeping the retry idempotent.
+    // The phone is deterministic per test id, so a retry re-runs this exact
+    // block; delete leftovers since a failed run skips the cleanup.
     await deleteTestUserByPhone(fullPhone);
 
-    // --- Register via the UI ---
     await goto(page, '/register');
     await page.getByLabel('Full name').fill(fullName);
     await page.getByLabel('Country code').selectOption(uniqueData.countryCode);
@@ -147,18 +144,14 @@ test.describe('Session edge cases', () => {
     await dismissRecoveryPrompt(page);
     await expect(page).toHaveURL(/\/$/, { timeout: 15_000 });
 
-    // --- Log out ---
     await goto(page, '/profile');
     await expect(page.getByText(fullName)).toBeVisible({ timeout: 10_000 });
     await page.getByRole('button', { name: 'Log out' }).click();
     await page.getByRole('button', { name: 'Sign out' }).click();
     await expect(page).toHaveURL(/\/login$/, { timeout: 15_000 });
 
-    // --- Log back in with the same phone ---
-    // The dev server can remount/reload the page mid-flow under parallel
-    // compile (dropping the OTP navigation state), so the whole "login →
-    // verify → home" sequence is retried as a unit until it lands. Each
-    // attempt re-sends a fresh code, re-types it, and waits for home.
+    // Dev server can remount/reload the page under parallel compile (dropping
+    // OTP navigation state), so retry login → verify → home as a unit.
     await expect(async () => {
       await goto(page, '/login');
       await page.getByLabel('Country code').selectOption(uniqueData.countryCode);
@@ -173,14 +166,13 @@ test.describe('Session edge cases', () => {
     await goto(page, '/profile');
     await expect(page.getByText(fullName)).toBeVisible({ timeout: 10_000 });
 
-    // --- Clean up ---
     await deleteTestUserByPhone(fullPhone);
   });
 });
 
 test.describe('API edge cases', () => {
   test('protected endpoint returns 401 without a token', async ({ page }) => {
-    const response = await page.request.get('http://localhost:3099/api/properties/my');
+    const response = await page.request.get(`${TEST_API_URL}/properties/my`);
     expect(response.status()).toBe(401);
   });
 });

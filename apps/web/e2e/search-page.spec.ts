@@ -1,50 +1,69 @@
 /**
- * E2E — Dedicated /search page (US6).
- *
- * The /search route has no dedicated E2E test. This spec validates
- * that search results render correctly on the dedicated route.
+ * E2E — Dedicated /search page (US6): typing a query into the search
+ * input on the dedicated route filters the results grid.
  */
 import { goto } from './test-helpers';
 import { expect, test } from '@playwright/test';
 
+const RIYADH_QUERY = 'Riyadh';
+const DUBAI_QUERY = 'Dubai';
+
 test.describe('/search Page', () => {
-  test('/search route displays filtered results', async ({ page }) => {
-    await goto(page, '/search?q=Riyadh');
+  test('typing a query on /search filters the results', async ({ page }) => {
+    await goto(page, '/search');
 
     const grid = page.getByTestId('property-grid');
     await expect(grid).toBeVisible({ timeout: 15_000 });
 
-    const cards = grid.locator('article');
-    const count = await cards.count();
-    expect(count).toBeGreaterThan(0);
+    const searchInput = page.getByLabel('Search properties');
+    await searchInput.fill(RIYADH_QUERY);
 
-    // All visible cards should contain "Riyadh" in their text.
-    const allTexts = await cards.allInnerTexts();
-    for (const text of allTexts) {
-      expect(text.toLowerCase()).toContain('riyadh');
-    }
+    // Debounced query lands server-side; poll one consistent snapshot so
+    // a single count read cannot observe a stale grid mid-refetch.
+    await expect
+      .poll(
+        async () => {
+          const texts = await grid.getByRole('article').allInnerTexts();
+          if (texts.length === 0) return false;
+          return texts.every((text) => text.toLowerCase().includes(RIYADH_QUERY.toLowerCase()));
+        },
+        { timeout: 15_000 },
+      )
+      .toBe(true);
   });
 
   test('changing query on /search updates results', async ({ page }) => {
-    await goto(page, '/search?q=Riyadh');
+    // Phase 1 (fill Riyadh) is pure setup so the grid settles; the
+    // phase-2 poll then only observes the Dubai change (no stale reads).
+    await goto(page, '/search');
 
     const grid = page.getByTestId('property-grid');
     await expect(grid).toBeVisible({ timeout: 15_000 });
 
-    const riyadhCount = await grid.locator('article').count();
-    expect(riyadhCount).toBeGreaterThan(0);
+    const searchInput = page.getByLabel('Search properties');
 
-    // Change to Dubai query.
-    await goto(page, '/search?q=Dubai');
-    await expect(grid).toBeVisible({ timeout: 15_000 });
+    await searchInput.fill(RIYADH_QUERY);
+    await expect
+      .poll(
+        async () => {
+          const texts = await grid.getByRole('article').allInnerTexts();
+          if (texts.length === 0) return false;
+          return texts.every((text) => text.toLowerCase().includes(RIYADH_QUERY.toLowerCase()));
+        },
+        { timeout: 15_000 },
+      )
+      .toBe(true);
 
-    const dubaiCount = await grid.locator('article').count();
-    expect(dubaiCount).toBeGreaterThan(0);
-
-    // Counts should differ (Riyadh and Dubai have different property counts).
-    const allTexts = await grid.locator('article').allInnerTexts();
-    for (const text of allTexts) {
-      expect(text.toLowerCase()).toContain('dubai');
-    }
+    await searchInput.fill(DUBAI_QUERY);
+    await expect
+      .poll(
+        async () => {
+          const texts = await grid.getByRole('article').allInnerTexts();
+          if (texts.length === 0) return false;
+          return texts.every((text) => text.toLowerCase().includes(DUBAI_QUERY.toLowerCase()));
+        },
+        { timeout: 15_000 },
+      )
+      .toBe(true);
   });
 });

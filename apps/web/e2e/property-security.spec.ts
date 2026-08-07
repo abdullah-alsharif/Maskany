@@ -1,11 +1,10 @@
 /**
- * E2E — Property security and access control.
- *
- * Every scenario runs as a fresh per-test user, so parallel runs never
- * share sessions or OTP cooldowns.
+ * E2E — Property security and access control. Every scenario runs as a
+ * fresh per-test user, so parallel runs never share sessions or OTP
+ * cooldowns. (Empty-title validation lives in property-form-validation.spec.ts.)
  */
 import { expect, test } from './test-fixtures';
-import { goto, loginAsTestUser, acceptAiConsent } from './test-helpers';
+import { goto, loginAsTestUser } from './test-helpers';
 
 test.describe('Self-review block', () => {
   test('owner visiting their own property sees they cannot review it', async ({
@@ -30,27 +29,11 @@ test.describe('Self-review block', () => {
   });
 });
 
-test.describe('Property creation validation', () => {
-  test('submitting step 1 with empty title shows validation error', async ({ page, ownerUser }) => {
-    await loginAsTestUser(page, ownerUser.phone);
-    await expect(page.getByTestId('property-grid')).toBeVisible({ timeout: 15_000 });
-
-    await goto(page, '/properties/create');
-    await expect(page).toHaveURL(/\/properties\/create$/);
-    await acceptAiConsent(page);
-
-    await page.getByLabel('Description').fill('Test description without title.');
-    await page.getByRole('button', { name: 'Next', exact: true }).click();
-
-    await expect(page.getByText(/title is required|required/i)).toBeVisible({ timeout: 5_000 });
-  });
-});
-
 test.describe('Browser user restrictions', () => {
   test('browser-type user cannot access create-property page', async ({ page, browserUser }) => {
     await loginAsTestUser(page, browserUser.phone);
 
     await goto(page, '/properties/create');
-    await expect(page).not.toHaveURL(/\/properties\/create$/);
+    await expect(page).toHaveURL(/\/$/, { timeout: 10_000 });
   });
 });

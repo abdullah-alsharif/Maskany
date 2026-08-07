@@ -81,8 +81,8 @@ export class PropertyWizardPage {
    */
   async uploadImages(file: UploadPayload): Promise<void> {
     const fileName = typeof file === 'string' ? file.split(/[\\/]/).pop()! : file.name;
-    await this.page.locator('input[type="file"]').first().setInputFiles(file);
-    await expect(this.page.locator(`img[alt="${fileName}"]`)).toBeVisible();
+    await this.page.getByLabel('Upload images').setInputFiles(file);
+    await expect(this.page.getByRole('img', { name: fileName })).toBeVisible();
     await this.nextButton.click();
   }
 

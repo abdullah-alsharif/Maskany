@@ -1,43 +1,27 @@
 /**
- * Playwright configuration for the Maskany web app E2E suite (T-033, PRD §8.3).
- *
- * The PRD requires real-browser, real-API, real-database tests. Playwright's
- * `webServer` option spawns both processes for us:
- *
- *   1. The Express API on :3099 wired to the test database (port 5433) with
- *      `NODE_ENV=test` so SMS/email transports log instead of calling Twilio
- *      and the OTP cooldown is disabled (`OTP_COOLDOWN_MS: '0'`).
- *   2. The Next.js dev server on :5199 with `API_BASE_URL` pointing at the
- *      test API so every fetch from the browser hits :3099.
- *
- * `globalSetup` re-seeds the test database and pre-compiles every route
- * (warm-up) before the run starts.
- *
- * Mobile-first: 375x812 (iPhone 13) viewport mirrors the development target.
+ * Playwright config (T-033, PRD §8.3): webServer spawns the Express API on
+ * :3099 (test DB :5433, NODE_ENV=test — SMS/email log instead of calling
+ * Twilio, OTP cooldown off) and the Next dev server on :5199 pointed at the
+ * test API. globalSetup re-seeds and pre-compiles routes; 375x812 viewport.
  */
 import { defineConfig } from '@playwright/test';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { TEST_API_PORT, TEST_DATABASE_URL, TEST_WEB_PORT } from './e2e/test-helpers';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-const TEST_API_PORT = 3099;
-const TEST_WEB_PORT = 5199;
-const TEST_DATABASE_URL =
-  'postgresql://maskany_test:maskany_test_pass@localhost:5433/maskany_test?schema=public';
 const REPO_ROOT = path.resolve(__dirname, '../..');
 const API_PACKAGE_DIR = path.resolve(REPO_ROOT, 'apps/api');
 const API_SERVER_ENTRY = path.resolve(API_PACKAGE_DIR, 'dist/src/server.js');
 
-// Configurable timeouts — slow machines can raise them via env:
-// E2E_EXPECT_TIMEOUT E2E_ACTION_TIMEOUT E2E_WEBSERVER_TIMEOUT E2E_SKIP_BUILD
+// Slow machines can raise these via env (E2E_*_TIMEOUT, E2E_SKIP_BUILD).
 const expectTimeout = Number(process.env.E2E_EXPECT_TIMEOUT) || 15_000;
 const actionTimeout = Number(process.env.E2E_ACTION_TIMEOUT) || 30_000;
 const webServerTimeout = Number(process.env.E2E_WEBSERVER_TIMEOUT) || 120_000;
 const skipApiBuild = process.env.E2E_SKIP_BUILD === 'true';
-// The webServer command owns the (fast) API TypeScript build so
-// `playwright test` works from a clean checkout without extra steps.
+// The webServer command owns the API build so the suite runs from a clean checkout.
 const apiServerCommand = skipApiBuild
   ? `node ${API_SERVER_ENTRY}`
   : `pnpm exec tsc -p tsconfig.build.json && node ${API_SERVER_ENTRY}`;
@@ -45,9 +29,8 @@ const apiServerCommand = skipApiBuild
 export default defineConfig({
   testDir: './e2e',
   testMatch: /.*\.spec\.ts$/,
-  // Every spec owns its data through the fixtures layer (unique phone/email/
-  // titles per test), so the whole suite runs in parallel. E2E_SERIAL=1
-  // forces a single worker for debugging order-dependent failures.
+  // Fixtures give every spec unique data, so the suite runs fully parallel;
+  // E2E_SERIAL=1 forces one worker to debug order-dependent failures.
   fullyParallel: true,
   workers: process.env.E2E_SERIAL === '1' ? 1 : '50%',
   retries: process.env.CI ? 1 : 0,
@@ -57,8 +40,7 @@ export default defineConfig({
     : [['list'], ['html', { open: 'on-failure' }]],
   timeout: 60_000,
   expect: {
-    // Generous default: the webpack dev server compiles routes lazily, and
-    // under 50% worker parallelism cold compiles can take a few seconds.
+    // Generous default — dev-server route compilation under parallel workers.
     timeout: expectTimeout,
   },
   use: {

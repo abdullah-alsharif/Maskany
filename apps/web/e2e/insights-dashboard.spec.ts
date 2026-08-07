@@ -1,16 +1,14 @@
 /**
  * E2E — Insights dashboard (owner analytics).
  *
- * Uses fresh per-test users so metric assertions are exact and parallel-safe:
- * the owner-with-properties case sees exactly the fixture property, the
- * empty case is guaranteed to have none, and the browser-user case never
- * races on shared OTP cooldowns.
+ * Fresh per-test users keep metric assertions exact and parallel-safe:
+ * the owner sees exactly the fixture property and the empty case has none.
  */
 import { expect, test } from './test-fixtures';
 import { goto, loginAsTestUser } from './test-helpers';
 
 test.describe('Insights dashboard — owner with properties', () => {
-  test('metric cards show accurate data for an owner with listings', async ({
+  test('metric cards show exact data for an owner with one active listing', async ({
     page,
     ownerWithProperty,
   }) => {
@@ -18,10 +16,26 @@ test.describe('Insights dashboard — owner with properties', () => {
     await goto(page, '/insights');
     await expect(page).toHaveURL(/\/insights$/);
 
-    await expect(page.getByText('Total listings')).toBeVisible({ timeout: 15_000 });
-    await expect(page.getByText('Active')).toBeVisible({ timeout: 5_000 });
-    await expect(page.getByText('Total views')).toBeVisible({ timeout: 10_000 });
-    await expect(page.getByText('Inquiries')).toBeVisible({ timeout: 10_000 });
+    // Metric cards are scoped by stable testid — labels are localized, testids are not.
+    const listingsCard = page.getByTestId('metric-total-listings');
+    await expect(listingsCard).toBeVisible({ timeout: 15_000 });
+    await expect(listingsCard.getByText('1', { exact: true })).toBeVisible();
+
+    const activeCard = page.getByTestId('metric-active-listings');
+    await expect(activeCard).toBeVisible({ timeout: 5_000 });
+    await expect(activeCard.getByText('1', { exact: true })).toBeVisible();
+
+    const viewsCard = page.getByTestId('metric-total-views');
+    await expect(viewsCard).toBeVisible({ timeout: 10_000 });
+    await expect(viewsCard.getByText('0', { exact: true })).toBeVisible();
+
+    const inquiriesCard = page.getByTestId('metric-inquiries');
+    await expect(inquiriesCard).toBeVisible({ timeout: 10_000 });
+    await expect(inquiriesCard.getByText('0', { exact: true })).toBeVisible();
+
+    await expect(page.getByText(ownerWithProperty.property.title)).toBeVisible({
+      timeout: 10_000,
+    });
 
     await expect(page.getByText('Top Properties')).toBeVisible();
     await expect(page.getByText('Best performing listings')).toBeVisible({ timeout: 5_000 });
@@ -44,9 +58,9 @@ test.describe('Insights dashboard — empty state', () => {
 });
 
 test.describe('Insights dashboard — browser user', () => {
-  test('browser user is redirected from /insights', async ({ page, browserUser }) => {
+  test('browser user is redirected from /insights to home', async ({ page, browserUser }) => {
     await loginAsTestUser(page, browserUser.phone);
     await goto(page, '/insights');
-    await expect(page).not.toHaveURL(/\/insights$/);
+    await expect(page).toHaveURL(/\/$/, { timeout: 10_000 });
   });
 });

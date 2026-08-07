@@ -1,31 +1,22 @@
 /**
- * E2E — Favorites from the property detail page.
- *
- * Uses a fresh per-test user so the "No favorites yet" end state is
- * guaranteed regardless of what other specs do in parallel.
+ * E2E — Favorites from the property detail page. Uses a fresh per-test user
+ * so the "No favorites yet" end state is guaranteed under parallel runs.
  */
 import { expect, test } from './test-fixtures';
-import { goto, loginAsTestUser } from './test-helpers';
+import { loginAsTestUser, openSeedProperty } from './test-helpers';
+import { createTestFavorite } from './test-data';
 
 test.describe('Favorites from detail page', () => {
-  test('add favorite from detail page, verify on favorites page, remove from detail page', async ({
+  test('adding a favorite from the detail page shows it in Favorites', async ({
     page,
     browserUser,
     seedProperties,
   }) => {
     await loginAsTestUser(page, browserUser.phone);
 
-    const grid = page.getByTestId('property-grid');
-    await expect(grid).toBeVisible({ timeout: 15_000 });
-
     const expectedTitle = seedProperties[0].title;
-    const firstCard = grid.locator('article').filter({ hasText: expectedTitle });
 
-    await firstCard.locator('a').first().click();
-    await expect(page).toHaveURL(/\/properties\/[0-9a-f-]{36}$/);
-    await expect(page.getByRole('heading', { level: 1, name: expectedTitle })).toBeVisible({
-      timeout: 15_000,
-    });
+    await openSeedProperty(page, expectedTitle);
 
     const detailFavBtn = page.getByRole('button', { name: 'Add to favorites' });
     await expect(detailFavBtn).toBeVisible();
@@ -41,10 +32,18 @@ test.describe('Favorites from detail page', () => {
     const favoritesGrid = page.getByTestId('favorites-grid');
     await expect(favoritesGrid).toBeVisible({ timeout: 15_000 });
     await expect(favoritesGrid.getByText(expectedTitle, { exact: true })).toBeVisible();
+  });
 
-    await goto(page, page.url().replace('/favorites', ''));
-    await page.getByRole('link', { name: expectedTitle }).first().click();
-    await expect(page).toHaveURL(/\/properties\/[0-9a-f-]{36}$/);
+  test('removing a favorite from the detail page shows the empty state', async ({
+    page,
+    browserUser,
+    seedProperties,
+  }) => {
+    await createTestFavorite({ userId: browserUser.id, propertyId: seedProperties[0].id });
+    await loginAsTestUser(page, browserUser.phone);
+
+    const expectedTitle = seedProperties[0].title;
+    await openSeedProperty(page, expectedTitle);
 
     await page.getByRole('button', { name: 'Remove from favorites' }).click();
     await expect(page.getByRole('button', { name: 'Add to favorites' })).toBeVisible({

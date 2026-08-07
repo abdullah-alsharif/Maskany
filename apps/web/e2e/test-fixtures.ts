@@ -1,16 +1,9 @@
 /**
- * Custom Playwright fixtures for the Maskany E2E suite.
- *
- * Follows a strict isolation pattern: every test derives
- * its own unique identifiers (phone, email, name, titles) from
- * `testInfo.testId`, so parallel workers can never collide on the unique
- * phone/email indexes or on per-user state. Mutating tests get a fresh
- * `browserUser` / `ownerUser` that is created before the test and deleted
- * (cascade) after it — including after failures.
- *
- * Because `globalSetup` truncates and re-seeds the database before every
- * run, identifiers only need to be unique within a single run; `testId`
- * gives us that, and the idempotent `createTestUser` covers retries.
+ * Custom Playwright fixtures: every test derives unique identifiers (phone,
+ * email, name, titles) from testInfo.testId so parallel workers never collide.
+ * Mutating tests get a fresh user created before and cascade-deleted after —
+ * including after failures. globalSetup re-seeds before each run, so
+ * identifiers only need uniqueness within a run.
  */
 import { test as base, type TestInfo } from '@playwright/test';
 import {
@@ -23,13 +16,9 @@ import {
 import { getPool } from './test-helpers';
 
 /**
- * Canonical seeded property titles (apps/api/src/scripts/seed.ts). The seed
- * gives them deterministic `created_at` (array order = newest first) and
- * stable titles, so the two newest seeds always sit on the first page of
- * the home grid — even while parallel fixture tests create and delete
- * their own (newer) properties. Tests that click "the first card" must use
- * these instead, otherwise they can pick up a fixture property that is
- * deleted mid-test by its owner's teardown.
+ * Canonical seeded titles (apps/api/src/scripts/seed.ts) — the newest seeds
+ * always sit on the first page and are never deleted mid-run, unlike
+ * fixture properties owned by parallel tests.
  */
 export const SEED_PROPERTY_TITLES = [
   'Modern 2BR Apartment in Al Olaya',
@@ -76,9 +65,8 @@ type Fixtures = {
   /** Fresh OWNER user plus one property they own (both cleaned up). */
   ownerWithProperty: { owner: TestUser; property: TestProperty };
   /**
-   * The newest seeded properties (never deleted during a run). Tests that
-   * need a stable property to click/favorite should use these instead of
-   * whatever card happens to be first in the grid.
+   * The newest seeded properties — never deleted during a run; use these
+   * instead of whatever card happens to be first in the grid.
    */
   seedProperties: Array<{ id: string; title: string }>;
 };
@@ -99,10 +87,9 @@ export const test = base.extend<Fixtures>({
     await deleteTestUser(user.id);
   },
 
-  // Owner fixtures use a different phone/email space than the browser user
-  // (same test id): when a test needs BOTH (e.g. reviews), `createTestUser`'s
-  // idempotent "delete existing row with this phone" must not wipe the other
-  // fixture's user (and cascade-delete its property).
+  // Fixture phone/email spaces are distinct (browser 50, owner 51,
+  // owner-with-property 52) so createTestUser's pre-delete never wipes a
+  // sibling fixture's user (and cascade-deletes its property).
   ownerUser: async ({ uniqueData }, use) => {
     const user = await createTestUser({
       fullName: uniqueData.fullName,
@@ -117,8 +104,8 @@ export const test = base.extend<Fixtures>({
   ownerWithProperty: async ({ uniqueData }, use) => {
     const owner = await createTestUser({
       fullName: uniqueData.fullName,
-      phone: `+96651${uniqueData.suffix}`,
-      email: `owner-${uniqueData.suffix}@test.example.com`,
+      phone: `+96652${uniqueData.suffix}`,
+      email: `owner-prop-${uniqueData.suffix}@test.example.com`,
       userType: 'OWNER',
     });
     const property = await createTestProperty({

@@ -1,10 +1,8 @@
 /**
- * E2E — Search (T-033, PRD §4.1).
- *
- * Typing into the search bar narrows the result grid; clearing the query
- * restores the full list. The seed dataset uses unique titles per city
- * (e.g. only Riyadh listings contain "Riyadh"), giving us a deterministic
- * way to assert filtering.
+ * E2E — Search (T-033, PRD §4.1): typing narrows the result grid and
+ * clearing restores it. Seed titles are unique per city (only Riyadh
+ * listings contain "Riyadh"), giving a deterministic filter assertion.
+ * Filtering and clearing are separate tests.
  */
 import { goto } from './test-helpers';
 import { expect, test } from '@playwright/test';
@@ -12,23 +10,42 @@ import { expect, test } from '@playwright/test';
 const RIYADH_QUERY = 'Riyadh';
 
 test.describe('Search', () => {
-  test('typing in the search bar filters results and clearing restores them', async ({ page }) => {
+  test('typing in the search bar filters the results', async ({ page }) => {
     await goto(page, '/');
 
     const grid = page.getByTestId('property-grid');
     await expect(grid).toBeVisible({ timeout: 15_000 });
 
-    const initialCount = await grid.locator('article').count();
-    expect(initialCount).toBeGreaterThan(1);
-
-    const searchInput = page.getByLabel('Search properties').first();
+    const searchInput = page.getByLabel('Search properties');
     await searchInput.fill(RIYADH_QUERY);
 
-    // Wait for the debounced query to land and the grid to refresh.
+    // Poll until every visible card matches — the seed holds non-Riyadh
+    // properties, so narrowing proves the filter without a racy baseline count.
     await expect
       .poll(
         async () => {
-          const cards = await grid.locator('article').allInnerTexts();
+          const cards = await grid.getByRole('article').allInnerTexts();
+          if (cards.length === 0) return false;
+          return cards.every((text) => text.toLowerCase().includes(RIYADH_QUERY.toLowerCase()));
+        },
+        { timeout: 15_000 },
+      )
+      .toBe(true);
+  });
+
+  test('clearing the search restores the full list', async ({ page }) => {
+    await goto(page, '/');
+
+    const grid = page.getByTestId('property-grid');
+    await expect(grid).toBeVisible({ timeout: 15_000 });
+
+    const searchInput = page.getByLabel('Search properties');
+    await searchInput.fill(RIYADH_QUERY);
+
+    await expect
+      .poll(
+        async () => {
+          const cards = await grid.getByRole('article').allInnerTexts();
           if (cards.length === 0) return false;
           return cards.every((text) => text.toLowerCase().includes(RIYADH_QUERY.toLowerCase()));
         },
@@ -36,15 +53,13 @@ test.describe('Search', () => {
       )
       .toBe(true);
 
-    const filteredCount = await grid.locator('article').count();
-    expect(filteredCount).toBeLessThan(initialCount);
-    expect(filteredCount).toBeGreaterThan(0);
-
     const clearButton = page.getByRole('button', { name: 'Clear search' });
     await clearButton.click();
 
+    // Restore asserts against the invariant: 24+ seeded properties exist
+    // and are never deleted mid-run (a baseline snapshot would race).
     await expect
-      .poll(async () => grid.locator('article').count(), { timeout: 15_000 })
-      .toBeGreaterThanOrEqual(initialCount);
+      .poll(async () => grid.getByRole('article').count(), { timeout: 15_000 })
+      .toBeGreaterThanOrEqual(20);
   });
 });

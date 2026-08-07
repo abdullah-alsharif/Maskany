@@ -112,6 +112,7 @@ export function InsightsPage() {
           label={t('insights.totalListings')}
           delay="animate-stagger-1"
           color="terracotta"
+          testId="metric-total-listings"
         />
         <MetricCard
           icon={TrendingUp}
@@ -120,6 +121,7 @@ export function InsightsPage() {
           sublabel={t('insights.last30d')}
           delay="animate-stagger-2"
           color="olive"
+          testId="metric-active-listings"
         />
         <MetricCard
           icon={Eye}
@@ -128,6 +130,7 @@ export function InsightsPage() {
           sublabel={t('insights.last30d')}
           delay="animate-stagger-3"
           color="amber"
+          testId="metric-total-views"
         />
         <MetricCard
           icon={MessageSquare}
@@ -136,6 +139,7 @@ export function InsightsPage() {
           sublabel={t('insights.last30d')}
           delay="animate-stagger-4"
           color="stone"
+          testId="metric-inquiries"
         />
       </div>
 

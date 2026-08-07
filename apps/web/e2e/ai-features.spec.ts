@@ -1,26 +1,23 @@
 /**
- * E2E — AI-powered property listing features.
- *
- * Single long test covering the AI consent dialog, field-level enhance
- * buttons, AI review panel, and AI translation generation on the edit
- * property page. Combined into one test to avoid re-authenticating and
- * re-creating expensive AI API calls per feature.
- *
- * AI API calls may fail when no AI provider key is configured — the test
- * verifies UI presence/loading states and accepts either success or
- * graceful error feedback.
+ * E2E — AI-powered property listing features: consent + field-level enhance,
+ * and translation generation + review panel. The AI provider needs a key to
+ * produce output, so the spec SKIPS when no key is configured and FAILS on
+ * any API error — error/limit feedback is never accepted as a pass.
  */
 import { expect, test } from './test-fixtures';
 import { goto, loginAsTestUser } from './test-helpers';
+import type { Page } from '@playwright/test';
 
-test('AI features on edit property page', async ({ page, ownerWithProperty }) => {
-  test.setTimeout(180_000);
+const aiKeyConfigured = Boolean(
+  process.env.OPENROUTER_API_KEY || process.env.OPENROUTER_PAID_API_KEY,
+);
 
-  const { owner, property } = ownerWithProperty;
-
-  // ====================================================================
-  // Login as property owner and navigate to edit page
-  // ====================================================================
+/** Log in as the owner, open the edit wizard, and accept the AI consent dialog. */
+async function openEditPage(
+  page: Page,
+  owner: { phone: string },
+  property: { title: string },
+): Promise<void> {
   await loginAsTestUser(page, owner.phone);
   await expect(page.getByTestId('property-grid')).toBeVisible({ timeout: 15_000 });
 
@@ -32,57 +29,46 @@ test('AI features on edit property page', async ({ page, ownerWithProperty }) =>
   await page.getByRole('link', { name: `Edit ${property.title}` }).click();
   await expect(page).toHaveURL(/\/properties\/[0-9a-f-]{36}\/edit$/, { timeout: 30_000 });
 
-  // ====================================================================
-  // AI consent dialog appears on first visit
-  // ====================================================================
   await expect(page.getByText('AI Writing Assistant')).toBeVisible({ timeout: 10_000 });
   await expect(page.getByText(/use AI to help/i)).toBeVisible();
-
   await page.getByRole('button', { name: 'Accept' }).click();
   await expect(page.getByText('AI Writing Assistant')).not.toBeVisible();
+}
 
-  // ====================================================================
-  // Step 1: enhance buttons visible on title, summary, description
-  // ====================================================================
+test('AI consent dialog and field-level enhancement on the edit page', async ({
+  page,
+  ownerWithProperty,
+}) => {
+  test.skip(!aiKeyConfigured, 'AI provider key not configured — cannot verify AI success');
+  test.setTimeout(180_000);
+
+  const { owner, property } = ownerWithProperty;
+  await openEditPage(page, owner, property);
+
   const enhanceButtons = page.getByRole('button', { name: /enhance/i });
   await expect(enhanceButtons).toHaveCount(3);
   await expect(enhanceButtons.first()).toBeVisible();
 
-  // ====================================================================
-  // Click enhance on title — shows spinner then result or error
-  // ====================================================================
   const titleInput = page.getByLabel('Title');
   await expect(titleInput).not.toHaveValue('');
 
-  const titleEnhanceBtn = enhanceButtons.first();
-  await titleEnhanceBtn.click();
+  await enhanceButtons.first().click();
 
-  // Loading spinner may complete too fast to observe — treat as optional.
-  try {
-    await titleEnhanceBtn.locator('svg[class*="animate-spin"]').waitFor({ timeout: 3_000 });
-  } catch {
-    // Spinner not observed — proceed to outcome race.
-  }
+  // "Undo" only appears after a real enhancement — API errors are not
+  // an accepted outcome (see header comment).
+  await expect(page.getByText('Undo')).toBeVisible({ timeout: 60_000 });
+});
 
-  const titleOutcome = await Promise.race([
-    page
-      .getByText('Undo')
-      .waitFor({ timeout: 60_000 })
-      .then(() => 'undo' as const),
-    page
-      .getByText('AI generation failed')
-      .waitFor({ timeout: 60_000 })
-      .then(() => 'error' as const),
-    page
-      .getByText('AI limit reached for now')
-      .waitFor({ timeout: 60_000 })
-      .then(() => 'rate_limited' as const),
-  ]);
-  expect(['undo', 'error', 'rate_limited']).toContain(titleOutcome);
+test('AI translation generation and review panel on the edit page', async ({
+  page,
+  ownerWithProperty,
+}) => {
+  test.skip(!aiKeyConfigured, 'AI provider key not configured — cannot verify AI success');
+  test.setTimeout(180_000);
 
-  // ====================================================================
-  // Navigate to step 3 — location fields prefilled
-  // ====================================================================
+  const { owner, property } = ownerWithProperty;
+  await openEditPage(page, owner, property);
+
   for (let step = 1; step < 3; step++) {
     await page.getByRole('button', { name: 'Next', exact: true }).click();
     await expect(page.getByText(`Step ${step + 1} of 6`)).toBeVisible({ timeout: 5_000 });
@@ -92,38 +78,21 @@ test('AI features on edit property page', async ({ page, ownerWithProperty }) =>
   await expect(areaInput).toBeVisible();
   await expect(areaInput).not.toHaveValue('');
 
-  // ====================================================================
-  // Open translation editor and test generate with AI button
-  // ====================================================================
-  await page.getByTestId('translation-toggle').click();
+  await page.getByRole('button', { name: /add translation|hide/i }).click();
 
   const generateBtn = page.getByRole('button', { name: /generate with ai/i });
   await expect(generateBtn).toBeVisible();
 
   await generateBtn.click();
-  try {
-    await generateBtn.locator('[class*="animate-spin"]').waitFor({ timeout: 3_000 });
-  } catch {
-    // Generation may complete (or fail) too fast for the spinner to be observable.
-  }
+  // Generation must populate the Arabic title — a failed call leaving it
+  // empty is not an accepted outcome.
+  await expect(page.getByLabel('العنوان')).not.toHaveValue('', { timeout: 60_000 });
 
-  // ====================================================================
-  // Open AI review panel
-  // ====================================================================
   await page.getByRole('button', { name: /start ai review/i }).click();
   await expect(page.getByText('AI Listing Review')).toBeVisible({ timeout: 10_000 });
 
-  const reviewOutcome = await Promise.race([
-    page
-      .getByText(/\d+\.\d+\/\d+/)
-      .waitFor({ timeout: 90_000 })
-      .then(() => 'review' as const),
-    page
-      .getByText('Could not analyze listing')
-      .waitFor({ timeout: 90_000 })
-      .then(() => 'error' as const),
-  ]);
-  expect(['review', 'error']).toContain(reviewOutcome);
+  // A real score is required — an analysis error is not accepted (see header).
+  await expect(page.getByText(/\d+\.\d+\/\d+/)).toBeVisible({ timeout: 90_000 });
 
   await page.getByRole('button', { name: /close/i }).click();
   await expect(page.getByText('AI Listing Review')).not.toBeVisible();

@@ -1,29 +1,31 @@
 /**
- * E2E — Language toggle (PRD §7.1).
- *
- * The home page has a globe button that toggles between English and Arabic.
- * Clicking it switches the UI language and the button's aria-label updates
- * to reflect the opposite direction.
+ * E2E — Language toggle (PRD §7.1): the globe button toggles English and
+ * Arabic. EN→AR and AR→EN are separate tests so each direction fails on
+ * its own.
  */
 import { goto } from './test-helpers';
 import { expect, test } from '@playwright/test';
 
 test.describe('Language toggle', () => {
-  test('toggling the language switcher flips between English and Arabic', async ({ page }) => {
+  test('globe button switches the UI to Arabic', async ({ page }) => {
     await goto(page, '/');
 
-    // In the default English state the globe button's aria-label says
-    // "التبديل إلى العربية" (Switch to Arabic).
+    // Default English state: the globe's aria-label is the Arabic string.
     const globeButton = page.getByRole('button', { name: 'التبديل إلى العربية' });
     await expect(globeButton).toBeVisible();
 
-    // Click to switch to Arabic.
     await globeButton.click();
 
-    // After switching, the button's label changes to "Switch to English".
+    await expect(page.getByRole('button', { name: 'Switch to English' })).toBeVisible();
+  });
+
+  test('globe button switches the UI back to English', async ({ page }) => {
+    await goto(page, '/');
+
+    // Switch to Arabic first — the return flip needs the Arabic locale.
+    await page.getByRole('button', { name: 'التبديل إلى العربية' }).click();
     await expect(page.getByRole('button', { name: 'Switch to English' })).toBeVisible();
 
-    // Click to switch back to English.
     await page.getByRole('button', { name: 'Switch to English' }).click();
     await expect(page.getByRole('button', { name: 'التبديل إلى العربية' })).toBeVisible();
   });

@@ -28,23 +28,23 @@ export class FilterPanelPage {
   }
 
   async selectCity(value: string): Promise<void> {
-    await this.page.locator('#filter-city').selectOption(value);
+    await this.page.getByLabel('City').selectOption(value);
   }
 
   async fillMinPrice(value: string): Promise<void> {
-    await this.page.locator('#filter-min-price').fill(value);
+    await this.page.getByLabel('Min price').fill(value);
   }
 
   async fillMaxPrice(value: string): Promise<void> {
-    await this.page.locator('#filter-max-price').fill(value);
+    await this.page.getByLabel('Max price').fill(value);
   }
 
   async selectRooms(value: string): Promise<void> {
-    await this.page.locator('#filter-rooms').selectOption(value);
+    await this.page.getByLabel('Rooms', { exact: true }).selectOption(value);
   }
 
   async selectSort(value: string): Promise<void> {
-    await this.page.locator('#filter-sort').selectOption(value);
+    await this.page.getByLabel('Sort by').selectOption(value);
   }
 
   /** Select an un-pressed property-type toggle (e.g. "Villa"). */

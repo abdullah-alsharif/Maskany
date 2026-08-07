@@ -1,8 +1,8 @@
 /**
  * E2E — Empty states and 404 (US5 + US7).
  *
- * Validates the no-results empty state, filter-matching-nothing state,
- * and 404 pages for invalid property UUIDs and routes.
+ * No-results and filter-matching-nothing states assert the "No properties
+ * found" terminal text; 404s cover invalid property UUIDs and routes.
  */
 import { goto } from './test-helpers';
 import { expect, test } from '@playwright/test';
@@ -15,14 +15,14 @@ test.describe('Empty States', () => {
     const grid = page.getByTestId('property-grid');
     await expect(grid).toBeVisible({ timeout: 15_000 });
 
-    const searchInput = page.getByLabel('Search properties').first();
+    const searchInput = page.getByLabel('Search properties');
     await searchInput.fill('xyznonexistent');
 
-    // Wait for debounced search and empty results.
-    await expect.poll(async () => grid.locator('article').count(), { timeout: 15_000 }).toBe(0);
-
-    // NoResults component should appear.
-    await expect(page.getByText('No properties found')).toBeVisible({ timeout: 10_000 });
+    // Poll for the NoResults text: a count-0 poll can pass transiently
+    // while the grid unmounts (skeleton or empty branch), the text cannot.
+    await expect
+      .poll(async () => page.getByText('No properties found').count(), { timeout: 15_000 })
+      .toBe(1);
   });
 
   test('filters matching nothing show empty state', async ({ page }) => {
@@ -37,9 +37,11 @@ test.describe('Empty States', () => {
     await filters.fillMaxPrice('1');
     await filters.apply();
 
-    await expect.poll(async () => grid.locator('article').count(), { timeout: 15_000 }).toBe(0);
-
-    await expect(page.getByText('No properties found')).toBeVisible({ timeout: 10_000 });
+    // See search test: poll for NoResults text — the article-count poll
+    // can catch the skeleton window where the grid is unmounted.
+    await expect
+      .poll(async () => page.getByText('No properties found').count(), { timeout: 15_000 })
+      .toBe(1);
   });
 });
 

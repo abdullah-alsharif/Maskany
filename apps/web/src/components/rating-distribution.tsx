@@ -26,12 +26,11 @@ export function RatingDistribution({ distribution, total }: RatingDistributionPr
               {stars}
             </span>
             <Star className="h-3 w-3 fill-amber-400 text-amber-400" aria-hidden="true" />
-            <div
-              className="flex-1 h-1.5 bg-stone-200/50 rounded-full overflow-hidden"
-              role="presentation"
-            >
+            <div className="flex-1 h-1.5 bg-stone-200/50 rounded-full overflow-hidden">
               <div
                 data-testid="distribution-fill"
+                role="img"
+                aria-label={t('aria.distributionBar', { stars, count })}
                 className="h-full bg-amber-400 rounded-full transition-[width] duration-700 ease-[var(--ease-out-expo)]"
                 style={{ width: `${percentage}%` }}
               />

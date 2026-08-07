@@ -1,18 +1,14 @@
 /**
  * E2E — Auth validation (PRD §2.1-§2.4).
  *
- * Registration and OTP edge cases: duplicate identifiers, empty required
- * fields, invalid OTP codes, and role/authentication guards on protected
- * routes. Tests that need an existing identifier use a seeded phone purely
- * for the duplicate-registration case (no OTP is issued), while every
- * authenticated flow uses a fresh per-test user so parallel runs never
- * race on OTP codes or rate limits.
+ * Registration and OTP edge cases plus role guards. Uses a seeded phone only
+ * to prove duplicate registration (no OTP is issued); authenticated flows use
+ * fresh per-test users so parallel runs never race on OTP codes or rate limits.
  */
 import { expect, test } from './test-fixtures';
-import { goto, getLatestOtpCode, loginAsTestUser } from './test-helpers';
+import { getPool, goto, getLatestOtpCode, loginAsTestUser, appAlert } from './test-helpers';
 
-// Seeded owner phone — used only to prove duplicate registration fails.
-// No OTP is issued for it, so sharing it with read-only specs is safe.
+// Seeded phone, never issued an OTP — safe to share with read-only specs.
 const EXISTING_PHONE_COUNTRY = '+966';
 const EXISTING_PHONE_LOCAL = '501111001';
 
@@ -26,10 +22,8 @@ test.describe('Registration validation', () => {
     await page.getByLabel('Phone number').fill(EXISTING_PHONE_LOCAL);
     await page.getByRole('button', { name: 'Create account' }).click();
 
-    await expect(page.locator('p[role="alert"]')).toBeVisible({ timeout: 10_000 });
-    await expect(page.locator('p[role="alert"]')).toContainText(
-      /could not create|already|exists|registered/i,
-    );
+    await expect(appAlert(page)).toBeVisible({ timeout: 10_000 });
+    await expect(appAlert(page)).toContainText(/could not create|already|exists|registered/i);
   });
 
   test('registering with an empty name shows validation error', async ({ page, uniqueData }) => {
@@ -39,7 +33,7 @@ test.describe('Registration validation', () => {
     await page.getByLabel('Phone number').fill(uniqueData.phoneLocal);
     await page.getByRole('button', { name: 'Create account' }).click();
 
-    await expect(page.locator('p[role="alert"]')).toContainText(/full name/i, {
+    await expect(appAlert(page)).toContainText(/full name/i, {
       timeout: 5_000,
     });
   });
@@ -50,7 +44,7 @@ test.describe('Registration validation', () => {
     await page.getByLabel('Full name').fill('No Phone User');
     await page.getByRole('button', { name: 'Create account' }).click();
 
-    await expect(page.locator('p[role="alert"]')).toContainText(/phone/i, { timeout: 5_000 });
+    await expect(appAlert(page)).toContainText(/phone/i, { timeout: 5_000 });
   });
 
   test('registering with an invalid email shows validation error', async ({ page, uniqueData }) => {
@@ -62,17 +56,17 @@ test.describe('Registration validation', () => {
     await page.getByLabel('Email (optional)').fill('not-an-email');
     await page.getByRole('button', { name: 'Create account' }).click();
 
-    // The API rejects the malformed email; the register form surfaces a
-    // generic error alert.
-    await expect(page.locator('p[role="alert"]')).toBeVisible({ timeout: 5_000 });
+    // The register form maps the malformed email to a generic account error.
+    await expect(appAlert(page)).toHaveText(/could not create your account/i, {
+      timeout: 5_000,
+    });
   });
 });
 
 test.describe('OTP validation', () => {
   test('submitting an invalid OTP code shows an error', async ({
     page,
-    // The user must exist (fixture side-effect) for the OTP request to
-    // succeed; the binding itself is unused.
+    // Fixture side-effect: the user must exist for the OTP to be issued.
     browserUser: _browserUser,
     uniqueData,
   }) => {
@@ -85,10 +79,24 @@ test.describe('OTP validation', () => {
     await expect(page).toHaveURL(/\/verify-otp$/);
 
     for (let i = 0; i < 6; i += 1) {
-      await page.getByLabel(`Digit ${i + 1}`).type('9');
+      await page.getByLabel(`Digit ${i + 1}`).pressSequentially('9');
     }
 
-    await expect(page.locator('p[role="alert"]')).toBeVisible({ timeout: 10_000 });
+    await expect(appAlert(page)).toBeVisible({ timeout: 10_000 });
+    // The verify page maps failed attempts to "That code didn't match."
+    await expect(appAlert(page)).toContainText(/didn'?t match/i);
+
+    // The wrong code must not have verified the pending OTP row.
+    const pool = getPool();
+    const result = await pool.query<{ verified: boolean }>(
+      `SELECT verified
+         FROM otp_codes
+        WHERE identifier = $1
+        ORDER BY created_at DESC
+        LIMIT 1`,
+      [uniqueData.phone],
+    );
+    expect(result.rows[0]?.verified).toBe(false);
   });
 
   test('login for an unregistered phone shows an error and issues no OTP', async ({
@@ -100,7 +108,7 @@ test.describe('OTP validation', () => {
     await page.getByLabel('Phone number').fill(uniqueData.phoneLocal);
     await page.getByRole('button', { name: 'Send code' }).click();
 
-    await expect(page.locator('p[role="alert"]')).toBeVisible({ timeout: 10_000 });
+    await expect(appAlert(page)).toBeVisible({ timeout: 10_000 });
     // The API must not have written an OTP for an unknown identifier.
     const code = await getLatestOtpCode(uniqueData.phone);
     expect(code).toBeNull();
@@ -128,10 +136,13 @@ test.describe('Unauthorized access', () => {
     await expect(page).toHaveURL(/\/login$/);
   });
 
-  test('browser-type user visiting /my-properties is redirected', async ({ page, browserUser }) => {
+  test('browser-type user visiting /my-properties is redirected to home', async ({
+    page,
+    browserUser,
+  }) => {
     await loginAsTestUser(page, browserUser.phone);
 
     await goto(page, '/my-properties');
-    await expect(page).not.toHaveURL(/\/my-properties$/);
+    await expect(page).toHaveURL(/\/$/, { timeout: 10_000 });
   });
 });

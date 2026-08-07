@@ -19,13 +19,20 @@ export const TEST_POSTGRES_PORT = 5433;
 
 /**
  * Execute a docker compose command against the test compose file.
+ *
+ * Every call carries a timeout so a hung docker daemon fails the suite with
+ * a clear error instead of blocking setup/teardown indefinitely.
  */
-function dockerCompose(command: string, options: { silent?: boolean } = {}): string {
+function dockerCompose(
+  command: string,
+  options: { silent?: boolean; timeoutMs?: number } = {},
+): string {
   const cmd = `docker compose -f "${COMPOSE_FILE}" ${command}`;
   try {
     const result = execSync(cmd, {
       encoding: 'utf-8',
       stdio: options.silent ? 'pipe' : 'inherit',
+      timeout: options.timeoutMs ?? 120_000,
     });
     return result || '';
   } catch (error) {
@@ -66,7 +73,9 @@ export function startTestEnvironment(): void {
     console.log('✅ Test environment already running');
     return;
   }
-  dockerCompose('up -d --wait');
+  // `up -d --wait` must tolerate a cold-start image pull on fresh CI
+  // machines, so it gets a longer budget than the default 120s.
+  dockerCompose('up -d --wait', { timeoutMs: 300_000 });
   console.log(
     `✅ Test environment ready (PostgreSQL: ${TEST_POSTGRES_HOST}:${TEST_POSTGRES_PORT})`,
   );

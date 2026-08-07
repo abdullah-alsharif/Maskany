@@ -1,75 +1,82 @@
 /**
- * E2E — Status toggle (US9).
- *
- * Validates that owners can deactivate and reactivate properties,
- * and that deactivated properties are excluded from the public listing.
- * Runs with a fresh per-test owner and a unique property title so the
- * public-listing assertions never observe another test's data.
+ * E2E — Status toggle (US9): deactivation and reactivation are separate
+ * tests, each seeded through the test-data layer (active fixture property /
+ * inactive DB row) so the behavior under test is a single state flip.
+ * Fixture teardown cascades the property away — no inline delete step.
  */
 import { expect, test } from './test-fixtures';
 import { goto, loginAsTestUser } from './test-helpers';
+import { createTestProperty } from './test-data';
 import { MyPropertiesPage } from './pages/my-properties-page';
-import { PropertyWizardPage } from './pages/property-wizard-page';
 
 test.describe('Status toggle', () => {
-  test('deactivate and reactivate property', async ({ page, ownerUser, uniqueData }) => {
-    const testTitle = uniqueData.title('Status Toggle Property');
-    const wizard = new PropertyWizardPage(page);
-    const myProperties = new MyPropertiesPage(page);
+  test('deactivating a property hides it from the public listing', async ({
+    page,
+    ownerWithProperty,
+  }) => {
+    const { owner, property } = ownerWithProperty;
 
-    // Create a property first.
+    await loginAsTestUser(page, owner.phone);
+    await expect(page.getByTestId('property-grid')).toBeVisible({ timeout: 15_000 });
+
+    // Precondition: the active property answers an exact-title search BEFORE
+    // deactivation — without it the absence poll below could pass vacuously.
+    await page.getByLabel('Search properties').fill(property.title);
+    await expect(
+      page.getByTestId('property-grid').getByRole('article').filter({ hasText: property.title }),
+    ).toBeVisible({ timeout: 15_000 });
+
+    const myProperties = new MyPropertiesPage(page);
+    await myProperties.goto();
+    const testCard = myProperties.card(property.title);
+    await expect(testCard.getByText('Active', { exact: true })).toBeVisible({ timeout: 10_000 });
+
+    await myProperties.toggleStatus(property.title, 'Inactive');
+
+    // The property must NOT answer that exact public search: title scoping
+    // resists parallel inserts (page-1 push-off) and unrelated-grid masking.
+    await goto(page, '/');
+    await page.getByLabel('Search properties').fill(property.title);
+    await expect
+      .poll(
+        async () =>
+          page
+            .getByTestId('property-grid')
+            .getByRole('article')
+            .filter({ hasText: property.title })
+            .count(),
+        { timeout: 15_000 },
+      )
+      .toBe(0);
+  });
+
+  test('reactivating a property brings it back to the public listing', async ({
+    page,
+    ownerUser,
+    uniqueData,
+  }) => {
+    const property = await createTestProperty({
+      ownerId: ownerUser.id,
+      title: uniqueData.title('Reactivate Property'),
+      status: 'INACTIVE',
+    });
+
     await loginAsTestUser(page, ownerUser.phone);
     await expect(page.getByTestId('property-grid')).toBeVisible({ timeout: 15_000 });
 
-    await wizard.gotoCreate();
-    await wizard.fillBasics(testTitle, 'Status toggle test.');
-    await wizard.fillDetails({
-      price: '3000',
-      bedrooms: '1',
-      bathrooms: '1',
-      area: '50',
-      currency: 'SAR',
-    });
-    await wizard.fillLocation({ city: 'Riyadh', neighborhood: 'Test Area', country: 'SA' });
-    await wizard.skipImages();
-    await wizard.fillContact(uniqueData.phone);
-    await wizard.publish();
-
-    // Go to my-properties and verify Active status.
+    const myProperties = new MyPropertiesPage(page);
     await myProperties.goto();
-    const testCard = myProperties.card(testTitle);
-    await expect(testCard.getByText('Active')).toBeVisible({ timeout: 10_000 });
+    const testCard = myProperties.card(property.title);
+    await expect(testCard.getByText('Inactive', { exact: true })).toBeVisible({ timeout: 10_000 });
 
-    // Deactivate.
-    await myProperties.toggleStatus(testTitle, 'Inactive');
+    await myProperties.toggleStatus(property.title, 'Active');
 
-    // Property should NOT appear in public listing.
+    // Exact-title search returns the best title match despite parallel
+    // workers' inserts — no "newest row stays on page 1" assumption.
     await goto(page, '/');
-    const grid = page.getByTestId('property-grid');
-    await expect(grid).toBeVisible({ timeout: 15_000 });
-    const allTexts = await grid.locator('article').allInnerTexts();
-    const found = allTexts.some((t) => t.includes(testTitle));
-    expect(found).toBe(false);
-
-    // Reactivate.
-    await myProperties.goto();
-    await myProperties.toggleStatus(testTitle, 'Active');
-
-    // Property should reappear in public listing.
-    await goto(page, '/');
-    await expect(grid).toBeVisible({ timeout: 15_000 });
-    await expect
-      .poll(
-        async () => {
-          const texts = await grid.locator('article').allInnerTexts();
-          return texts.some((t) => t.includes(testTitle));
-        },
-        { timeout: 15_000 },
-      )
-      .toBe(true);
-
-    // Clean up.
-    await myProperties.goto();
-    await myProperties.deleteProperty(testTitle);
+    await page.getByLabel('Search properties').fill(property.title);
+    await expect(
+      page.getByTestId('property-grid').getByRole('article').filter({ hasText: property.title }),
+    ).toBeVisible({ timeout: 15_000 });
   });
 });

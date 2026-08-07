@@ -1,12 +1,12 @@
 /**
  * E2E — Category tabs (US11).
  *
- * The CategoryBar has 8 tabs (All, Apartments, Rooms, Chalets, Villas,
- * Houses, Studios, Other). This spec validates that each tab filters
- * the property grid correctly.
+ * Validates each of the 8 CategoryBar tabs (All, Apartments, Rooms, Chalets,
+ * Villas, Houses, Studios, Other) filters the property grid correctly.
  */
 import { goto } from './test-helpers';
 import { expect, test } from '@playwright/test';
+import { SEED_PROPERTY_TITLES } from './test-fixtures';
 
 test.describe('Category Tabs', () => {
   test.beforeEach(async ({ page }) => {
@@ -18,18 +18,42 @@ test.describe('Category Tabs', () => {
   test('All tab shows all properties', async ({ page }) => {
     const grid = page.getByTestId('property-grid');
 
-    // First click a specific tab to narrow.
+    // Narrow first; poll until visible cards are all villa-badged.
     await page.getByRole('tab', { name: 'Villas' }).click();
     await expect
-      .poll(async () => grid.locator('article').count(), { timeout: 15_000 })
-      .toBeGreaterThan(0);
-    const villaCount = await grid.locator('article').count();
+      .poll(
+        async () => {
+          const cardCount = await grid.getByRole('article').count();
+          if (cardCount === 0) return false;
+          const badgeCount = await grid
+            .getByRole('article')
+            .getByText(/^Villa$/)
+            .count();
+          return badgeCount === cardCount;
+        },
+        { timeout: 15_000 },
+      )
+      .toBe(true);
+    const villaCount = await grid.getByRole('article').count();
 
-    // Now click All — should show more or equal.
+    // All must settle on a superset of villas that still includes the seeded
+    // apartment (SEED_PROPERTY_TITLES[0], never deleted mid-run).
     await page.getByRole('tab', { name: 'All' }).click();
     await expect
-      .poll(async () => grid.locator('article').count(), { timeout: 15_000 })
-      .toBeGreaterThanOrEqual(villaCount);
+      .poll(
+        async () => {
+          const cardCount = await grid.getByRole('article').count();
+          if (cardCount < villaCount) return false;
+          const apartmentVisible = await grid
+            .getByRole('article')
+            .filter({ hasText: SEED_PROPERTY_TITLES[0] })
+            .first()
+            .isVisible();
+          return apartmentVisible;
+        },
+        { timeout: 15_000 },
+      )
+      .toBe(true);
   });
 
   test('Villas tab shows only villas', async ({ page }) => {
@@ -37,18 +61,22 @@ test.describe('Category Tabs', () => {
 
     await page.getByRole('tab', { name: 'Villas' }).click();
 
+    // Badge count === card count: a bare count poll can pass on stale
+    // pre-refetch skeleton cards.
     await expect
-      .poll(async () => grid.locator('article').count(), { timeout: 15_000 })
-      .toBeGreaterThan(0);
-
-    // All visible badges should say "Villa".
-    const badges = grid
-      .locator('article')
-      .locator('span')
-      .filter({ hasText: /^Villa$/ });
-    const count = await grid.locator('article').count();
-    const badgeCount = await badges.count();
-    expect(badgeCount).toBe(count);
+      .poll(
+        async () => {
+          const cardCount = await grid.getByRole('article').count();
+          if (cardCount === 0) return false;
+          const badgeCount = await grid
+            .getByRole('article')
+            .getByText(/^Villa$/)
+            .count();
+          return badgeCount === cardCount;
+        },
+        { timeout: 15_000 },
+      )
+      .toBe(true);
   });
 
   test('Apartments tab shows only apartments', async ({ page }) => {
@@ -57,16 +85,19 @@ test.describe('Category Tabs', () => {
     await page.getByRole('tab', { name: 'Apartments' }).click();
 
     await expect
-      .poll(async () => grid.locator('article').count(), { timeout: 15_000 })
-      .toBeGreaterThan(0);
-
-    const badges = grid
-      .locator('article')
-      .locator('span')
-      .filter({ hasText: /^Apartment$/ });
-    const count = await grid.locator('article').count();
-    const badgeCount = await badges.count();
-    expect(badgeCount).toBe(count);
+      .poll(
+        async () => {
+          const cardCount = await grid.getByRole('article').count();
+          if (cardCount === 0) return false;
+          const badgeCount = await grid
+            .getByRole('article')
+            .getByText(/^Apartment$/)
+            .count();
+          return badgeCount === cardCount;
+        },
+        { timeout: 15_000 },
+      )
+      .toBe(true);
   });
 
   test('Studios tab shows only studios', async ({ page }) => {
@@ -75,19 +106,22 @@ test.describe('Category Tabs', () => {
     await page.getByRole('tab', { name: 'Studios' }).click();
 
     await expect
-      .poll(async () => grid.locator('article').count(), { timeout: 15_000 })
-      .toBeGreaterThan(0);
-
-    const badges = grid
-      .locator('article')
-      .locator('span')
-      .filter({ hasText: /^Studio$/ });
-    const count = await grid.locator('article').count();
-    const badgeCount = await badges.count();
-    expect(badgeCount).toBe(count);
+      .poll(
+        async () => {
+          const cardCount = await grid.getByRole('article').count();
+          if (cardCount === 0) return false;
+          const badgeCount = await grid
+            .getByRole('article')
+            .getByText(/^Studio$/)
+            .count();
+          return badgeCount === cardCount;
+        },
+        { timeout: 15_000 },
+      )
+      .toBe(true);
   });
 
-  test('Other tab shows only other types or is empty', async ({ page }) => {
+  test('Other tab shows an empty grid (no OTHER-type seed)', async ({ page }) => {
     const grid = page.getByTestId('property-grid');
 
     // Wait for the category fetch so we never assert on a stale grid.
@@ -97,17 +131,9 @@ test.describe('Category Tabs', () => {
     await page.getByRole('tab', { name: 'Other' }).click();
     await otherFetch;
 
-    // No OTHER-type properties are seeded and fixture-created properties
-    // are APARTMENT, so the tab is expected to be empty — but tolerate
-    // OTHER cards (e.g. added by external tooling) by asserting every
-    // visible card carries the "Other" badge.
-    const cardCount = await grid.locator('article').count();
-    if (cardCount > 0) {
-      const badges = grid
-        .locator('article')
-        .locator('span')
-        .filter({ hasText: /^Other$/ });
-      expect(await badges.count()).toBe(cardCount);
-    }
+    // Fixture-created properties are APARTMENT and none are OTHER-seeded, so
+    // the tab is deterministic; assert the no-results state, not cards.
+    await expect(page.getByText('No properties found')).toBeVisible({ timeout: 10_000 });
+    await expect(grid).not.toBeVisible();
   });
 });

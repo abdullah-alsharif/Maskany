@@ -23,7 +23,7 @@ export class MyPropertiesPage {
   }
 
   card(title: string): Locator {
-    return this.page.locator('article').filter({ hasText: title });
+    return this.page.getByRole('article').filter({ hasText: title });
   }
 
   /** Delete `title` via the confirm dialog and wait for it to disappear. */

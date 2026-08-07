@@ -32,9 +32,13 @@ test.describe('Language persistence', () => {
     await goto(page, '/');
 
     await page.getByRole('button', { name: 'التبديل إلى العربية' }).click();
-    await expect(page.locator('html')).toHaveAttribute('dir', 'rtl');
+    await expect
+      .poll(() => page.evaluate(() => document.documentElement.getAttribute('dir')))
+      .toBe('rtl');
 
     await page.getByRole('button', { name: 'Switch to English' }).click();
-    await expect(page.locator('html')).toHaveAttribute('dir', 'ltr');
+    await expect
+      .poll(() => page.evaluate(() => document.documentElement.getAttribute('dir')))
+      .toBe('ltr');
   });
 });
