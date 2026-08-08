@@ -4,6 +4,7 @@ import { useState, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useAiEnhance } from '../../hooks/use-ai-enhance';
 import { useAiStreamEnhance } from '../../hooks/use-ai-stream-enhance';
+import { AiFailureNote } from './ai-failure-note';
 import type { useAiHistory } from '../../hooks/use-ai-history';
 import type { PropertyMetadata } from '../../services/ai-service';
 
@@ -100,9 +101,9 @@ export function AiEnhanceButton({
   }, [previousValue, onResult, onUndo]);
 
   const loading = aiEnhance.status === 'loading' || aiStreamEnhance.status === 'loading';
-  const errorMessage = aiEnhance.errorMessage || aiStreamEnhance.errorMessage;
   const isRateLimited =
     aiEnhance.status === 'rate_limited' || aiStreamEnhance.status === 'rate_limited';
+  const hasError = aiEnhance.status === 'error' || aiStreamEnhance.status === 'error';
 
   return (
     <div className="flex items-center gap-1">
@@ -146,10 +147,8 @@ export function AiEnhanceButton({
         </button>
       )}
 
-      {!showUndo && isRateLimited && <span className="text-xs text-amber-600">{errorMessage}</span>}
-      {!showUndo && !isRateLimited && aiEnhance.status === 'error' && (
-        <span className="text-xs text-red-500">{errorMessage}</span>
-      )}
+      {!showUndo && isRateLimited && <AiFailureNote variant="rate_limit" compact />}
+      {!showUndo && !isRateLimited && hasError && <AiFailureNote variant="error" compact />}
     </div>
   );
 }

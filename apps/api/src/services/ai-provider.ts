@@ -11,6 +11,8 @@ export type TaskKind =
 export interface AIProviderConfig {
   maxTokens: number;
   temperature: number;
+  /** Per-request timeout in ms. Falls back to the provider's default. */
+  timeoutMs?: number;
 }
 
 export interface AIStreamResult {
@@ -42,6 +44,6 @@ export const TASK_CONFIG: Record<TaskKind, AIProviderConfig> = {
   expand: { maxTokens: 1536, temperature: 0.4 },
   fix_grammar: { maxTokens: 1024, temperature: 0.1 },
   generate: { maxTokens: 512, temperature: 0.6 },
-  review: { maxTokens: 2048, temperature: 0.3 },
+  review: { maxTokens: 2048, temperature: 0.3, timeoutMs: 90_000 },
   translate: { maxTokens: 2048, temperature: 0.2 },
 };

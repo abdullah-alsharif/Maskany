@@ -3,6 +3,7 @@
 import { useState, useMemo, useCallback, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { AiQualityScore } from './ai-quality-score';
+import { AiFailureNote } from './ai-failure-note';
 import { useAiReview } from '../../hooks/use-ai-review';
 import type { ReviewPropertyData, ReviewIssue, FixOption } from '../../services/ai-service';
 
@@ -290,6 +291,31 @@ export function AiReviewPanel({
           <div className="p-4 pb-28 space-y-4">
             {isLoading && (
               <div className="space-y-3">
+                <div className="flex items-center justify-center gap-3 py-6 animate-fade-in">
+                  <svg
+                    className="animate-spin h-5 w-5 text-terracotta-600"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                  >
+                    <circle
+                      className="opacity-25"
+                      cx="12"
+                      cy="12"
+                      r="10"
+                      stroke="currentColor"
+                      strokeWidth="4"
+                    />
+                    <path
+                      className="opacity-75"
+                      fill="currentColor"
+                      d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
+                    />
+                  </svg>
+                  <div>
+                    <p className="text-sm font-semibold text-stone-700">{t('ai.reviewLoading')}</p>
+                    <p className="text-xs text-stone-500 mt-0.5">{t('ai.reviewLoadingHint')}</p>
+                  </div>
+                </div>
                 <div className="h-24 rounded-xl bg-stone-100 animate-pulse" />
                 {[1, 2, 3, 4, 5].map((i) => (
                   <div key={i} className="h-16 rounded-xl bg-stone-100 animate-pulse" />
@@ -298,16 +324,12 @@ export function AiReviewPanel({
             )}
 
             {error && (
-              <div className="text-center py-8">
-                <p className="text-sm text-stone-500 mb-3">{t('ai.reviewError')}</p>
-                <button
-                  type="button"
-                  onClick={() => refetch()}
-                  className="text-sm text-terracotta-600 hover:text-terracotta-700 font-medium"
-                >
-                  {t('ai.retry')}
-                </button>
-              </div>
+              <AiFailureNote
+                variant="error"
+                title={t('ai.reviewError')}
+                hint={t('ai.reviewErrorHint')}
+                onRetry={() => refetch()}
+              />
             )}
 
             {data && (

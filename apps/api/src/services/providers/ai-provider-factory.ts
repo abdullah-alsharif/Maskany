@@ -45,11 +45,15 @@ export function createAIProvider(options: AIProviderOptions): AIProvider {
     timeoutMs = DEFAULT_TIMEOUT_MS,
   } = options;
 
-  const fetchOpts = (body: Record<string, unknown>, stream?: boolean): RequestInit => ({
+  const fetchOpts = (
+    body: Record<string, unknown>,
+    stream?: boolean,
+    timeoutMsOverride?: number,
+  ): RequestInit => ({
     method: 'POST',
     headers: buildHeaders(apiKey, extraHeaders),
     body: JSON.stringify({ ...body, stream }),
-    signal: AbortSignal.timeout(timeoutMs),
+    signal: AbortSignal.timeout(timeoutMsOverride ?? timeoutMs),
   });
 
   return {
@@ -73,7 +77,7 @@ export function createAIProvider(options: AIProviderOptions): AIProvider {
         body.response_format = { type: 'json_object' };
       }
 
-      const response = await fetch(baseUrl, fetchOpts(body));
+      const response = await fetch(baseUrl, fetchOpts(body, false, config.timeoutMs));
       const raw = await response.text();
       if (!response.ok) {
         throw new Error(`${id} API error: ${response.status} ${raw.slice(0, 500)}`);
@@ -110,6 +114,7 @@ export function createAIProvider(options: AIProviderOptions): AIProvider {
             temperature: config.temperature,
           },
           true,
+          config.timeoutMs,
         ),
       );
 

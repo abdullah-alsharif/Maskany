@@ -8,15 +8,21 @@ export const LANG_STORAGE_KEY = 'maskany_lang';
 export const SUPPORTED_LANGS = ['en', 'ar'] as const;
 export type SupportedLang = (typeof SUPPORTED_LANGS)[number];
 
-if (!i18n.isInitialized) {
+const resources = { en: { translation: en }, ar: { translation: ar } } as const;
+
+if (i18n.isInitialized) {
+  // HMR-safe: on a hot reload the module re-executes with a fresh bundle,
+  // but re-init is skipped to avoid double-registering plugins. Replace the
+  // resource bundles instead so newly added or edited keys appear immediately.
+  for (const lng of SUPPORTED_LANGS) {
+    i18n.addResourceBundle(lng, 'translation', resources[lng].translation, true, true);
+  }
+} else {
   void i18n
     .use(LanguageDetector)
     .use(initReactI18next)
     .init({
-      resources: {
-        en: { translation: en },
-        ar: { translation: ar },
-      },
+      resources,
       fallbackLng: 'en',
       supportedLngs: SUPPORTED_LANGS,
       detection: {

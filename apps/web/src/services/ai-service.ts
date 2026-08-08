@@ -118,6 +118,7 @@ export async function* streamEnhanceField(
   const reader = res.body!.getReader();
   const decoder = new TextDecoder();
   let buffer = '';
+  let currentEvent = '';
 
   while (true) {
     const { done, value } = await reader.read();
@@ -128,8 +129,15 @@ export async function* streamEnhanceField(
     buffer = lines.pop() ?? '';
 
     for (const line of lines) {
+      if (line.startsWith('event: ')) {
+        currentEvent = line.slice(7).trim();
+        continue;
+      }
       if (line.startsWith('data: ')) {
         const data = JSON.parse(line.slice(6));
+        if (currentEvent === 'error' || data.error) {
+          throw new Error(data.error ?? 'AI generation failed');
+        }
         if (data.text) yield data.text;
       }
     }

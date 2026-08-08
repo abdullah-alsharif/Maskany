@@ -7,11 +7,12 @@
  */
 'use client';
 
-import type { ReactNode } from 'react';
+import { type ReactNode, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useMutation } from '@tanstack/react-query';
 import { Button } from './ui/button';
 import { AiEnhanceButton } from './ai/ai-enhance-button';
+import { AiFailureNote, type AiFailureVariant } from './ai/ai-failure-note';
 import { useAiHistory } from '../hooks/use-ai-history';
 import { useIdempotencyKey } from '../hooks/use-idempotency-key';
 import { translateAllFields, type PropertyMetadata } from '../services/ai-service';
@@ -82,6 +83,7 @@ export function TranslationEditor({
   const { t, i18n } = useTranslation();
   const history = useAiHistory();
   const { key: idempotencyKey, reset: renewKey } = useIdempotencyKey();
+  const [generateError, setGenerateError] = useState<AiFailureVariant | null>(null);
 
   const effectiveLocale = (i18n.language?.startsWith('ar') ? 'ar' : 'en') as 'en' | 'ar';
   const sourceLocale = effectiveLocale;
@@ -113,7 +115,11 @@ export function TranslationEditor({
       );
       return result.translation;
     },
+    onMutate: () => {
+      setGenerateError(null);
+    },
     onSuccess: (translation) => {
+      setGenerateError(null);
       onChange({
         title: translation.title ?? '',
         summary: translation.summary ?? '',
@@ -123,6 +129,10 @@ export function TranslationEditor({
         country: translation.country ?? '',
       });
       renewKey();
+    },
+    onError: (err) => {
+      const axiosErr = err as { response?: { status?: number } };
+      setGenerateError(axiosErr.response?.status === 429 ? 'rate_limit' : 'error');
     },
   });
 
@@ -169,6 +179,10 @@ export function TranslationEditor({
           </Button>
         </div>
       </div>
+
+      {generateError && (
+        <AiFailureNote variant={generateError} onRetry={() => generateMutation.mutate()} />
+      )}
 
       {open && (
         <div className="space-y-3 pt-2 border-t border-stone-100" dir={transDir}>
