@@ -2,8 +2,7 @@
 module.exports = {
   ci: {
     collect: {
-      startServerCommand:
-        'pnpm --filter @maskany/web build && pnpm --filter @maskany/web exec next start -p 3000',
+      startServerCommand: 'pnpm --filter @maskany/web exec next start -p 3000',
       // Property IDs are auto-generated UUIDs (gen_random_uuid), so there is
       // no deterministic URL for /properties/[id]. In a real CI run, extract
       // an ID from the seeded DB and inject it into this list.

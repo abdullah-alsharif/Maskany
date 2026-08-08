@@ -16,7 +16,7 @@ export const options = {
 
 export default function () {
   const BASE = 'http://localhost:3001/api';
-  const res = mixedTraffic(BASE, '');
+  const res = mixedTraffic(BASE);
   errorRate.add(res.status !== 200);
   sleep(0.5 + Math.random() * 1.5);
 }

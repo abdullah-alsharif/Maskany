@@ -14,7 +14,7 @@ export async function checkDbHealth(db: Kysely<Database>): Promise<HealthStatus>
         .selectFrom('users' as never)
         .select('id' as never)
         .limit(1)
-        .executeTakeFirstOrThrow(),
+        .executeTakeFirst(),
       new Promise<never>((_, reject) => setTimeout(() => reject(new Error('timeout')), 5000)),
     ]);
     return { status: 'ok', db: 'connected', timestamp: new Date().toISOString() };

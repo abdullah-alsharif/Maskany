@@ -20,9 +20,9 @@ export interface CacheKeyParams {
 function normalizeContent(text: string): string {
   return text
     .toLowerCase()
-    .trim()
     .replace(/[^\w\s]|_/g, '')
     .replace(/\s+/g, ' ')
+    .trim()
     .slice(0, 200);
 }
 

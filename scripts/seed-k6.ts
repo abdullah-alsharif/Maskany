@@ -374,12 +374,16 @@ async function main(): Promise<void> {
     });
   }
 
-  const insertedProps = await db
-    .insertInto('properties')
-    .values(propertyValues)
-    .returning(['id'])
-    .execute();
-  const propIds = insertedProps.map((p) => p.id);
+  const propIds: string[] = [];
+  for (let i = 0; i < propertyValues.length; i += BATCH) {
+    const batch = propertyValues.slice(i, i + BATCH);
+    const insertedBatch = await db
+      .insertInto('properties')
+      .values(batch)
+      .returning(['id'])
+      .execute();
+    propIds.push(...insertedBatch.map((p) => p.id));
+  }
   console.log(`[seed-k6] inserted ${propIds.length} properties`);
 
   console.log('[seed-k6] seeding media records...');

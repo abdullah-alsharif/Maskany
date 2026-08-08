@@ -24,6 +24,20 @@ export default defineConfig({
     coverage: {
       provider: 'v8',
       reporter: ['text', 'lcov'],
+      // Migrations and CLI/provisioning scripts are exercised by the
+      // `db:migrate` and pipeline setup steps during CI/local DB
+      // provisioning rather than by unit tests, so they are excluded from
+      // the unit-coverage report.
+      exclude: [
+        '**/node_modules/**',
+        '**/coverage/**',
+        '**/dist/**',
+        '**/*.d.ts',
+        '**/cypress/**',
+        'tests/**',
+        'src/migrations/**',
+        'src/scripts/**',
+      ],
       thresholds: {
         functions: 80,
         lines: 80,

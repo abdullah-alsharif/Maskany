@@ -128,26 +128,37 @@ export function createAIProvider(options: AIProviderOptions): AIProvider {
       if (!reader) throw new Error('No response body');
 
       const decoder = new TextDecoder();
-      let buffer = '';
       let usage: TokenUsage = { promptTokens: 0, completionTokens: 0, totalTokens: 0 };
       let modelName = 'unknown';
 
       const asyncIterator = {
         [Symbol.asyncIterator]() {
+          let pendingLines: string[] = [];
+          let buffer = '';
+
           return {
             async next(): Promise<IteratorResult<string>> {
               while (true) {
-                const { done, value } = await reader.read();
-                if (done) {
-                  return { done: true, value: undefined as unknown as string };
+                if (pendingLines.length === 0) {
+                  const { done, value } = await reader.read();
+                  if (done) {
+                    // Flush any trailing line without a newline terminator.
+                    const trimmed = buffer.trim();
+                    if (trimmed.startsWith('data: ') && trimmed !== 'data: [DONE]') {
+                      pendingLines = [trimmed];
+                      buffer = '';
+                    } else {
+                      return { done: true, value: undefined as unknown as string };
+                    }
+                  } else {
+                    buffer += decoder.decode(value, { stream: true });
+                    pendingLines = buffer.split('\n');
+                    buffer = pendingLines.pop() ?? '';
+                  }
                 }
 
-                buffer += decoder.decode(value, { stream: true });
-                const lines = buffer.split('\n');
-                buffer = lines.pop() ?? '';
-
-                for (const line of lines) {
-                  const trimmed = line.trim();
+                for (let i = 0; i < pendingLines.length; i += 1) {
+                  const trimmed = pendingLines[i].trim();
                   if (!trimmed || trimmed === 'data: [DONE]') continue;
                   if (!trimmed.startsWith('data: ')) continue;
 
@@ -161,12 +172,14 @@ export function createAIProvider(options: AIProviderOptions): AIProvider {
                     }
                     const content = parsed.choices?.[0]?.delta?.content ?? '';
                     if (content) {
+                      pendingLines = pendingLines.slice(i + 1);
                       return { done: false, value: content };
                     }
                   } catch {
                     // skip malformed lines
                   }
                 }
+                pendingLines = [];
               }
             },
           };

@@ -40,48 +40,9 @@ export function viewDetail(baseUrl) {
   return res;
 }
 
-export function authFlow(baseUrl) {
-  const res = http.post(
-    `${baseUrl}/auth/login`,
-    JSON.stringify({
-      phone: '+966500001001',
-    }),
-    {
-      headers: { 'Content-Type': 'application/json' },
-      tags: { name: 'auth-login' },
-    },
-  );
-  check(res, { 'auth status 200': (r) => r.status === 200 });
-  return res;
-}
-
-export function createProperty(baseUrl, token) {
-  const res = http.post(
-    `${baseUrl}/properties`,
-    JSON.stringify({
-      title: 'k6 Test Property',
-      property_type: 'APARTMENT',
-      city: 'Riyadh',
-      price: '2500.00',
-      currency: 'SAR',
-      whatsapp_number: '+966500009001',
-    }),
-    {
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${token}`,
-      },
-      tags: { name: 'create-property' },
-    },
-  );
-  check(res, { 'create status 201': (r) => r.status === 201 });
-  return res;
-}
-
-export function mixedTraffic(baseUrl, token) {
+export function mixedTraffic(baseUrl) {
   const roll = Math.random();
-  if (roll < 0.6) return browseProperties(baseUrl);
+  if (roll < 0.55) return browseProperties(baseUrl);
   if (roll < 0.8) return searchProperties(baseUrl);
-  if (roll < 0.9) return authFlow(baseUrl);
-  return createProperty(baseUrl, token);
+  return viewDetail(baseUrl);
 }

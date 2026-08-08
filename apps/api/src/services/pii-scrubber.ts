@@ -12,13 +12,16 @@ export function scrubPii(text: string): string {
   cleaned = cleaned.replace(emailPattern, '[EMAIL REMOVED]');
   cleaned = cleaned.replace(saudiPhonePattern, '[PHONE REMOVED]');
   cleaned = cleaned.replace(uaePhonePattern, '[PHONE REMOVED]');
-  cleaned = cleaned.replace(phoneGenericPattern, (match) => {
-    const digits = match.replace(/\D/g, '');
-    return digits.length >= 7 && digits.length <= 15 ? '[PHONE REMOVED]' : match;
-  });
+  // Specific identifiers and the generic phone pattern must be applied
+  // BEFORE the broad digit/space matcher, otherwise Emirates IDs, iqama
+  // numbers and IBANs would be swallowed as generic phone numbers.
   cleaned = cleaned.replace(emiratesIdPattern, '[ID REMOVED]');
   cleaned = cleaned.replace(saudiIqamaPattern, '[ID REMOVED]');
   cleaned = cleaned.replace(ibanPattern, '[IBAN REMOVED]');
   cleaned = cleaned.replace(urlPattern, '[URL REMOVED]');
+  cleaned = cleaned.replace(phoneGenericPattern, (match) => {
+    const digits = match.replace(/\D/g, '');
+    return digits.length >= 7 && digits.length <= 15 ? '[PHONE REMOVED]' : match;
+  });
   return cleaned;
 }

@@ -16,7 +16,9 @@ export interface SemanticSearchResult {
 }
 
 export function encodeSemanticCursor(distance: number, propertyId: string): string {
-  const payload = JSON.stringify({ d: Number(distance.toFixed(6)), i: propertyId });
+  // Keep the full double precision: rounding to 6dp would make the cursor
+  // compare "greater than" its own origin row on the next page.
+  const payload = JSON.stringify({ d: distance, i: propertyId });
   return Buffer.from(payload).toString('base64url');
 }
 
@@ -56,10 +58,16 @@ export async function searchBySemantic(
 
   if (params.cursor) {
     const cursor = decodeSemanticCursor(params.cursor);
+    // Rows are ordered by ascending distance then property id, so the next
+    // page continues strictly past (distance, id) of the last returned row.
     queryBuilder = queryBuilder.where(
-      sql`(embedding <-> ${vectorLiteral}::vector)`,
-      '<',
-      cursor.distance,
+      sql<boolean>`(
+        (embedding <-> ${vectorLiteral}::vector) > ${cursor.distance}
+        OR (
+          (embedding <-> ${vectorLiteral}::vector) = ${cursor.distance}
+          AND property_id > ${cursor.propertyId}
+        )
+      )`,
     );
   }
 
