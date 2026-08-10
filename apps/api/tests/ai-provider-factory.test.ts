@@ -28,6 +28,10 @@ function jsonResponse(body: unknown, status = 200): Response {
   });
 }
 
+function sseResponse(chunks: string[]): Response {
+  return new Response(chunks.join(''), { status: 200 });
+}
+
 describe('createAIProvider().generate', () => {
   beforeEach(() => {
     vi.restoreAllMocks();
@@ -173,10 +177,6 @@ describe('createAIProvider().generate', () => {
 });
 
 describe('createAIProvider().stream', () => {
-  function sseResponse(chunks: string[]): Response {
-    return new Response(chunks.join(''), { status: 200 });
-  }
-
   it('yields delta content chunks and exposes usage + model', async () => {
     vi.spyOn(global, 'fetch').mockResolvedValue(
       sseResponse([
@@ -244,5 +244,142 @@ describe('createAIProvider().stream', () => {
     vi.spyOn(global, 'fetch').mockResolvedValue(new Response(null, { status: 200 }));
 
     await expect(makeProvider().stream('sys', 'user', CONFIG)).rejects.toThrow('No response body');
+  });
+});
+
+describe('prompt caching (032-prompt-caching)', () => {
+  beforeEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it('[T002] generate attaches cache_control to the system message by default', async () => {
+    vi.spyOn(global, 'fetch').mockResolvedValue(
+      jsonResponse({ choices: [{ message: { content: 'ok' } }] }),
+    );
+
+    await makeProvider().generate('sys', 'user text', CONFIG);
+
+    const [, opts] = vi.mocked(fetch).mock.calls[0] as [string, RequestInit];
+    const body = JSON.parse(opts.body as string);
+    expect(body.messages[0]).toEqual({
+      role: 'system',
+      content: 'sys',
+      cache_control: { type: 'ephemeral' },
+    });
+    expect(body.messages[1]).toEqual({ role: 'user', content: 'user text' });
+  });
+
+  it('[T003] stream attaches cache_control to the system message by default', async () => {
+    vi.spyOn(global, 'fetch').mockResolvedValue(sseResponse(['data: [DONE]\n']));
+
+    await makeProvider().stream('sys', 'user text', CONFIG);
+
+    const [, opts] = vi.mocked(fetch).mock.calls[0] as [string, RequestInit];
+    const body = JSON.parse(opts.body as string);
+    expect(body.messages[0]).toEqual({
+      role: 'system',
+      content: 'sys',
+      cache_control: { type: 'ephemeral' },
+    });
+  });
+
+  it('[T004] parses cached tokens from prompt_tokens_details in generate', async () => {
+    vi.spyOn(global, 'fetch').mockResolvedValue(
+      jsonResponse({
+        choices: [{ message: { content: 'ok' } }],
+        usage: {
+          prompt_tokens: 100,
+          completion_tokens: 20,
+          total_tokens: 120,
+          prompt_tokens_details: { cached_tokens: 90 },
+        },
+      }),
+    );
+
+    const result = await makeProvider().generate('sys', 'user', CONFIG);
+
+    expect(result.usage.cachedPromptTokens).toBe(90);
+  });
+
+  it('[T004] parses cached tokens from the final usage chunk in stream', async () => {
+    vi.spyOn(global, 'fetch').mockResolvedValue(
+      sseResponse([
+        'data: {"choices":[{"delta":{"content":"hi"}}]}\n',
+        'data: {"choices":[{"delta":{}}],"usage":{"prompt_tokens":5,"completion_tokens":7,"total_tokens":12,"prompt_tokens_details":{"cached_tokens":4}}}\n',
+        'data: [DONE]\n',
+      ]),
+    );
+
+    const stream = await makeProvider().stream('sys', 'user', CONFIG);
+    for await (const _chunk of stream) {
+      // drain
+    }
+
+    expect(stream.usage.cachedPromptTokens).toBe(4);
+  });
+
+  it('[T004] leaves cachedPromptTokens unset when prompt_tokens_details is absent', async () => {
+    vi.spyOn(global, 'fetch').mockResolvedValue(
+      jsonResponse({
+        choices: [{ message: { content: 'ok' } }],
+        usage: { prompt_tokens: 1, completion_tokens: 1, total_tokens: 2 },
+      }),
+    );
+
+    const result = await makeProvider().generate('sys', 'user', CONFIG);
+
+    expect(result.usage.cachedPromptTokens).toBeUndefined();
+  });
+
+  it('[T010] omits cache_control when promptCaching is false', async () => {
+    vi.spyOn(global, 'fetch').mockResolvedValue(
+      jsonResponse({ choices: [{ message: { content: 'ok' } }] }),
+    );
+
+    await makeProvider({ promptCaching: false }).generate('sys', 'user', CONFIG);
+
+    const [, opts] = vi.mocked(fetch).mock.calls[0] as [string, RequestInit];
+    const body = JSON.parse(opts.body as string);
+    expect(body.messages[0]).toEqual({ role: 'system', content: 'sys' });
+  });
+
+  it('[T010] omits cache_control when AI_PROMPT_CACHE_ENABLED=false', async () => {
+    vi.spyOn(global, 'fetch').mockResolvedValue(
+      jsonResponse({ choices: [{ message: { content: 'ok' } }] }),
+    );
+    process.env.AI_PROMPT_CACHE_ENABLED = 'false';
+
+    await makeProvider().generate('sys', 'user', CONFIG);
+
+    delete process.env.AI_PROMPT_CACHE_ENABLED;
+
+    const [, opts] = vi.mocked(fetch).mock.calls[0] as [string, RequestInit];
+    const body = JSON.parse(opts.body as string);
+    expect(body.messages[0]).toEqual({ role: 'system', content: 'sys' });
+  });
+
+  it('[T011] message content is byte-identical with caching enabled vs disabled', async () => {
+    const fetchMock = vi.spyOn(global, 'fetch');
+
+    fetchMock.mockResolvedValue(jsonResponse({ choices: [{ message: { content: 'ok' } }] }));
+    await makeProvider({ promptCaching: true }).generate('sys', 'user text', CONFIG);
+    const cachedBody = JSON.parse(
+      (vi.mocked(fetch).mock.calls[0][1] as RequestInit).body as string,
+    );
+
+    fetchMock.mockResolvedValue(jsonResponse({ choices: [{ message: { content: 'ok' } }] }));
+    await makeProvider({ promptCaching: false }).generate('sys', 'user text', CONFIG);
+    const uncachedBody = JSON.parse(
+      (vi.mocked(fetch).mock.calls[1][1] as RequestInit).body as string,
+    );
+
+    expect(cachedBody.messages[0].content).toBe(uncachedBody.messages[0].content);
+    expect(cachedBody.messages[1]).toEqual(uncachedBody.messages[1]);
+    expect(cachedBody.messages[0]).toMatchObject({
+      role: 'system',
+      content: 'sys',
+      cache_control: { type: 'ephemeral' },
+    });
+    expect(uncachedBody.messages[0]).toEqual({ role: 'system', content: 'sys' });
   });
 });

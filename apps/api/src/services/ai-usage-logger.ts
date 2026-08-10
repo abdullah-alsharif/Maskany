@@ -15,6 +15,10 @@ export interface UsageLogEntry {
   cost: number;
   durationMs: number;
   cached: boolean;
+  /** Provider-reported cached prompt tokens (prompt-cache hit size). */
+  cachedPromptTokens: number;
+  /** True when the provider reported a prompt-cache hit (cachedPromptTokens > 0). */
+  cacheHit: boolean;
   success: boolean;
   errorCode?: string;
   promptVersions?: Array<{ templateId: string; version: string }>;
@@ -35,9 +39,11 @@ export function buildUsageLog(params: {
   cached: boolean;
   success: boolean;
   errorCode?: string;
+  cachedPromptTokens?: number;
   promptVersions?: Array<{ templateId: string; version: string }>;
   sectionTokens?: Array<{ sectionId: string; tokenCount: number }>;
 }): UsageLogEntry {
+  const cachedPromptTokens = params.cachedPromptTokens ?? 0;
   return {
     requestId: crypto.randomUUID?.() ?? `${Date.now()}-${Math.random().toString(36).slice(2)}`,
     userId: params.userId,
@@ -52,6 +58,8 @@ export function buildUsageLog(params: {
     cost: 0,
     durationMs: params.durationMs,
     cached: params.cached,
+    cachedPromptTokens,
+    cacheHit: cachedPromptTokens > 0,
     success: params.success,
     errorCode: params.errorCode,
     promptVersions: params.promptVersions,
@@ -76,6 +84,7 @@ export async function logUsage(entry: UsageLogEntry): Promise<void> {
       cost: entry.cost.toFixed(6),
       duration_ms: entry.durationMs,
       cached: entry.cached,
+      cached_prompt_tokens: entry.cachedPromptTokens,
       success: entry.success,
       error: entry.errorCode ?? null,
       created_at: new Date(),

@@ -12,6 +12,8 @@ export interface AIProviderOptions {
   safetyInterceptCheck?: (text: string, data: unknown) => boolean;
   onResponse?: (text: string) => void;
   timeoutMs?: number;
+  /** Attach provider prompt-cache markers to the system message. Default: true. */
+  promptCaching?: boolean;
 }
 
 function buildHeaders(apiKey: string, extra?: Record<string, string>): Record<string, string> {
@@ -23,13 +25,43 @@ function buildHeaders(apiKey: string, extra?: Record<string, string>): Record<st
 }
 
 function parseUsage(data: {
-  usage?: { prompt_tokens?: number; completion_tokens?: number; total_tokens?: number };
+  usage?: {
+    prompt_tokens?: number;
+    completion_tokens?: number;
+    total_tokens?: number;
+    prompt_tokens_details?: { cached_tokens?: number };
+  };
 }): TokenUsage {
+  const cachedPromptTokens = data.usage?.prompt_tokens_details?.cached_tokens;
   return {
     promptTokens: data.usage?.prompt_tokens ?? 0,
     completionTokens: data.usage?.completion_tokens ?? 0,
     totalTokens: data.usage?.total_tokens ?? 0,
+    ...(typeof cachedPromptTokens === 'number' && cachedPromptTokens > 0
+      ? { cachedPromptTokens }
+      : {}),
   };
+}
+
+export function promptCachingEnabled(promptCaching: boolean | undefined): boolean {
+  if (promptCaching === false) return false;
+  return process.env.AI_PROMPT_CACHE_ENABLED !== 'false';
+}
+
+function buildMessages(
+  system: string,
+  user: string,
+  promptCaching: boolean | undefined,
+): Array<Record<string, unknown>> {
+  const cacheable = promptCachingEnabled(promptCaching);
+  return [
+    {
+      role: 'system',
+      content: system,
+      ...(cacheable ? { cache_control: { type: 'ephemeral' } } : {}),
+    },
+    { role: 'user', content: user },
+  ];
 }
 
 export function createAIProvider(options: AIProviderOptions): AIProvider {
@@ -43,6 +75,7 @@ export function createAIProvider(options: AIProviderOptions): AIProvider {
     safetyInterceptCheck,
     onResponse,
     timeoutMs = DEFAULT_TIMEOUT_MS,
+    promptCaching,
   } = options;
 
   const fetchOpts = (
@@ -62,10 +95,7 @@ export function createAIProvider(options: AIProviderOptions): AIProvider {
     async generate(system, user, config) {
       const body: Record<string, unknown> = {
         model,
-        messages: [
-          { role: 'system', content: system },
-          { role: 'user', content: user },
-        ],
+        messages: buildMessages(system, user, promptCaching),
         max_tokens: config.maxTokens,
         temperature: config.temperature,
       };
@@ -106,10 +136,7 @@ export function createAIProvider(options: AIProviderOptions): AIProvider {
         fetchOpts(
           {
             model,
-            messages: [
-              { role: 'system', content: system },
-              { role: 'user', content: user },
-            ],
+            messages: buildMessages(system, user, promptCaching),
             max_tokens: config.maxTokens,
             temperature: config.temperature,
           },

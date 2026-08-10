@@ -161,6 +161,7 @@ export interface AiUsageLogsTable {
   cost: string;
   duration_ms: number;
   cached: boolean;
+  cached_prompt_tokens: number;
   success: boolean;
   error: string | null;
   created_at: Generated<Date>;

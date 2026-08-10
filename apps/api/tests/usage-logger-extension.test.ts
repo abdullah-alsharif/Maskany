@@ -60,4 +60,60 @@ describe('Usage log extension', () => {
     });
     expect(entry.promptVersions).toBeUndefined();
   });
+
+  it('[T006] log entry includes cachedPromptTokens defaulting to 0', () => {
+    const entry = buildUsageLog({
+      userId: 'user1',
+      provider: 'openai',
+      model: 'gpt-4',
+      action: 'enhance',
+      locale: 'en',
+      promptTokens: 100,
+      completionTokens: 50,
+      totalTokens: 150,
+      durationMs: 500,
+      cached: false,
+      success: true,
+    });
+    expect(entry.cachedPromptTokens).toBe(0);
+    expect(entry.cacheHit).toBe(false);
+  });
+
+  it('[T006] log entry includes cachedPromptTokens and derives cacheHit', () => {
+    const entry = buildUsageLog({
+      userId: 'user1',
+      provider: 'openai',
+      model: 'gpt-4',
+      action: 'enhance',
+      locale: 'en',
+      promptTokens: 100,
+      completionTokens: 50,
+      totalTokens: 150,
+      durationMs: 500,
+      cached: false,
+      success: true,
+      cachedPromptTokens: 12,
+    });
+    expect(entry.cachedPromptTokens).toBe(12);
+    expect(entry.cacheHit).toBe(true);
+  });
+
+  it('[T006] cacheHit stays false when cachedPromptTokens is zero', () => {
+    const entry = buildUsageLog({
+      userId: 'user1',
+      provider: 'openai',
+      model: 'gpt-4',
+      action: 'enhance',
+      locale: 'en',
+      promptTokens: 100,
+      completionTokens: 50,
+      totalTokens: 150,
+      durationMs: 500,
+      cached: false,
+      success: true,
+      cachedPromptTokens: 0,
+    });
+    expect(entry.cachedPromptTokens).toBe(0);
+    expect(entry.cacheHit).toBe(false);
+  });
 });

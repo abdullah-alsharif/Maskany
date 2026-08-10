@@ -37,7 +37,7 @@ const inflight = new Map<string, Promise<AIResponse>>();
 
 const MAX_ENHANCE_TOKENS = 3500;
 
-function coalesceKey(request: EnhanceRequest): string {
+export function coalesceKey(request: EnhanceRequest): string {
   const normalized = request.currentValue
     .toLowerCase()
     .trim()
@@ -85,9 +85,11 @@ function buildUsageLog(params: {
   cached: boolean;
   success: boolean;
   errorCode?: string;
+  cachedPromptTokens?: number;
   promptVersions?: Array<{ templateId: string; version: string }>;
   sectionTokens?: Array<{ sectionId: string; tokenCount: number }>;
 }): UsageLogEntry {
+  const cachedPromptTokens = params.cachedPromptTokens ?? 0;
   return {
     requestId: crypto.randomUUID(),
     userId: params.userId,
@@ -102,6 +104,8 @@ function buildUsageLog(params: {
     cost: 0,
     durationMs: params.durationMs,
     cached: params.cached,
+    cachedPromptTokens,
+    cacheHit: cachedPromptTokens > 0,
     success: params.success,
     errorCode: params.errorCode,
     promptVersions: params.promptVersions,
@@ -179,6 +183,7 @@ export async function enhance(
           promptTokens: result.usage.promptTokens,
           completionTokens: result.usage.completionTokens,
           totalTokens: result.usage.totalTokens,
+          cachedPromptTokens: result.usage.cachedPromptTokens ?? 0,
           durationMs: Date.now() - startTime,
           cached: false,
           success: localeValid,
@@ -252,6 +257,7 @@ export async function enhanceStreaming(
       promptTokens: stream.usage.promptTokens,
       completionTokens: stream.usage.completionTokens,
       totalTokens: stream.usage.totalTokens,
+      cachedPromptTokens: stream.usage.cachedPromptTokens ?? 0,
       durationMs: Date.now() - startTime,
       cached: false,
       success: true,
@@ -323,6 +329,7 @@ export async function translateAll(
         promptTokens: result.usage.promptTokens,
         completionTokens: result.usage.completionTokens,
         totalTokens: result.usage.totalTokens,
+        cachedPromptTokens: result.usage.cachedPromptTokens ?? 0,
         durationMs: Date.now() - startTime,
         cached: false,
         success: true,
@@ -432,6 +439,7 @@ export async function reviewListing(
         promptTokens: result.usage.promptTokens,
         completionTokens: result.usage.completionTokens,
         totalTokens: result.usage.totalTokens,
+        cachedPromptTokens: result.usage.cachedPromptTokens ?? 0,
         durationMs: Date.now() - startTime,
         cached: false,
         success: true,

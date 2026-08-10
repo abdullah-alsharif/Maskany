@@ -25,6 +25,8 @@ export interface TokenUsage {
   promptTokens: number;
   completionTokens: number;
   totalTokens: number;
+  /** Provider-reported cached prompt tokens (prompt cache hit). Absent when unknown. */
+  cachedPromptTokens?: number;
 }
 
 export interface AIProvider {
